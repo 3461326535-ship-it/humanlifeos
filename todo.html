@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验排期 · 人类生活实验日志</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入Font Awesome图标 -->
+    <link href="css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- 引入我们自己的CSS文件 -->
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#722ED1',
+                        success: '#00B42A',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        dark: '#1D2129',
+                        light: '#F2F3F5'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- 新增 footer 样式，适配侧边栏固定宽度布局 -->
+    <style>
+        /* 确保 footer 与主内容对齐，侧边栏宽度请根据实际情况调整 */
+        .app-footer {
+            text-align: center;
+            padding: 16px 20px;
+            color: #666;
+            font-size: 14px;
+            background: #ffffff;
+            border-top: 1px solid #e5e7eb;
+            margin-left: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .app-footer a {
+            color: #999;
+            text-decoration: none;
+        }
+        .app-footer a:hover {
+            color: #165DFF;
+        }
+        /* 移动端适配：侧边栏隐藏时 footer 应占满全宽 */
+        @media (max-width: 1024px) {
+            .app-footer {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 text-dark min-h-screen flex flex-col">
+
+    <!-- 导航栏 -->
+    <div class="sidebar" id="sidebar"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部标题卡片 - 固定在顶部 -->
+        <header class="header-card bg-white shadow-sm">
+            <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <!-- 移动端汉堡菜单由 nav-loader.js 统一注入 -->
+
+                    <i class="fa fa-calendar-check-o text-primary text-2xl"></i>
+                    <h1 class="text-xl font-bold text-dark">智能日程规划</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- 数据管理按钮 -->
+                    <button id="import-data-btn" class="data-btn import-btn">
+                        <i class="fa fa-download mr-2"></i>
+                        <span>导入数据</span>
+                    </button>
+                    <button id="export-data-btn" class="data-btn export-btn">
+                        <i class="fa fa-upload mr-2"></i>
+                        <span>导出数据</span>
+                    </button>
+                    <!-- 通知开关 -->
+                    <button id="notify-btn" class="data-btn export-btn" title="开启通知">
+                        <i class="fa fa-bell-slash mr-1"></i><span>通知</span>
+                    </button>
+                    <!-- 主题切换 -->
+                    <button class="theme-toggle" id="theme-toggle" title="切换暗色模式">🌙</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主内容区 - 添加顶部内边距避免被标题遮挡 -->
+        <div class="content-container">
+            <main class="flex-grow container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- 左侧边栏 - 日期选择器 -->
+                <div class="lg:col-span-1 bg-white rounded-xl shadow-sm p-5 h-fit sticky top-24">
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold" style="font-size: 17px;">选择日期</h2>
+                            <div class="flex space-x-2">
+                                <button id="prev-month" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                                    <i class="fa fa-chevron-left text-gray-600"></i>
+                                </button>
+                                <button id="today-btn" class="text-xs font-medium bg-primary/10 text-primary px-3 py-1 rounded-full hover:bg-primary/20 transition-colors">
+                                    今天
+                                </button>
+                                <button id="next-month" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                                    <i class="fa fa-chevron-right text-gray-600"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 月份和年份显示 -->
+                        <div class="text-center mb-4">
+                            <h3 id="current-month" class="text-lg font-medium">2025年6月</h3>
+                        </div>
+                        
+                        <!-- 星期标题 -->
+                        <div class="grid grid-cols-7 gap-1 mb-2">
+                            <div class="text-center text-xs font-medium text-gray-500 py-2">日</div>
+                            <div class="text-center text-xs font-medium text-gray-500 py-2">一</div>
+                            <div class="text-center text-xs font-medium text-gray-500 py-2">二</div>
+                            <div class="text-center text-xs font-medium text-gray-500 py-2">三</div>
+                            <div class="text-center text-xs font-medium text-gray-500 py-2">四</div>
+                            <div class="text-center text-xs font-medium text-gray-500 py-2">五</div>
+                            <div class="text-center text-xs font-medium text-gray-500 py-2">六</div>
+                        </div>
+                        
+                        <!-- 日历网格 -->
+                        <div id="calendar-grid" class="grid grid-cols-7 gap-1">
+                            <!-- 日历将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 即将到来的日程 -->
+                    <div>
+                        <h2 class="text-lg font-semibold mb-4">即将到来的日程</h2>
+                        <div id="upcoming-events" class="space-y-3 max-h-60 overflow-y-auto scrollbar-hide pr-1">
+                            <!-- 即将到来的日程将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 右侧内容区 - 日程列表和表单 -->
+                <div class="lg:col-span-3">
+                    <!-- 日期标题和视图切换 -->
+                    <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between mb-4">
+                            <div>
+                                <h2 id="selected-date" class="text-xl font-bold">2025年6月3日</h2>
+                                <p id="day-of-week" class="text-gray-500">星期二</p>
+                            </div>
+                            <div class="flex mt-3 md:mt-0">
+                                <button id="day-view-btn" class="view-btn active">日视图</button>
+                                <button id="week-view-btn" class="view-btn">周视图</button>
+                                <button id="month-view-btn" class="view-btn">月视图</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 视图内容容器 -->
+                        <div id="view-container">
+                            <!-- 日视图内容 -->
+                            <div id="day-view" class="space-y-4">
+                                <!-- 今日统计 -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div class="bg-primary/5 rounded-lg p-4 flex items-center">
+                                        <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                                            <i class="fa fa-list text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">总日程</p>
+                                            <p id="total-events" class="text-lg font-bold">5</p>
+                                        </div>
+                                    </div>
+                                    <div class="bg-success/5 rounded-lg p-4 flex items-center">
+                                        <div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center mr-3">
+                                            <i class="fa fa-check text-success"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">已完成</p>
+                                            <p id="completed-events" class="text-lg font-bold">2</p>
+                                        </div>
+                                    </div>
+                                    <div class="bg-warning/5 rounded-lg p-4 flex items-center">
+                                        <div class="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center mr-3">
+                                            <i class="fa fa-clock-o text-warning"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">待完成</p>
+                                            <p id="pending-events" class="text-lg font-bold">3</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 日程列表 -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h2 class="text-lg font-semibold">今日日程</h2>
+                                        <div class="flex space-x-2">
+                                            <div class="flex space-x-2" id="filter-buttons-container">
+                                                <button class="filter-btn active px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary" data-filter="全部">全部</button>
+                                                <button class="filter-btn px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600" data-filter="工作">工作</button>
+                                                <button class="filter-btn px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600" data-filter="生活">生活</button>
+                                                <button class="filter-btn px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600" data-filter="其他">其他</button>
+                                            </div>
+                                            <!-- 添加日程按钮 -->
+                                            <button id="add-event-btn" class="flex items-center bg-primary hover:bg-primary/90 text-white px-3 py-1 rounded-lg transition-colors">
+                                                <i class="fa fa-plus mr-1 text-xs"></i>
+                                                <span class="text-sm">添加日程</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="event-list" class="space-y-3">
+                                        <!-- 日程列表将通过JavaScript动态生成 -->
+                                    </div>
+                                    
+                    <!-- 空状态 -->
+                    <div id="empty-state" class="hidden py-10 text-center">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                            <i class="fa fa-calendar-o text-gray-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-600 mb-2">今天没有日程</h3>
+                        <p class="text-gray-500 mb-4">点击"添加日程"按钮创建你的第一个日程</p>
+                        <button id="empty-add-btn" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors">
+                            添加第一个日程
+                        </button>
+                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 周视图内容 -->
+                            <div id="week-view" class="hidden">
+                                <div class="grid grid-cols-7 gap-1 mb-2">
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">日</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">一</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">二</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">三</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">四</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">五</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">六</div>
+                                </div>
+                                <div id="week-grid" class="grid grid-cols-7 gap-1 mb-6">
+                                    <!-- 周视图内容将通过JavaScript动态生成 -->
+                                </div>
+                                
+                                <!-- 新增：本周分类汇总 -->
+                                <div id="week-summary" class="mt-8">
+                                    <h3 class="text-lg font-semibold mb-4">本周分类汇总</h3>
+                                    <div id="week-category-summary" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <!-- 分类汇总将通过JavaScript动态生成 -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 月视图内容 -->
+                            <div id="month-view" class="hidden">
+                                <div class="grid grid-cols-7 gap-1 mb-2">
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">日</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">一</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">二</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">三</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">四</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">五</div>
+                                    <div class="text-center font-medium text-sm py-2 bg-gray-50 rounded-t">六</div>
+                                </div>
+                                <div id="month-grid" class="grid grid-cols-7 gap-1 mb-6">
+                                    <!-- 月视图内容将通过JavaScript动态生成 -->
+                                </div>
+                                
+                                <!-- 新增：本月分类汇总 -->
+                                <div id="month-summary" class="mt-8">
+                                    <h3 class="text-lg font-semibold mb-4">本月分类汇总</h3>
+                                    <div id="month-category-summary" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <!-- 分类汇总将通过JavaScript动态生成 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 进度统计 -->
+                    <div class="bg-white rounded-xl shadow-sm p-5">
+                        <h2 id="progress-title" class="text-lg font-semibold mb-4">今日完成度</h2>
+                        <div class="flex items-center justify-center">
+                            <div class="relative w-40 h-40">
+                                <svg class="w-full h-full" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#F2F3F5" stroke-width="8" />
+                                    <circle id="progress-circle" class="progress-circle" cx="50" cy="50" r="45" fill="none" stroke="#165DFF" stroke-width="8" 
+                                        stroke-dasharray="282.74" stroke-dashoffset="141.37" transform="rotate(-90 50 50)" />
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span id="progress-text" class="text-2xl font-bold">42%</span>
+                                    <span id="progress-subtitle" class="text-xs text-gray-500">今日完成率</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- 添加/编辑日程模态框 -->
+            <div id="event-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-lg w-full max-w-md transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
+                    <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+                        <h3 id="modal-title" class="text-lg font-semibold">添加日程</h3>
+                        <button id="close-modal" class="text-gray-400 hover:text-gray-600">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="p-5">
+                        <form id="event-form">
+                            <input type="hidden" id="event-id">
+                            <div class="mb-4">
+                                <label for="event-title" class="block text-sm font-medium text-gray-700 mb-1">标题 <span class="text-danger">*</span></label>
+                                <input type="text" id="event-title" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors" placeholder="输入日程标题" required>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label for="event-date" class="block text-sm font-medium text-gray-700 mb-1">日期 <span class="text-danger">*</span></label>
+                                    <input type="date" id="event-date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors" required>
+                                </div>
+                                <div>
+                                    <label for="event-time" class="block text-sm font-medium text-gray-700 mb-1">时间 <span class="text-danger">*</span></label>
+                                    <input type="time" id="event-time" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors" required>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="event-category" class="block text-sm font-medium text-gray-700 mb-1">分类</label>
+                                <select id="event-category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors">
+                                    <option value="工作">工作</option>
+                                    <option value="生活">生活</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label for="event-description" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+                                <textarea id="event-description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors" placeholder="输入日程描述"></textarea>
+                            </div>
+
+                            <!-- 重复周期 -->
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label for="event-recurrence" class="block text-sm font-medium text-gray-700 mb-1">重复</label>
+                                    <select id="event-recurrence" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors">
+                                        <option value="">不重复</option>
+                                        <option value="daily">每天</option>
+                                        <option value="weekly">每周</option>
+                                        <option value="monthly">每月</option>
+                                        <option value="yearly">每年</option>
+                                    </select>
+                                </div>
+                                <div id="recurrence-end-group" style="display:none;">
+                                    <label for="event-recurrence-end" class="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
+                                    <input type="date" id="event-recurrence-end" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors">
+                                </div>
+                            </div>
+
+                            <!-- === 子任务管理 === -->
+                            <div class="mb-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="block text-sm font-medium text-gray-700">子任务</label>
+                                    <button type="button" id="add-subtask-btn" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded transition-colors">
+                                        <i class="fa fa-plus mr-1"></i>添加子任务
+                                    </button>
+                                </div>
+                                <div id="subtasks-container" class="space-y-2 max-h-40 overflow-y-auto p-2 border border-gray-200 rounded-lg">
+                                    <!-- 子任务将动态添加到这里 -->
+                                </div>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="event-reminder" class="w-4 h-4 text-primary focus:ring-primary/50 border-gray-300 rounded">
+                                    <span class="ml-2 text-sm text-gray-700">设置提醒</span>
+                                </label>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button type="button" id="cancel-event" class="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+                                    取消
+                                </button>
+                                <button type="submit" class="flex-1 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors">
+                                    保存
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 导入数据模态框 -->
+            <div id="import-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-lg w-full max-w-lg transform transition-all duration-300 scale-95 opacity-0">
+                    <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold">导入日程数据</h3>
+                        <button id="close-import-modal" class="text-gray-400 hover:text-gray-600">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="p-5">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">上传JSON文件</label>
+                            <div class="flex items-center justify-center w-full">
+                                <label for="json-file" class="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <i class="fa fa-cloud-upload text-3xl text-gray-400 mb-2"></i>
+                                        <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">点击上传</span> 或拖放文件</p>
+                                        <p class="text-xs text-gray-500">仅支持JSON格式文件</p>
+                                    </div>
+                                    <input id="json-file" type="file" class="hidden" accept=".json">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">或粘贴JSON数据</label>
+                            <textarea id="json-data" rows="8" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors font-mono text-sm" placeholder='[{"id": 1, "title": "会议", "date": "2025-06-10", ...}]'></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="cancel-import" class="border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+                                取消
+                            </button>
+                            <button id="confirm-import" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors">
+                                导入数据
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="app-footer" style="text-align: center; padding: 16px; font-size: 13px; color: #6c757d; line-height: 1.8;">
+    © 2026 humanlifeos.art &nbsp;|&nbsp; 
+    <a href="https://beian.miit.gov.cn/" target="_blank" style="color: #6c757d; text-decoration: none;">湘ICP备2026007930号</a> &nbsp;|&nbsp; 
+    <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011402021877" target="_blank" style="color: #6c757d; text-decoration: none; display: inline-flex; align-items: center;">
+        <img src="https://beian.mps.gov.cn/img/ghs.png" style="height: 14px; margin-right: 4px;">沪公网安备 31011402021877号
+    </a>
+</footer>
+
+    <!-- AI 聊天按钮 -->
+    <button id="ai-chat-toggle" class="fixed bottom-6 right-6 w-14 h-14 rounded-2xl flex items-center justify-center z-40 chat-toggle-btn">
+        <i class="fa fa-comments text-xl"></i>
+    </button>
+
+    <!-- AI 聊天窗口 -->
+    <div id="ai-chat-window" class="fixed bottom-20 right-6 w-96 flex flex-col z-50 hidden chat-window">
+        <div class="chat-header">
+            <div>
+                <h3 class="font-semibold text-sm text-dark">智能助手</h3>
+                <p class="text-xs text-gray-400">在线</p>
+            </div>
+            <button id="ai-chat-close" class="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                <i class="fa fa-times text-xs"></i>
+            </button>
+        </div>
+
+        <div id="ai-chat-messages" class="chat-messages">
+            <div class="text-center text-xs text-gray-400 py-4">我是您的智能日程助手</div>
+        </div>
+
+        <!-- 快捷操作 -->
+        <div class="chat-quick-actions">
+            <button class="quick-action-btn" data-action="新建任务">+ 新建任务</button>
+            <button class="quick-action-btn" data-action="今天">📋 今天</button>
+            <button class="quick-action-btn" data-action="完成">✅ 完成</button>
+            <button class="quick-action-btn" data-action="效率">📊 效率</button>
+            <button class="quick-action-btn" data-action="明天">⏰ 明天</button>
+            <button class="quick-action-btn" data-action="搜索">🔍 搜索</button>
+        </div>
+
+        <div class="chat-input-area">
+            <div class="chat-input-row">
+                <input type="text" id="ai-chat-input" placeholder="输入您的问题..." autocomplete="off">
+                <button id="ai-chat-send" class="chat-send-btn">
+                    <i class="fa fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 确认弹窗 -->
+    <div id="ai-confirm-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center">
+        <div class="bg-white rounded-2xl w-[360px] max-w-[90vw] max-h-[80vh] overflow-y-auto shadow-2xl p-5 transform transition-all">
+            <div class="flex items-center mb-4">
+                <div class="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center mr-3">
+                    <i class="fa fa-exclamation-triangle text-warning"></i>
+                </div>
+                <h3 class="font-semibold text-dark">确认操作</h3>
+            </div>
+            <p id="ai-confirm-message" class="mb-4 text-gray-600">AI准备执行操作，请确认</p>
+            <div id="ai-confirm-details" class="mb-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-700"></div>
+            <div class="flex justify-end gap-2">
+                <button id="ai-confirm-cancel" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">取消</button>
+                <button id="ai-confirm-ok" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入我们自己的JavaScript文件 -->
+    <script src="/js/nav-loader.js"></script>
+    <script src="/js/script.js"></script>
+</body>
+</html>

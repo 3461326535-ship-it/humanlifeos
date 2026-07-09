@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 214 60% 57%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 214 60% 57%;
+    --radius: 0.75rem;
+
+    /* Custom Colors */
+    --primary-blue: #4A90D9;
+    --green: #34C759;
+    --red: #FF3B30;
+    --yellow: #FFCC00;
+    --purple: #AF52DE;
+    --teal: #5AC8FA;
+    --text-primary: #1C1C1E;
+    --text-secondary: #3A3A3C;
+    --text-tertiary: #8E8E93;
+    --bg-primary: #F5F5F7;
+    --bg-card: #FFFFFF;
+    --divider: #E5E5EA;
+    --icon-gray: #C7C7CC;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-neutral-900 text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+    overflow: hidden;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  .app-container {
+    @apply w-full max-w-[428px] mx-auto bg-[var(--bg-primary)] relative overflow-hidden flex flex-col;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .content-scrollable {
+    @apply flex-1 overflow-y-auto no-scrollbar;
+  }
+
+  .card-shadow {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .fab-shadow {
+    box-shadow: 0 4px 12px rgba(74, 144, 217, 0.4);
+  }
+}

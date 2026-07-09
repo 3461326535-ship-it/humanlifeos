@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>快捷入口 · 人类生活实验日志</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <!-- 外部依赖：Font Awesome、Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    
+    <!-- 导航栏样式（外部引用） -->
+    <link rel="stylesheet" href="/css/nav.css">
+
+    <style>
+        /* 仅保留常用网页本身的功能样式（原样式微调，移除与导航重复的部分） */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #f6f9fc 0%, #eef2f5 100%);
+            min-height: 100vh;
+            color: #1a2c3e;
+        }
+
+        .content-wrapper {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* 以下为常用网页原有样式（完全保留） */
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+            padding-bottom: 1rem;
+        }
+        .title-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .title-section i {
+            font-size: 2.4rem;
+            color: #3b82f6;
+            background: white;
+            padding: 10px;
+            border-radius: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+        }
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1e293b, #2c3e66);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+        .sub {
+            color: #5b6e8c;
+            font-size: 0.85rem;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+        .reset-btn {
+            background: rgba(255,255,240,0.8);
+            backdrop-filter: blur(4px);
+            border: 1px solid #cddfe7;
+            padding: 8px 18px;
+            border-radius: 60px;
+            font-weight: 500;
+            color: #2c4f6e;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        .reset-btn:hover {
+            background: white;
+            border-color: #3b82f6;
+            color: #3b82f6;
+            box-shadow: 0 4px 10px rgba(59,130,246,0.2);
+            transform: translateY(-1px);
+        }
+        .add-card {
+            background: white;
+            border-radius: 32px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2.8rem;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.05);
+            border: 1px solid rgba(59,130,246,0.2);
+        }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+        .input-group {
+            flex: 1;
+            min-width: 180px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #5b7a9a;
+            margin-bottom: 6px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            border: 1.5px solid #e2edf2;
+            font-size: 0.95rem;
+            font-family: 'Inter', monospace;
+            transition: 0.2s;
+            background: #fefefe;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+        .btn-add {
+            background: linear-gradient(100deg, #3b82f6, #2563eb);
+            border: none;
+            padding: 12px 28px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 8px rgba(37,99,235,0.2);
+            margin-top: 22px;
+        }
+        .btn-add:hover {
+            background: linear-gradient(100deg, #2563eb, #1d4ed8);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 18px rgba(37,99,235,0.3);
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .bookmark-count {
+            background: rgba(59,130,246,0.12);
+            padding: 6px 16px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1e4a76;
+        }
+        .empty-hint {
+            text-align: center;
+            padding: 3rem 1rem;
+            background: rgba(255,255,245,0.7);
+            border-radius: 48px;
+            color: #6c8dae;
+            font-weight: 500;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 1.6rem;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(2px);
+            border-radius: 28px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
+            border: 1px solid #eef3f8;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.15);
+            border-color: #cbdde9;
+            background: white;
+        }
+        .card-content {
+            padding: 1.4rem 1.5rem 1.2rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .icon-wrapper {
+            flex-shrink: 0;
+            width: 56px;
+            height: 56px;
+            background: #f8fafc;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02), 0 4px 8px rgba(0,0,0,0.02);
+        }
+        .site-icon {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        .fallback-icon {
+            font-size: 28px;
+            color: #5f8bb3;
+        }
+        .info {
+            flex: 1;
+            overflow: hidden;
+        }
+        .site-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #0f2b3b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .site-url {
+            font-size: 0.7rem;
+            color: #6f8eae;
+            margin-top: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-family: monospace;
+        }
+        .delete-btn {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(6px);
+            border-radius: 40px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #a03e3e;
+            cursor: pointer;
+            transition: 0.2s;
+            opacity: 0.7;
+            border: none;
+            font-size: 0.9rem;
+        }
+        .delete-btn:hover {
+            opacity: 1;
+            background: #fee2e2;
+            color: #dc2626;
+            transform: scale(1.05);
+        }
+        .toast-msg {
+            position: fixed;
+            bottom: 26px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293bdc;
+            backdrop-filter: blur(12px);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            z-index: 2000;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        @media (max-width: 640px) {
+            .content-wrapper {
+                padding: 1.2rem;
+            }
+            .add-card {
+                padding: 1rem 1.2rem;
+            }
+            .card-content {
+                padding: 1rem;
+            }
+            .icon-wrapper {
+                width: 48px;
+                height: 48px;
+            }
+            .site-name {
+                font-size: 0.95rem;
+            }
+            .btn-add {
+                padding: 10px 20px;
+            }
+        }
+
+        /* ── 页脚（合规备案） ── */
+        .app-footer {
+            text-align: center; padding: 16px 20px; color: #666;
+            font-size: 14px; background: #ffffff; border-top: 1px solid #e5e7eb;
+            margin-left: 0; width: 100%; box-sizing: border-box;
+        }
+        .app-footer a { color: #999; text-decoration: none; }
+        .app-footer a:hover { color: #165DFF; }
+        @media (max-width: 1024px) {
+            .app-footer { margin-left: 0; width: 100%; }
+        }
+
+</style>
+</head>
+<body>
+
+<!-- 侧边栏容器，导航内容由 nav-loader.js 动态加载 -->
+<div id="sidebar" class="sidebar"></div>
+
+<!-- 移动端菜单由 nav-loader.js 统一注入 -->
+
+<!-- 原常用网页主要内容区域，包裹在 .main-content 中 -->
+<div class="main-content">
+    <div class="content-wrapper">
+        <div class="header">
+            <div class="title-section">
+                <i class="fas fa-bookmark"></i>
+                <div>
+                    <h1>常用网页汇总</h1>
+                    <div class="sub">一键增删 · 智能图标</div>
+                </div>
+            </div>
+            <div class="reset-btn" id="resetDefaultBtn">
+                <i class="fas fa-arrows-rotate"></i> 恢复默认示例
+            </div>
+        </div>
+
+        <div class="add-card">
+            <div class="form-row">
+                <div class="input-group">
+                    <label><i class="fas fa-tag"></i> 网站名称</label>
+                    <input type="text" id="siteName" placeholder="例如：GitHub 创意工坊" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label><i class="fas fa-link"></i> 网址链接</label>
+                    <input type="text" id="siteUrl" placeholder="https:// 或 http:// 或 github.com" autocomplete="off">
+                </div>
+                <button class="btn-add" id="addBookmarkBtn">
+                    <i class="fas fa-plus-circle"></i> 添加网页
+                </button>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="bookmark-count" id="bookmarkCount">✨ 加载中...</div>
+        </div>
+
+        <div id="bookmarkGrid" class="grid"></div>
+    </div>
+</div>
+
+<!-- 引入导航加载器（负责加载 nav.html 到 #sidebar，并注入 active 样式） -->
+<script src="/js/utils.js"></script>
+<script src="/js/nav-loader.js"></script>
+
+<!-- 常用网页本身的业务逻辑（完全保留原始功能） -->
+<script>
+    // ---------- 存储与书签管理（原样保留） ----------
+    const STORAGE_KEY = 'web_bookmarks_master';
+    const DEFAULT_BOOKMARKS = [
+        { id: '1', name: 'GitHub 开源世界', url: 'https://github.com' },
+        { id: '2', name: 'MDN Web 文档', url: 'https://developer.mozilla.org/zh-CN/' },
+        { id: '3', name: 'Stack Overflow', url: 'https://stackoverflow.com' },
+        { id: '4', name: 'Google 搜索', url: 'https://www.google.com' },
+        { id: '5', name: 'YouTube 创意', url: 'https://www.youtube.com' },
+        { id: '6', name: '知乎·知识库', url: 'https://www.zhihu.com' }
+    ];
+
+    let bookmarks = [];
+    let toastTimer = null;
+
+    function showMessage(text, isError = false) {
+        let toast = document.querySelector('.toast-msg');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.className = 'toast-msg';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = text;
+        toast.style.backgroundColor = isError ? '#b91c1cd9' : '#1e293bdc';
+        toast.style.opacity = '1';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            toast.style.opacity = '0';
+        }, 2600);
+    }
+
+    function normalizeUrl(rawUrl) {
+        if (!rawUrl || rawUrl.trim() === '') return null;
+        let url = rawUrl.trim();
+        if (!/^https?:\/\//i.test(url)) {
+            url = 'https://' + url;
+        }
+        try {
+            const validUrl = new URL(url);
+            if (validUrl.protocol !== 'http:' && validUrl.protocol !== 'https:') {
+                throw new Error('仅支持HTTP/HTTPS链接');
+            }
+            return validUrl.href;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    function extractDomainFromUrl(fullUrl) {
+        try {
+            const urlObj = new URL(fullUrl);
+            return urlObj.hostname;
+        } catch(e) { return ''; }
+    }
+
+    function getFaviconUrl(websiteUrl) {
+        const hostname = extractDomainFromUrl(websiteUrl);
+        if (!hostname) return '';
+        return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=48`;
+    }
+
+    function saveToLocal() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
+    }
+
+    function loadBookmarks() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) {
+                    bookmarks = parsed;
+                    return;
+                }
+            } catch(e) { console.warn(e); }
+        }
+        bookmarks = DEFAULT_BOOKMARKS.map(item => ({ ...item, id: String(item.id) + '_' + Date.now() }));
+        saveToLocal();
+    }
+
+    function escapeAttr(str) {
+        return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function renderGrid() {
+        const gridContainer = document.getElementById('bookmarkGrid');
+        const countSpan = document.getElementById('bookmarkCount');
+        if (!gridContainer) return;
+
+        if (!bookmarks.length) {
+            gridContainer.innerHTML = `<div class="empty-hint" style="grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size: 3rem; opacity: 0.6; margin-bottom: 12px; display: block;"></i>📭 暂无网页汇总，点击上方「添加网页」开始收藏～</div>`;
+            if (countSpan) countSpan.innerHTML = `📚 0 个书签`;
+            return;
+        }
+
+        let cardsHtml = '';
+        bookmarks.forEach(bookmark => {
+            const displayUrl = bookmark.url.length > 45 ? bookmark.url.substring(0, 42) + '...' : bookmark.url;
+            const favIconSrc = getFaviconUrl(bookmark.url);
+            const safeName = escapeHtml(bookmark.name);
+            const safeUrl = escapeHtml(bookmark.url);
+            cardsHtml += `
+                <div class="card" data-id="${bookmark.id}" data-url="${escapeAttr(bookmark.url)}">
+                    <div class="delete-btn" data-id="${bookmark.id}" title="删除书签">
+                        <i class="fas fa-trash-alt"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="icon-wrapper">
+                            <img class="site-icon" src="${favIconSrc}" alt="icon" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'fas fa-globe fallback-icon\'></i>';">
+                        </div>
+                        <div class="info">
+                            <div class="site-name">${safeName}</div>
+                            <div class="site-url" title="${safeUrl}">${escapeHtml(displayUrl)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        gridContainer.innerHTML = cardsHtml;
+        if (countSpan) {
+            countSpan.innerHTML = `📖 共 ${bookmarks.length} 个常用网站`;
+        }
+    }
+
+    function addBookmark(name, rawUrl) {
+        if (!name || name.trim() === '') {
+            showMessage('❌ 请填写网站名称', true);
+            return false;
+        }
+        const trimmedName = name.trim();
+        const normalized = normalizeUrl(rawUrl);
+        if (!normalized) {
+            showMessage('❌ 网址无效，请以 http:// 或 https:// 开头或输入正确域名', true);
+            return false;
+        }
+        const existing = bookmarks.find(b => b.url === normalized);
+        if (existing) {
+            showMessage(`⚠️ "${existing.name}" 已经存在，不要重复添加`, true);
+            return false;
+        }
+        const newId = Date.now().toString() + '-' + Math.random().toString(36).substring(2, 6);
+        const newBookmark = { id: newId, name: trimmedName, url: normalized };
+        bookmarks.push(newBookmark);
+        saveToLocal();
+        renderGrid();
+        showMessage(`✅ 成功添加「${trimmedName}」`, false);
+        return true;
+    }
+
+    function deleteBookmarkById(id) {
+        const targetIndex = bookmarks.findIndex(b => b.id === id);
+        if (targetIndex === -1) return false;
+        const removedName = bookmarks[targetIndex].name;
+        bookmarks.splice(targetIndex, 1);
+        saveToLocal();
+        renderGrid();
+        showMessage(`🗑️ 已移除「${removedName}」`, false);
+        return true;
+    }
+
+    function resetToDefault() {
+        if (confirm('⚠️ 重置将会删除当前所有自定义网页，恢复默认常用网站示例。\n确定要继续吗？')) {
+            bookmarks = DEFAULT_BOOKMARKS.map((item, idx) => ({ ...item, id: `def_${Date.now()}_${idx}` }));
+            saveToLocal();
+            renderGrid();
+            showMessage('✨ 已恢复默认网页汇总', false);
+        }
+    }
+
+    // 事件绑定
+    function bindEvents() {
+        const addBtn = document.getElementById('addBookmarkBtn');
+        const nameInput = document.getElementById('siteName');
+        const urlInput = document.getElementById('siteUrl');
+        const resetBtn = document.getElementById('resetDefaultBtn');
+        const grid = document.getElementById('bookmarkGrid');
+
+        const performAdd = () => {
+            const name = nameInput.value;
+            const url = urlInput.value;
+            if (addBookmark(name, url)) {
+                nameInput.value = '';
+                urlInput.value = '';
+                nameInput.focus();
+            }
+        };
+
+        addBtn.addEventListener('click', performAdd);
+        nameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performAdd(); });
+        urlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performAdd(); });
+        resetBtn.addEventListener('click', resetToDefault);
+
+        grid.addEventListener('click', (e) => {
+            const delBtn = e.target.closest('.delete-btn');
+            if (delBtn) {
+                e.stopPropagation();
+                const id = delBtn.getAttribute('data-id');
+                if (id) deleteBookmarkById(id);
+                return;
+            }
+            const card = e.target.closest('.card');
+            if (card) {
+                const url = card.getAttribute('data-url');
+                if (url) window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        });
+    }
+
+    // 初始化
+    function init() {
+        loadBookmarks();
+        renderGrid();
+        bindEvents();
+        // 移动端菜单交互由 nav-loader.js 统一处理
+    }
+    init();
+</script>
+
+    <footer class="app-footer" style="text-align: center; padding: 16px; font-size: 13px; color: #6c757d; line-height: 1.8;">
+    © 2026 humanlifeos.art &nbsp;|&nbsp;
+    <a href="https://beian.miit.gov.cn/" target="_blank" style="color: #6c757d; text-decoration: none;">湘ICP备2026007930号</a> &nbsp;|&nbsp;
+    <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011402021877" target="_blank" style="color: #6c757d; text-decoration: none; display: inline-flex; align-items: center;">
+        <img src="https://beian.mps.gov.cn/img/ghs.png" style="height: 14px; margin-right: 4px;">沪公网安备 31011402021877号
+    </a>
+</footer>
+
+
+</body>
+</html>

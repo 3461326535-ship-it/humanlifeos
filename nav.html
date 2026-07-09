@@ -1,0 +1,202 @@
+<!-- 图钉：锁定侧边栏展开/收起 -->
+<div class="sidebar-pin" id="sidebarPin" title="固定侧边栏">
+    <i class="fa fa-thumb-tack"></i>
+</div>
+
+<!-- 导航菜单 -->
+<ul>
+    <li>
+        <a href="/home.html">
+            <span class="icon">🏠</span>
+            <span class="nav-text">总览</span>
+        </a>
+    </li>
+    <li>
+        <a href="/todo.html">
+            <span class="icon">🧪</span>
+            <span class="nav-text">实验排期</span>
+            <span class="nav-badge" id="nav-todo-badge" style="display:none">0</span>
+        </a>
+    </li>
+    <li>
+        <a href="/finance.html">
+            <span class="icon">💎</span>
+            <span class="nav-text">资产管理</span>
+        </a>
+    </li>
+    <li class="has-submenu">
+        <a href="#">
+            <span class="icon">🔌</span>
+            <span class="nav-text">外部接口</span>
+        </a>
+        <ul class="submenu">
+            <li><a href="https://message.alibaba.com/message/default.htm#feedback/all" target="_blank"><span class="submenu-icon"></span><span class="nav-text">阿里巴巴国际站</span></a></li>
+            <li><a href="https://tuiguang.baidu.com/oneWeb.html?userid=48928215" target="_blank"><span class="submenu-icon"></span><span class="nav-text">百度爱采购</span></a></li>
+            <li><a href="https://www.lisungroup.cn/ls-login" target="_blank"><span class="submenu-icon"></span><span class="nav-text">中文官网后台</span></a></li>
+            <li><a href="https://www.lisungroup.com/ls-login" target="_blank"><span class="submenu-icon"></span><span class="nav-text">英文官网后台</span></a></li>
+            <li><a href="https://www.youtube.com/" target="_blank"><span class="submenu-icon"></span><span class="nav-text">Youtube</span></a></li>
+            <li><a href="https://www.facebook.com/" target="_blank"><span class="submenu-icon"></span><span class="nav-text">Facebook</span></a></li>
+            <li><a href="https://www.pinterest.com/" target="_blank"><span class="submenu-icon"></span><span class="nav-text">Pinterest</span></a></li>
+            <li><a href="https://x.com/" target="_blank"><span class="submenu-icon"></span><span class="nav-text">X</span></a></li>
+            <li><a href="http://lisungroup.3322.org:6060/" target="_blank"><span class="submenu-icon"></span><span class="nav-text">ERP系统</span></a></li>
+            <li><a href="https://docs.qq.com/sheet/DRWN2U3dWZ2NDR21B?tab=wszopu" target="_blank"><span class="submenu-icon"></span><span class="nav-text">物流表</span></a></li>
+            <li><a href="https://docs.qq.com/sheet/DVWRGR2pac2xkV1B3?tab=ak23ie" target="_blank"><span class="submenu-icon"></span><span class="nav-text">sales系统</span></a></li>
+            <li><a href="https://docs.qq.com/sheet/DRURUYkxBVklERFJl?tab=BB08J2" target="_blank"><span class="submenu-icon"></span><span class="nav-text">website表</span></a></li>
+            <li><a href="https://docs.qq.com/sheet/DRVZpQldiTm50bEZ4?tab=2lnc8q" target="_blank"><span class="submenu-icon"></span><span class="nav-text">marketing表</span></a></li>
+        </ul>
+    </li>
+    <li class="has-submenu">
+        <a href="#">
+            <span class="icon">🔬</span>
+            <span class="nav-text">实验室</span>
+        </a>
+        <ul class="submenu">
+            <li><a href="/globaltime.html"><span class="submenu-icon"></span><span class="nav-text">世界时钟</span></a></li>
+            <li><a href="/wallnotepad.html"><span class="submenu-icon"></span><span class="nav-text">灵感便签</span></a></li>
+            <li><a href="/timekeeper.html"><span class="submenu-icon"></span><span class="nav-text">计时实验</span></a></li>
+            <li><a href="/html_editor_preview.html" target="_blank"><span class="submenu-icon"></span><span class="nav-text">代码实验台</span></a></li>
+            <li><a href="/colorpro.html"><span class="submenu-icon"></span><span class="nav-text">色彩工坊</span></a></li>
+        </ul>
+    </li>
+    <li>
+        <a href="/common-sites.html">
+            <span class="icon">⚡</span>
+            <span class="nav-text">快捷入口</span>
+        </a>
+    </li>
+</ul>
+
+<!-- 侧边栏底部：用户区 + 设置 -->
+<div class="sidebar-footer">
+    <!-- 用户信息（点击编辑） -->
+    <div class="sidebar-user" id="sidebarUser" title="点击登录">
+        <div class="user-avatar" id="userAvatar">🧑</div>
+        <div class="user-info">
+            <span class="user-name" id="userName">未登录</span>
+            <span class="user-label" id="userLabel">点击登录</span>
+        </div>
+    </div>
+
+    <!-- 云同步徽标（登录后显示） -->
+    <div class="sidebar-sync-badge" id="syncBadge" title="云同步已启用" style="display:none">
+        <i class="fa fa-cloud"></i>
+    </div>
+
+    <!-- 设置齿轮 -->
+    <div class="sidebar-settings" id="sidebarSettings" title="设置">
+        <i class="fa fa-gear"></i>
+        <span class="nav-text">设置</span>
+    </div>
+</div>
+
+<!-- 用户编辑弹窗（由 nav-loader.js 控制） -->
+<div class="profile-modal-overlay" id="profileModal" style="display:none;">
+    <div class="profile-modal">
+        <h3>✏️ 编辑个人信息</h3>
+        <div class="profile-avatar-picker" id="avatarPicker">
+            <button data-emoji="🧑">🧑</button>
+            <button data-emoji="👨">👨</button>
+            <button data-emoji="👩">👩</button>
+            <button data-emoji="🧔">🧔</button>
+            <button data-emoji="👩‍💻">👩‍💻</button>
+            <button data-emoji="👨‍💻">👨‍💻</button>
+            <button data-emoji="🦊">🦊</button>
+            <button data-emoji="🐱">🐱</button>
+            <button data-emoji="🐼">🐼</button>
+            <button data-emoji="🐶">🐶</button>
+            <button data-emoji="🦁">🦁</button>
+            <button data-emoji="🐰">🐰</button>
+            <button data-emoji="🌞">🌞</button>
+            <button data-emoji="⭐">⭐</button>
+            <button data-emoji="🎯">🎯</button>
+            <button data-emoji="🔥">🔥</button>
+        </div>
+        <div class="form-group" style="margin-top:16px;">
+            <label>你的名字</label>
+            <input type="text" id="profileNameInput" placeholder="输入昵称..." maxlength="20" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--card-bg, #fff);color:var(--text);font-family:inherit;outline:none;">
+        </div>
+        <div class="profile-modal-actions">
+            <button class="btn btn-ghost" id="profileCancel">取消</button>
+            <button class="btn btn-primary" id="profileSave">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 登录弹窗 -->
+<div class="profile-modal-overlay" id="loginModal" style="display:none;">
+    <div class="profile-modal" style="max-width:340px;">
+        <h3>🔐 登录</h3>
+        <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">登录后数据将同步到云端</p>
+        <div style="margin-top:16px;">
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);">用户名</label>
+            <input type="text" id="loginUserInput" placeholder="admin" autocomplete="username" style="width:100%;padding:10px;margin-top:4px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--card-bg,#fff);color:var(--text);font-family:inherit;outline:none;">
+        </div>
+        <div style="margin-top:12px;">
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);">密码</label>
+            <input type="password" id="loginPasswordInput" placeholder="请输入密码" autocomplete="current-password" style="width:100%;padding:10px;margin-top:4px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--card-bg,#fff);color:var(--text);font-family:inherit;outline:none;">
+        </div>
+        <div id="loginError" style="display:none;margin-top:10px;padding:8px;border-radius:6px;background:#fee;color:#c00;font-size:12px;text-align:center;"></div>
+        <div class="profile-modal-actions">
+            <button class="btn btn-ghost" id="loginCancel">取消</button>
+            <button class="btn btn-primary" id="loginConfirm">登录</button>
+        </div>
+        <div style="text-align:center;margin-top:12px;">
+            <a href="#" id="showRegisterLink" style="font-size:12px;color:var(--blue);text-decoration:none;">注册新账号</a>
+        </div>
+    </div>
+</div>
+
+<!-- 注册弹窗 -->
+<div class="profile-modal-overlay" id="registerModal" style="display:none;">
+    <div class="profile-modal" style="max-width:340px;">
+        <h3>📝 注册</h3>
+        <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">创建账号后数据将同步到云端</p>
+        <div style="margin-top:16px;">
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);">用户名</label>
+            <input type="text" id="regUserInput" placeholder="至少2个字符" maxlength="20" style="width:100%;padding:10px;margin-top:4px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--card-bg,#fff);color:var(--text);font-family:inherit;outline:none;">
+        </div>
+        <div style="margin-top:12px;">
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);">密码</label>
+            <input type="password" id="regPwInput" placeholder="至少6位" style="width:100%;padding:10px;margin-top:4px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--card-bg,#fff);color:var(--text);font-family:inherit;outline:none;">
+        </div>
+        <div id="regError" style="display:none;margin-top:10px;padding:8px;border-radius:6px;background:#fee;color:#c00;font-size:12px;text-align:center;"></div>
+        <div class="profile-modal-actions">
+            <button class="btn btn-ghost" id="regCancel">返回登录</button>
+            <button class="btn btn-primary" id="regConfirm">注册</button>
+        </div>
+    </div>
+</div>
+
+<!-- 数据迁移弹窗 -->
+<div class="profile-modal-overlay" id="migrateModal" style="display:none;">
+    <div class="profile-modal" style="max-width:360px;">
+        <h3>☁️ 数据迁移</h3>
+        <p style="font-size:13px;color:var(--text-secondary);margin-top:4px;" id="migrateMsg">发现您之前有未关联的数据，是否合并到当前账号？</p>
+        <div class="profile-modal-actions">
+            <button class="btn btn-ghost" id="migrateSkip">跳过</button>
+            <button class="btn btn-primary" id="migrateConfirm">合并数据</button>
+        </div>
+    </div>
+</div>
+
+<!-- 修改密码弹窗 -->
+<div class="profile-modal-overlay" id="changePwModal" style="display:none;">
+    <div class="profile-modal" style="max-width:340px;">
+        <h3>🔑 修改默认密码</h3>
+        <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">首次登录请修改默认密码以确保安全</p>
+        <div style="margin-top:12px;">
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);">当前密码</label>
+            <input type="password" id="cpCurrentInput" autocomplete="current-password" style="width:100%;padding:10px;margin-top:4px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--card-bg,#fff);color:var(--text);font-family:inherit;outline:none;">
+        </div>
+        <div style="margin-top:12px;">
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);">新密码（至少6位）</label>
+            <input type="password" id="cpNewInput" autocomplete="new-password" style="width:100%;padding:10px;margin-top:4px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--card-bg,#fff);color:var(--text);font-family:inherit;outline:none;">
+        </div>
+        <div id="cpError" style="display:none;margin-top:10px;padding:8px;border-radius:6px;background:#fee;color:#c00;font-size:12px;text-align:center;"></div>
+        <div class="profile-modal-actions">
+            <button class="btn btn-ghost" id="cpCancel">跳过</button>
+            <button class="btn btn-primary" id="cpConfirm">修改密码</button>
+        </div>
+    </div>
+</div>
+

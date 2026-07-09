@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>世界时钟 · 全球时区观测</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+        }
+
+        body {
+            background: #f4f7fc;
+            background-image: radial-gradient(circle at 10% 20%, rgba(210, 230, 245, 0.3) 0%, #eef2f5 100%);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+        }
+
+        /* 主容器 */
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 头部 */
+        .header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1F6E8C, #0E4E6D);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1::before {
+            content: "🌍";
+            background: none;
+            -webkit-background-clip: unset;
+            color: #1F6E8C;
+            font-size: 2rem;
+        }
+
+        .sub {
+            color: #2c5a74;
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        /* 本地时间参考条 */
+        .local-time-bar {
+            background: white;
+            border-radius: 60px;
+            padding: 0.75rem 1.8rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(70, 130, 170, 0.15);
+        }
+
+        .local-time-bar span {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1a5d7a;
+        }
+
+        .local-time-bar strong {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #0b435c;
+            background: #e6f0f5;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            margin-left: 12px;
+            letter-spacing: 1px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* 卡片网格 */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* 卡片样式 - 明亮卡片 */
+        .timezone-card {
+            background: #ffffff;
+            border-radius: 1.8rem;
+            padding: 1.3rem 1.3rem 1.2rem 1.3rem;
+            transition: all 0.25s ease;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.03), 0 2px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2edf2;
+            position: relative;
+        }
+
+        .timezone-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 30px -12px rgba(30, 80, 100, 0.2);
+            border-color: #cbdbe6;
+            background: #fefefe;
+        }
+
+        /* 卡片头部 */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            border-bottom: 1px solid #e0ecf2;
+            padding-bottom: 0.7rem;
+            margin-bottom: 1rem;
+        }
+
+        .city-name {
+            font-size: 1.45rem;
+            font-weight: 600;
+            color: #1c506b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .city-name .city-icon {
+            font-size: 1.3rem;
+        }
+
+        .zone-id {
+            font-size: 0.7rem;
+            font-family: monospace;
+            background: #eef3f8;
+            padding: 0.2rem 0.6rem;
+            border-radius: 30px;
+            color: #3d708b;
+            font-weight: 500;
+        }
+
+        .delete-btn {
+            background: #f0f2f5;
+            border: none;
+            color: #9a6e6e;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: #b95a5a;
+        }
+
+        .delete-btn:hover {
+            background: #ffe0e0;
+            color: #c23d3d;
+            transform: scale(1.03);
+        }
+
+        /* 时间显示区域 */
+        .time-display {
+            text-align: center;
+            margin: 0.8rem 0 0.4rem 0;
+        }
+
+        .clock-time {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 2.7rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #0a384e;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.02);
+        }
+
+        .date-info {
+            font-size: 0.85rem;
+            color: #608b9f;
+            margin-top: 0.5rem;
+            display: flex;
+            justify-content: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .date-info span {
+            background: #eff5f9;
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+        }
+
+        .offset-hint {
+            font-size: 0.7rem;
+            text-align: center;
+            margin-top: 0.7rem;
+            color: #608bb0;
+            border-top: 1px solid #e0edf3;
+            padding-top: 0.6rem;
+            font-family: monospace;
+        }
+
+        /* 添加面板 白色干净风格 */
+        .add-panel {
+            background: white;
+            border-radius: 1.8rem;
+            padding: 1.6rem;
+            margin-top: 0.5rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
+            border: 1px solid #dde9ef;
+        }
+
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1f6d8c;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-section {
+            margin-bottom: 1.2rem;
+            background: #f9fdfe;
+            padding: 0.9rem;
+            border-radius: 1.4rem;
+            border: 1px solid #e2edf2;
+        }
+
+        .search-label {
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: #2c6d8c;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        #citySearchInput {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: white;
+            border: 1px solid #cde0e8;
+            border-radius: 1.2rem;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.2s;
+            color: #1b4b64;
+        }
+
+        #citySearchInput:focus {
+            border-color: #3598b9;
+            box-shadow: 0 0 0 3px rgba(53, 152, 185, 0.2);
+        }
+
+        /* 搜索结果下拉 */
+        .search-results {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 1.2rem;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+            max-height: 260px;
+            overflow-y: auto;
+            z-index: 100;
+            border: 1px solid #d4e2ea;
+            display: none;
+        }
+
+        .search-results.show {
+            display: block;
+        }
+
+        .result-item {
+            padding: 0.7rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #eef2f5;
+            transition: background 0.1s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-item:hover {
+            background: #e9f3f8;
+        }
+
+        .result-tz {
+            font-family: monospace;
+            font-weight: 500;
+            color: #1c6b8c;
+        }
+
+        .result-friendly {
+            font-size: 0.7rem;
+            color: #6f95ac;
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+            margin-top: 0.5rem;
+        }
+
+        .input-group {
+            flex: 1;
+            min-width: 160px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #5683a0;
+            margin-bottom: 0.3rem;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            background: #ffffff;
+            border: 1px solid #cde0e8;
+            border-radius: 1.2rem;
+            color: #1f4d66;
+            font-size: 0.9rem;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        select {
+            background: white;
+        }
+
+        .btn-add {
+            background: linear-gradient(100deg, #2c7da0, #1f6685);
+            border: none;
+            padding: 0.7rem 1.6rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .btn-add:hover {
+            background: linear-gradient(100deg, #3c8db0, #2a6f8f);
+            transform: scale(0.98);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            justify-content: flex-end;
+        }
+
+        .btn-secondary {
+            background: #f0f5f8;
+            border: 1px solid #cde0e8;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            color: #2a6f8f;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 500;
+        }
+
+        .btn-secondary:hover {
+            background: #e4edf2;
+            border-color: #b5cfdd;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 3rem;
+            background: #ffffffdb;
+            border-radius: 2rem;
+            color: #4b7997;
+            font-size: 1rem;
+            backdrop-filter: blur(2px);
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #7f9eb0;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem;
+            }
+            .clock-time {
+                font-size: 2.1rem;
+            }
+            .city-name {
+                font-size: 1.2rem;
+            }
+        }
+
+        /* ── 页脚（合规备案） ── */
+        .app-footer {
+            text-align: center; padding: 16px 20px; color: #666;
+            font-size: 14px; background: #ffffff; border-top: 1px solid #e5e7eb;
+            margin-left: 0; width: 100%; box-sizing: border-box;
+        }
+        .app-footer a { color: #999; text-decoration: none; }
+        .app-footer a:hover { color: #165DFF; }
+        @media (max-width: 1024px) {
+            .app-footer { margin-left: 0; width: 100%; }
+        }
+    </style>
+    <link rel="stylesheet" href="/css/nav.css">
+</head>
+<body>
+<div class="sidebar" id="sidebar"></div>
+<div class="main-content">
+<div class="app-container">
+    <div class="header">
+        <h1>全球时区时钟</h1>
+        <div class="sub">🌏 智能地名搜索 · 一键关注全球客户时间</div>
+    </div>
+
+    <div class="local-time-bar">
+        <span>🕘 您的本地时间</span>
+        <strong id="localTimeStrong">--:--:--</strong>
+    </div>
+
+    <!-- 卡片列表容器 -->
+    <div id="cardsContainer" class="cards-grid"></div>
+
+    <!-- 添加新时区面板 (带有地名搜索) -->
+    <div class="add-panel">
+        <div class="panel-title">
+            <span>➕</span> 添加客户时区 &nbsp; <span style="font-size:0.8rem;">🌐 支持城市/国家搜索</span>
+        </div>
+
+        <!-- 智能搜索组件 -->
+        <div class="search-section">
+            <div class="search-label">
+                🔍 根据城市/国家名搜索时区 (例如: 印度, 孟买, 纽约, 伦敦)
+            </div>
+            <div class="search-wrapper">
+                <input type="text" id="citySearchInput" placeholder="输入地名，自动匹配时区..." autocomplete="off">
+                <div id="searchResultsDropdown" class="search-results"></div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="input-group" style="flex: 1.5;">
+                <label>🏷️ 显示名称 (自定义)</label>
+                <input type="text" id="customLabelInput" placeholder="例如: 印度班加罗尔团队">
+            </div>
+            <div class="input-group" style="flex: 2;">
+                <label>🌍 IANA时区 (或通过搜索填充)</label>
+                <input type="text" id="customZoneInput" placeholder="例如: Asia/Kolkata">
+            </div>
+            <div>
+                <button class="btn-add" id="addTimezoneBtn">➕ 添加时钟</button>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn-secondary" id="resetDefaultBtn">↺ 恢复默认时区</button>
+            <button class="btn-secondary" id="clearAllBtn">🗑 清空所有时区</button>
+        </div>
+        <div style="font-size: 0.7rem; margin-top: 12px; color: #5982a0;">
+            💡 提示: 支持全球所有IANA时区，自动处理夏令时。直接搜索“印度”、“洛杉矶”或“悉尼”即可精准匹配时区。
+        </div>
+    </div>
+    <footer class="app-footer" style="text-align: center; padding: 16px; font-size: 13px; color: #6c757d; line-height: 1.8;">
+    © 2026 humanlifeos.art &nbsp;|&nbsp;
+    <a href="https://beian.miit.gov.cn/" target="_blank" style="color: #6c757d; text-decoration: none;">湘ICP备2026007930号</a> &nbsp;|&nbsp;
+    <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011402021877" target="_blank" style="color: #6c757d; text-decoration: none; display: inline-flex; align-items: center;">
+        <img src="https://beian.mps.gov.cn/img/ghs.png" style="height: 14px; margin-right: 4px;">沪公网安备 31011402021877号
+    </a>
+</footer>
+</div>
+
+<script src="/js/utils.js"></script>
+<script>
+    // ---------- 存储管理 ----------
+    const STORAGE_KEY = 'global_customer_timezones_light';
+
+    // 默认预置时区 (明亮版)
+    const DEFAULT_TIMEZONES = [
+        { label: "🗽 纽约 (美国东部)", zone: "America/New_York" },
+        { label: "🌉 旧金山 (美国西部)", zone: "America/Los_Angeles" },
+        { label: "🇬🇧 伦敦 (英国)", zone: "Europe/London" },
+        { label: "🇩🇪 柏林 (中欧)", zone: "Europe/Berlin" },
+        { label: "🇨🇳 北京/上海", zone: "Asia/Shanghai" },
+        { label: "🇯🇵 东京", zone: "Asia/Tokyo" },
+        { label: "🇮🇳 孟买", zone: "Asia/Kolkata" },
+        { label: "🇦🇪 迪拜", zone: "Asia/Dubai" },
+        { label: "🇦🇺 悉尼", zone: "Australia/Sydney" }
+    ];
+
+    let timezoneList = [];
+    let intervalId = null;
+
+    // ---------- 时区索引 (基于Intl全量时区) ----------
+    let allTimezones = [];      // 存储 {zoneId, keywords, friendlyName}
+    
+    // 初始化时区索引
+    function buildTimezoneIndex() {
+        try {
+            const zones = Intl.supportedValuesOf('timeZone');
+            const keywordMap = new Map();
+            
+            for (const zone of zones) {
+                // 提取关键词: 区域和城市
+                const parts = zone.split('/');
+                let region = parts[0];
+                let city = parts.length > 1 ? parts[parts.length-1] : '';
+                city = city.replace(/_/g, ' ');
+                region = region.replace(/_/g, ' ');
+                
+                // 附加别名: 常见国家映射
+                let extraKeywords = [];
+                if (zone === 'Asia/Kolkata') extraKeywords.push('印度', '孟买', '加尔各答', '新德里', 'india', 'mumbai');
+                if (zone === 'Asia/Shanghai') extraKeywords.push('中国', '北京', '上海', 'china', 'beijing');
+                if (zone === 'Asia/Tokyo') extraKeywords.push('日本', '东京', 'japan', 'tokyo');
+                if (zone === 'Europe/London') extraKeywords.push('英国', '伦敦', 'uk', 'london');
+                if (zone === 'America/New_York') extraKeywords.push('纽约', '美国东部', 'new york');
+                if (zone === 'America/Los_Angeles') extraKeywords.push('洛杉矶', '加州', 'la', 'los angeles');
+                if (zone === 'Australia/Sydney') extraKeywords.push('悉尼', '澳大利亚', 'sydney');
+                if (zone === 'Europe/Berlin') extraKeywords.push('柏林', '德国', 'berlin');
+                if (zone === 'Asia/Dubai') extraKeywords.push('迪拜', '阿联酋', 'dubai');
+                if (zone === 'Asia/Singapore') extraKeywords.push('新加坡', 'singapore');
+                if (zone === 'Asia/Bangkok') extraKeywords.push('曼谷', '泰国', 'bangkok');
+                if (zone === 'Asia/Seoul') extraKeywords.push('首尔', '韩国', 'seoul');
+                if (zone.includes('America/Sao')) extraKeywords.push('巴西', '圣保罗');
+                if (zone.includes('Africa/Johannesburg')) extraKeywords.push('南非', '约翰内斯堡');
+                
+                const fullName = `${city} (${region})`.trim();
+                const searchText = `${region} ${city} ${zone} ${extraKeywords.join(' ')}`.toLowerCase();
+                
+                keywordMap.set(zone, {
+                    zoneId: zone,
+                    friendly: fullName,
+                    searchKey: searchText
+                });
+            }
+            
+            // 转换为数组
+            allTimezones = Array.from(keywordMap.values());
+        } catch(e) {
+            console.warn("时区索引构建失败, 降级使用预置列表", e);
+            // 降级方案: 预置常用时区用于搜索
+            allTimezones = [
+                { zoneId: "Asia/Kolkata", friendly: "加尔各答/孟买 (印度)", searchKey: "印度 孟买 加尔各答 asia/kolkata" },
+                { zoneId: "America/New_York", friendly: "纽约 (美国)", searchKey: "纽约 美国 newyork" },
+                { zoneId: "Europe/London", friendly: "伦敦 (英国)", searchKey: "伦敦 英国 london" },
+                { zoneId: "Asia/Shanghai", friendly: "上海/北京 (中国)", searchKey: "上海 北京 中国 china" },
+                { zoneId: "Asia/Tokyo", friendly: "东京 (日本)", searchKey: "东京 日本 tokyo" },
+                { zoneId: "Australia/Sydney", friendly: "悉尼 (澳大利亚)", searchKey: "悉尼 澳大利亚 sydney" },
+                { zoneId: "Europe/Berlin", friendly: "柏林 (德国)", searchKey: "柏林 德国 berlin" },
+                { zoneId: "Asia/Dubai", friendly: "迪拜 (阿联酋)", searchKey: "迪拜 阿联酋 dubai" }
+            ];
+        }
+    }
+
+    // 根据搜索词匹配时区
+    function searchTimezones(query) {
+        if (!query.trim()) return [];
+        const lowerQuery = query.toLowerCase().trim();
+        const results = allTimezones.filter(tz => tz.searchKey.includes(lowerQuery));
+        // 去重 && 按匹配度排序 (出现位置靠前优先)
+        results.sort((a, b) => {
+            const aIdx = a.searchKey.indexOf(lowerQuery);
+            const bIdx = b.searchKey.indexOf(lowerQuery);
+            return aIdx - bIdx;
+        });
+        return results.slice(0, 12);
+    }
+
+    // 渲染搜索下拉
+    function renderSearchDropdown(query) {
+        const dropdown = document.getElementById('searchResultsDropdown');
+        const zoneInput = document.getElementById('customZoneInput');
+        const labelInput = document.getElementById('customLabelInput');
+        
+        if (!query.trim()) {
+            dropdown.classList.remove('show');
+            dropdown.innerHTML = '';
+            return;
+        }
+        const matches = searchTimezones(query);
+        if (matches.length === 0) {
+            dropdown.innerHTML = '<div class="result-item" style="justify-content:center; color:#9aaeb9;">未找到匹配时区，请尝试其他名称或手动输入IANA代码</div>';
+            dropdown.classList.add('show');
+            return;
+        }
+        dropdown.innerHTML = matches.map(match => `
+            <div class="result-item" data-zone="${match.zoneId}" data-friendly="${match.friendly}">
+                <div>
+                    <div class="result-tz">${match.zoneId}</div>
+                    <div class="result-friendly">📍 ${match.friendly}</div>
+                </div>
+                <div style="font-size:0.7rem; color:#2c7da0;">选择 ➕</div>
+            </div>
+        `).join('');
+        dropdown.classList.add('show');
+        
+        // 绑定点击结果事件
+        document.querySelectorAll('.result-item[data-zone]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                const zone = el.getAttribute('data-zone');
+                const friendly = el.getAttribute('data-friendly');
+                if (zone) {
+                    zoneInput.value = zone;
+                    if (!labelInput.value.trim()) {
+                        labelInput.value = friendly;
+                    }
+                    // 关闭下拉
+                    dropdown.classList.remove('show');
+                    // 清空搜索输入框的占位，可保留搜索词但不清空体验更好
+                    document.getElementById('citySearchInput').value = '';
+                }
+                e.stopPropagation();
+            });
+        });
+    }
+
+    // 保存到localStorage
+    function saveTimezonesToStorage() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(timezoneList));
+    }
+
+    function loadTimezones() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    timezoneList = parsed;
+                    return;
+                }
+            } catch(e) {}
+        }
+        timezoneList = JSON.parse(JSON.stringify(DEFAULT_TIMEZONES));
+        saveTimezonesToStorage();
+    }
+
+    // 渲染卡片 (使用最新timezoneList)
+    function renderCards() {
+        const container = document.getElementById('cardsContainer');
+        if (!container) return;
+        if (!timezoneList.length) {
+            container.innerHTML = `<div class="empty-message">
+                🌐 暂无时区卡片，请使用上方搜索框添加客户时区，或点击“恢复默认时区”。
+            </div>`;
+            return;
+        }
+        let html = '';
+        timezoneList.forEach((tz, idx) => {
+            const safeZone = tz.zone || 'UTC';
+            const displayLabel = tz.label || safeZone.split('/').pop() || '时区';
+            html += `
+                <div class="timezone-card" data-zone="${escapeHtml(safeZone)}" data-index="${idx}">
+                    <div class="card-header">
+                        <div class="city-name">
+                            <span class="city-icon">⏰</span>
+                            <span class="city-text">${escapeHtml(displayLabel)}</span>
+                        </div>
+                        <div class="zone-id">${escapeHtml(safeZone)}</div>
+                        <button class="delete-btn" data-zone-delete="${idx}" aria-label="删除">✕</button>
+                    </div>
+                    <div class="time-display">
+                        <div class="clock-time" id="time-${idx}">--:--:--</div>
+                        <div class="date-info">
+                            <span class="weekday" id="weekday-${idx}">---</span>
+                            <span class="fulldate" id="fulldate-${idx}">----/--/--</span>
+                        </div>
+                        <div class="offset-hint" id="offset-${idx}">UTC 偏移计算中...</div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        // 绑定删除事件
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idxAttr = btn.getAttribute('data-zone-delete');
+                if (idxAttr !== null) {
+                    const idxToDelete = parseInt(idxAttr, 10);
+                    if (!isNaN(idxToDelete) && idxToDelete >= 0 && idxToDelete < timezoneList.length) {
+                        timezoneList.splice(idxToDelete, 1);
+                        saveTimezonesToStorage();
+                        renderCards();
+                    }
+                }
+            });
+        });
+    }
+
+    // 获取时区时间信息 (Intl)
+    function getTimeInfoForZone(timeZone) {
+        try {
+            const now = new Date();
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone };
+            let timeStr = new Intl.DateTimeFormat('zh-CN', timeOptions).format(now);
+            if (timeStr === 'Invalid Date' || !timeStr) throw new Error('无效时区');
+            
+            const dateOptions = { weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric', timeZone };
+            const parts = new Intl.DateTimeFormat('zh-CN', dateOptions).formatToParts(now);
+            let weekday = '', fullDate = '';
+            for (const p of parts) {
+                if (p.type === 'weekday') weekday = p.value;
+                if (p.type === 'year') fullDate += p.value + '年';
+                if (p.type === 'month') fullDate += p.value + '月';
+                if (p.type === 'day') fullDate += p.value + '日';
+            }
+            if (!weekday) weekday = '未知';
+            if (!fullDate) fullDate = new Intl.DateTimeFormat('zh-CN', { year:'numeric', month:'numeric', day:'numeric', timeZone }).format(now);
+            
+            const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+            const tzDate = new Date(now.toLocaleString('en-US', { timeZone }));
+            const offsetMinutes = (tzDate.getTime() - utcDate.getTime()) / 60000;
+            const sign = offsetMinutes >= 0 ? '+' : '-';
+            const absOff = Math.abs(offsetMinutes);
+            const hours = Math.floor(absOff / 60);
+            const mins = absOff % 60;
+            let offsetStr = `UTC ${sign}${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
+            if (offsetMinutes === 0) offsetStr = 'UTC ±0';
+            return { timeStr, weekday, fullDate, offsetStr };
+        } catch(e) {
+            return { timeStr: '--:--:--', weekday: '无效', fullDate: '无效时区', offsetStr: '时区错误' };
+        }
+    }
+
+    // 更新所有卡片显示
+    function updateAllTimes() {
+        const cards = document.querySelectorAll('.timezone-card');
+        cards.forEach((card) => {
+            const zone = card.getAttribute('data-zone');
+            if (!zone) return;
+            const { timeStr, weekday, fullDate, offsetStr } = getTimeInfoForZone(zone);
+            const timeDiv = card.querySelector('.clock-time');
+            const weekdaySpan = card.querySelector('.weekday');
+            const fullDateSpan = card.querySelector('.fulldate');
+            const offsetSpan = card.querySelector('.offset-hint');
+            if (timeDiv) timeDiv.textContent = timeStr;
+            if (weekdaySpan) weekdaySpan.textContent = weekday;
+            if (fullDateSpan) fullDateSpan.textContent = fullDate;
+            if (offsetSpan) offsetSpan.textContent = offsetStr;
+        });
+        updateLocalTimeBar();
+    }
+
+    function updateLocalTimeBar() {
+        const localElem = document.getElementById('localTimeStrong');
+        if (localElem) {
+            const now = new Date();
+            localElem.textContent = now.toLocaleTimeString('zh-CN', { hour12: false });
+        }
+    }
+
+    function startClock() {
+        if (intervalId) clearInterval(intervalId);
+        updateAllTimes();
+        intervalId = setInterval(updateAllTimes, 1000);
+    }
+
+    function stopClock() {
+        if (intervalId) clearInterval(intervalId);
+        intervalId = null;
+    }
+
+    // 添加时区
+    function addTimezone(label, zone) {
+        if (!zone) {
+            alert("请提供有效时区 (IANA格式或通过搜索获得)");
+            return false;
+        }
+        // 验证
+        const test = getTimeInfoForZone(zone);
+        if (test.timeStr === '--:--:--' || test.weekday === '无效') {
+            alert(`时区 "${zone}" 无效，请使用标准格式例如 Asia/Kolkata, Europe/London`);
+            return false;
+        }
+        const finalLabel = label.trim() ? label.trim() : zone.split('/').pop().replace(/_/g, ' ');
+        const exists = timezoneList.some(tz => tz.zone === zone);
+        if (exists) {
+            alert(`时区 "${zone}" 已存在，无需重复添加。`);
+            return false;
+        }
+        timezoneList.push({ label: finalLabel, zone: zone });
+        saveTimezonesToStorage();
+        renderCards();
+        return true;
+    }
+
+    function resetToDefault() {
+        if (confirm('恢复默认时区会覆盖当前列表，确定吗？')) {
+            timezoneList = JSON.parse(JSON.stringify(DEFAULT_TIMEZONES));
+            saveTimezonesToStorage();
+            renderCards();
+        }
+    }
+
+    function clearAllZones() {
+        if (timezoneList.length === 0) return;
+        if (confirm('确定清空所有时区吗？')) {
+            timezoneList = [];
+            saveTimezonesToStorage();
+            renderCards();
+        }
+    }
+
+    function initEventHandlers() {
+        const addBtn = document.getElementById('addTimezoneBtn');
+        const labelInput = document.getElementById('customLabelInput');
+        const zoneInput = document.getElementById('customZoneInput');
+        const resetBtn = document.getElementById('resetDefaultBtn');
+        const clearBtn = document.getElementById('clearAllBtn');
+        const searchInput = document.getElementById('citySearchInput');
+        
+        addBtn.addEventListener('click', () => {
+            addTimezone(labelInput.value, zoneInput.value);
+            // 添加后不清空zone，但可保留以快速再次添加同类
+            labelInput.value = '';
+            // zone不清空也无伤大雅，但方便连续添加同样zone? 不推荐，但还是部分清空比较好体验
+            // 只是不自动清空zone，用户可手动删除
+        });
+        resetBtn.addEventListener('click', resetToDefault);
+        clearBtn.addEventListener('click', clearAllZones);
+        
+        // 搜索事件
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value;
+            renderSearchDropdown(query);
+        });
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('searchResultsDropdown');
+            const wrapper = document.querySelector('.search-wrapper');
+            if (dropdown && !wrapper.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+    }
+
+    // 初始化
+    function init() {
+        buildTimezoneIndex();
+        loadTimezones();
+        renderCards();
+        initEventHandlers();
+        startClock();
+    }
+    init();
+</script>
+</div><!-- .main-content -->
+<script src="/js/nav-loader.js"></script>
+</body>
+</html>

@@ -1,0 +1,2455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>灵感便签 · 多墙面</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link rel="stylesheet" href="/css/nav.css">
+
+    <style>
+        /* ========== CSS 变量系统 ========== */
+        :root {
+            --wall-bg: #e8e0ce;
+            --wall-dark: #cfc7b0;
+            --toolbar-bg: rgba(245, 240, 225, 0.92);
+            --toolbar-border: rgba(120, 90, 50, 0.25);
+            --text-primary: #3b2c1f;
+            --text-secondary: #6b5a45;
+            --text-muted: #9a8a70;
+            --accent: #8b6942;
+            --accent-hover: #6d4f32;
+            --danger: #b85c3a;
+            --danger-hover: #9a4a2a;
+            --shadow-sm: 0 2px 6px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+            --shadow-lg: 0 12px 24px rgba(0,0,0,0.18);
+            --shadow-card: 0 8px 15px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,245,200,0.7) inset;
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 40px;
+            --transition-fast: 0.1s ease;
+            --transition-normal: 0.2s ease;
+            --transition-slow: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            --note-width: 230px;
+            --note-min-h: 200px;
+            --drag-h: 32px;
+        }
+
+        /* ========== 全局重置 ========== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Microsoft YaHei', 'KaiTi', '华文楷书', cursive, monospace;
+            background: var(--wall-dark);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+        }
+        body.is-dragging, body.is-dragging * { user-select: none !important; }
+
+        /* ========== 主容器 ========== */
+        .main-content { height: 100%; }
+        .wall {
+            position: relative;
+            width: 100%; height: 100%;
+            background-color: var(--wall-bg);
+            background-image:
+                radial-gradient(circle at 25% 40%, rgba(180,160,130,0.12) 2%, transparent 2.5%),
+                radial-gradient(circle at 70% 85%, rgba(140,115,80,0.1) 1.8%, transparent 2%),
+                repeating-linear-gradient(45deg, rgba(100,70,40,0.03) 0px, rgba(100,70,40,0.03) 2px, transparent 2px, transparent 8px);
+            background-size: 45px 45px, 60px 60px, auto;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        /* ========== 顶部工具栏 ========== */
+        .toolbar {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 64px;
+            background: var(--toolbar-bg);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+            border-bottom: 1px solid var(--toolbar-border);
+            box-shadow: var(--shadow-sm);
+            transition: height var(--transition-normal), box-shadow var(--transition-normal);
+            gap: 12px;
+        }
+        .toolbar.is-scrolled {
+            height: 52px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .toolbar-left, .toolbar-center, .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .toolbar-center {
+            flex: 1;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .title {
+            font-size: 1.35rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.08);
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity var(--transition-fast), transform var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            border-radius: var(--radius-md);
+            position: relative;
+            white-space: nowrap;
+        }
+        .title::before {
+            content: "";
+            display: inline-block;
+            width: 24px; height: 24px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b6942' width='24' height='24'%3E%3Cpath d='M4 4v16h16V4H4zm2 2h12v12H6V6zm2 2v8h8V8H8z'/%3E%3C/svg%3E") no-repeat center;
+            background-size: contain;
+            flex-shrink: 0;
+        }
+        .title:hover { opacity: 0.85; }
+        .title:active { transform: scale(0.98); }
+        .title .nav-hint {
+            position: absolute;
+            top: -2px; right: -6px;
+            width: 8px; height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: pulse-dot 2s ease-in-out infinite;
+            display: none;
+        }
+        .title .nav-hint.is-visible { display: block; }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* 墙面切换器 */
+        .wall-switcher {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.5);
+            border: 1px solid var(--toolbar-border);
+            border-radius: var(--radius-xl);
+            padding: 4px 6px;
+            max-width: 320px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .wall-switcher::-webkit-scrollbar { display: none; }
+        .wall-tab {
+            padding: 6px 14px;
+            border-radius: var(--radius-xl);
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all var(--transition-fast);
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            position: relative;
+        }
+        .wall-tab:hover { background: rgba(139,105,66,0.1); color: var(--accent); }
+        .wall-tab.is-active {
+            background: linear-gradient(135deg, #f5e7d3, #e8d5b8);
+            color: var(--accent-hover);
+            font-weight: 600;
+            box-shadow: 0 2px 0 #b2977a;
+        }
+        .wall-tab .wall-tab-close {
+            display: inline-block;
+            margin-left: 6px;
+            width: 14px; height: 14px;
+            line-height: 14px;
+            text-align: center;
+            border-radius: 50%;
+            font-size: 11px;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+        .wall-tab:hover .wall-tab-close,
+        .wall-tab.is-active .wall-tab-close { opacity: 0.6; }
+        .wall-tab .wall-tab-close:hover { opacity: 1; background: var(--danger); color: #fff; }
+
+        .wall-add-btn {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 1.5px dashed var(--text-muted);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all var(--transition-fast);
+            font-family: inherit;
+        }
+        .wall-add-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(139,105,66,0.08); }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, #f5e7d3, #e8d5b8);
+            border: none;
+            padding: 9px 20px;
+            border-radius: var(--radius-xl);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent-hover);
+            cursor: pointer;
+            box-shadow: 0 4px 0 #b2977a, var(--shadow-sm);
+            transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .add-btn::before {
+            content: "+";
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .add-btn:hover {
+            background: linear-gradient(135deg, #f8ead6, #ecd9be);
+        }
+        .add-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #b2977a, var(--shadow-sm);
+        }
+        .add-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* 图片粘贴提示 */
+        .paste-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            opacity: 0.7;
+        }
+
+        /* 撤销按钮 */
+        .undo-btn {
+            background: transparent;
+            border: 1.5px solid var(--toolbar-border);
+            padding: 8px 14px;
+            border-radius: var(--radius-xl);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            font-family: inherit;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(10px);
+            white-space: nowrap;
+        }
+        .undo-btn.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+        }
+        .undo-btn:hover {
+            background: rgba(180,140,90,0.12);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* ========== 便签容器 ========== */
+        .notes-container {
+            position: relative;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            margin-top: 64px;
+            background: transparent;
+        }
+
+        /* ========== 便签卡片 ========== */
+        .note-card {
+            position: absolute;
+            width: var(--note-width);
+            min-height: var(--note-min-h);
+            background: #fffaec;
+            border-radius: var(--radius-sm) var(--radius-md) var(--radius-md) var(--radius-sm);
+            box-shadow: var(--shadow-card);
+            transition: transform var(--transition-fast), box-shadow var(--transition-normal);
+            cursor: default;
+            padding: 14px 14px 20px 20px;
+            touch-action: none;
+            will-change: transform, left, top;
+        }
+        .note-card:hover {
+            transform: translateY(-3px) rotate(0.15deg);
+            box-shadow: 0 16px 22px -8px rgba(0,0,0,0.28), 0 0 0 1px rgba(250,235,150,0.9) inset;
+        }
+        .note-card.is-dragging {
+            cursor: grabbing;
+            opacity: 0.92;
+            transform: rotate(0.6deg) scale(1.02);
+            box-shadow: var(--shadow-lg);
+            z-index: 9999 !important;
+            transition: none;
+        }
+        .note-card.is-editing {
+            box-shadow: 0 0 0 2px rgba(139,105,66,0.4), var(--shadow-lg);
+        }
+
+        /* 胶带区域 */
+        .drag-handle {
+            position: absolute;
+            top: -4px; left: 0; right: 0;
+            height: var(--drag-h);
+            cursor: grab;
+            z-index: 5;
+            background: transparent;
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            transition: background var(--transition-normal);
+        }
+        .drag-handle:active { cursor: grabbing; }
+        .drag-handle:focus-visible {
+            outline: 2px dashed var(--accent);
+            outline-offset: -2px;
+        }
+
+        /* ===== 胶带样式 ===== */
+        .tape-transparent::before {
+            content: "";
+            position: absolute;
+            top: -8px; left: 50%;
+            transform: translateX(-50%) rotate(-3deg);
+            width: 40px; height: 22px;
+            background: radial-gradient(ellipse at 30% 30%, rgba(220,190,120,0.5), rgba(170,130,70,0.25));
+            border-radius: 50% 40% 60% 50%;
+            filter: blur(1px);
+            pointer-events: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            opacity: 0.85;
+        }
+        .tape-masking::before {
+            content: "";
+            position: absolute;
+            top: -10px; left: 50%;
+            transform: translateX(-50%) rotate(2deg);
+            width: 48px; height: 18px;
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(210,180,130,0.55) 0px,
+                rgba(210,180,130,0.55) 3px,
+                rgba(200,170,120,0.45) 3px,
+                rgba(200,170,120,0.45) 6px
+            );
+            border-radius: 2px;
+            filter: blur(0.3px);
+            pointer-events: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            opacity: 0.9;
+            clip-path: polygon(0 15%, 5% 0, 95% 0, 100% 15%, 100% 85%, 95% 100%, 5% 100%, 0 85%);
+        }
+        .tape-washi-dots::before {
+            content: "";
+            position: absolute;
+            top: -9px; left: 50%;
+            transform: translateX(-50%) rotate(-2deg);
+            width: 46px; height: 20px;
+            background: radial-gradient(circle at 30% 50%, rgba(180,100,100,0.35) 2px, transparent 3px),
+                        radial-gradient(circle at 70% 50%, rgba(100,130,180,0.35) 2px, transparent 3px),
+                        rgba(255,250,240,0.6);
+            background-size: 12px 12px, 12px 12px, 100% 100%;
+            border-radius: 3px;
+            pointer-events: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+            opacity: 0.9;
+        }
+        .tape-washi-stripes::before {
+            content: "";
+            position: absolute;
+            top: -9px; left: 50%;
+            transform: translateX(-50%) rotate(1deg);
+            width: 46px; height: 20px;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(139,105,66,0.2) 0px,
+                rgba(139,105,66,0.2) 4px,
+                rgba(200,160,100,0.25) 4px,
+                rgba(200,160,100,0.25) 8px
+            );
+            border-radius: 3px;
+            pointer-events: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+            opacity: 0.9;
+        }
+        .tape-kraft::before {
+            content: "";
+            position: absolute;
+            top: -8px; left: 50%;
+            transform: translateX(-50%) rotate(-1deg);
+            width: 42px; height: 20px;
+            background: rgba(160,120,70,0.45);
+            border-radius: 2px;
+            pointer-events: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            opacity: 0.9;
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(140,100,50,0.1) 4px, rgba(140,100,50,0.1) 5px);
+        }
+        .tape-none::before { display: none; }
+
+        /* ===== 折角样式 ===== */
+        .corner-fold::after {
+            content: "";
+            position: absolute;
+            bottom: 0; right: 0;
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.12) 45%, rgba(80,50,20,0.18) 100%);
+            clip-path: polygon(0 0, 100% 0, 100% 100%);
+            border-radius: 0 0 var(--radius-md) 0;
+            pointer-events: none;
+        }
+        .corner-dogear::after {
+            content: "";
+            position: absolute;
+            bottom: 0; right: 0;
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.1) 40%, rgba(80,50,20,0.2) 100%);
+            clip-path: polygon(0 0, 100% 0, 100% 100%);
+            border-radius: 0 0 var(--radius-md) 0;
+            pointer-events: none;
+        }
+        .corner-curl::after {
+            content: "";
+            position: absolute;
+            bottom: -2px; right: -2px;
+            width: 32px; height: 32px;
+            background: radial-gradient(ellipse at 100% 100%, rgba(80,50,20,0.25) 0%, rgba(80,50,20,0.05) 60%, transparent 70%);
+            border-radius: 0 0 var(--radius-md) 0;
+            pointer-events: none;
+            box-shadow: -2px -2px 4px rgba(0,0,0,0.05) inset;
+        }
+        .corner-none::after { display: none; }
+
+        /* 便签内容 */
+        .note-content {
+            width: 100%;
+            min-height: 130px;
+            outline: none;
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--text-primary);
+            background: transparent;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            font-family: inherit;
+            cursor: text;
+            padding-right: 18px;
+            user-select: text;
+            pointer-events: auto;
+            transition: background var(--transition-normal);
+        }
+        .note-content[contenteditable="true"] {
+            background: rgba(255,250,210,0.5);
+            box-shadow: 0 0 0 1px #f0dd9e inset;
+            border-radius: var(--radius-sm);
+            padding: 4px 6px;
+            margin: -4px -6px;
+        }
+        .note-content.is-placeholder {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        .note-content a {
+            color: var(--accent);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            cursor: pointer;
+        }
+        .note-content a:hover {
+            color: var(--accent-hover);
+        }
+
+        /* 图片便签 */
+        .note-image-wrap {
+            width: 100%;
+            min-height: 100px;
+            max-height: 280px;
+            overflow: hidden;
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.03);
+        }
+        .note-image-wrap img {
+            max-width: 100%;
+            max-height: 280px;
+            object-fit: contain;
+            border-radius: var(--radius-sm);
+            display: block;
+        }
+
+        /* 删除按钮 */
+        .delete-note {
+            position: absolute;
+            top: 6px; right: 8px;
+            width: 24px; height: 24px;
+            background: transparent;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            z-index: 25;
+            pointer-events: auto;
+            opacity: 0;
+            padding: 10px;
+            margin: -10px;
+        }
+        .note-card:hover .delete-note,
+        .delete-note:focus-visible {
+            opacity: 1;
+            background: #e9cfb0;
+            color: var(--danger);
+            box-shadow: var(--shadow-sm);
+        }
+        .delete-note:hover {
+            background: var(--danger) !important;
+            color: #fff !important;
+            transform: scale(1.08);
+        }
+        .delete-note:active { transform: scale(0.94); }
+        .delete-note:focus-visible {
+            outline: 2px solid var(--danger);
+            outline-offset: 2px;
+        }
+
+        /* 样式切换菜单 */
+        .style-menu {
+            position: absolute;
+            bottom: 6px; right: 6px;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+            z-index: 25;
+        }
+        .note-card:hover .style-menu { opacity: 1; }
+        .style-btn {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(139,105,66,0.2);
+            background: rgba(255,255,255,0.6);
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            transition: all var(--transition-fast);
+            padding: 0;
+        }
+        .style-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(255,255,255,0.9);
+            transform: scale(1.1);
+        }
+        .style-btn:active { transform: scale(0.95); }
+
+        /* 编辑提示条 */
+        .edit-hint {
+            position: absolute;
+            bottom: 4px; left: 50%;
+            transform: translateX(-50%) translateY(4px);
+            font-size: 10px;
+            color: var(--text-muted);
+            opacity: 0;
+            transition: opacity var(--transition-normal), transform var(--transition-normal);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .note-card.is-editing .edit-hint {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* 时间戳 */
+        .note-timestamp {
+            position: absolute;
+            bottom: 4px; left: 10px;
+            font-size: 10px;
+            color: var(--text-muted);
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
+        }
+        .note-card:hover .note-timestamp { opacity: 0.6; }
+
+        /* ========== Todo 模式 ========== */
+        .todo-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 2px 0;
+        }
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 5px;
+            border-radius: 4px;
+            transition: background 0.15s ease;
+            position: relative;
+            min-height: 22px;
+        }
+        .todo-item:hover {
+            background: rgba(139,105,66,0.06);
+        }
+        .todo-item.is-done .todo-text {
+            text-decoration: line-through;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+        .todo-checkbox {
+            width: 14px;
+            height: 14px;
+            min-width: 14px;
+            border: 1.5px solid var(--text-secondary);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 10px;
+            color: var(--accent);
+            transition: all 0.15s ease;
+            background: rgba(255,255,255,0.4);
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .todo-checkbox:hover {
+            border-color: var(--accent);
+            background: rgba(139,105,66,0.1);
+        }
+        .todo-text {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+            cursor: text;
+            word-break: break-word;
+            color: var(--text-primary);
+        }
+        .todo-delete {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            flex-shrink: 0;
+            margin-left: 2px;
+        }
+        .todo-item:hover .todo-delete {
+            opacity: 0.6;
+        }
+        .todo-delete:hover {
+            opacity: 1 !important;
+            color: var(--danger);
+        }
+
+        /* 添加任务行：非编辑状态默认隐藏，hover 便签时淡入，无框无线 */
+        .todo-add-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 12px;
+            transition: opacity 0.2s ease, color 0.15s ease;
+            margin-top: 2px;
+            opacity: 0;
+            border: none;
+            background: transparent;
+        }
+        .note-card:hover .todo-add-row {
+            opacity: 0.45;
+        }
+        .todo-add-row:hover {
+            opacity: 0.9 !important;
+            color: var(--accent);
+            background: rgba(139,105,66,0.06);
+        }
+        .todo-add-icon {
+            width: 14px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .todo-edit-input {
+            flex: 1;
+            border: none;
+            border-bottom: 1.5px solid var(--accent);
+            background: transparent;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--text-primary);
+            padding: 2px 0;
+            outline: none;
+        }
+        .todo-toggle-btn {
+            font-size: 12px !important;
+        }
+        .todo-toggle-btn.is-active {
+            background: rgba(139,105,66,0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* ========== 空状态 ========== */
+        .empty-state {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-muted);
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+        .empty-state.visible { opacity: 1; }
+        .empty-state .hint-icon {
+            width: 56px; height: 56px;
+            margin: 0 auto 16px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239a8a70' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2L12 22M2 12L22 12'/%3E%3C/svg%3E") no-repeat center;
+            background-size: 32px;
+            border: 2px dashed var(--text-muted);
+            border-radius: var(--radius-lg);
+            opacity: 0.5;
+        }
+        .empty-state .hint-title {
+            font-size: 1.15rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .empty-state .hint-sub {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* ========== Toast 通知 ========== */
+        /* ========== Toast 通知 ========== */
+        .toast-container {
+            position: fixed;
+            bottom: 24px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .toast {
+            background: rgba(50,40,30,0.9);
+            color: #f5f0e6;
+            padding: 10px 20px;
+            border-radius: var(--radius-xl);
+            font-size: 0.9rem;
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            transform: translateY(12px);
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        .toast.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast .toast-action {
+            color: #f0c060;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        /* ========== 样式选择弹窗 ========== */
+        .style-picker-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.3);
+            z-index: 5000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .style-picker-overlay.is-active {
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.2s ease, visibility 0s linear 0s;
+        }
+        .style-picker-card {
+            background: #fffdf5;
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            max-width: 360px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.95);
+            transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .style-picker-overlay.is-active .style-picker-card {
+            transform: scale(1);
+        }
+        .style-picker-card h3 {
+            font-size: 1.1rem;
+            color: var(--accent);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .picker-section {
+            margin-bottom: 16px;
+        }
+        .picker-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .picker-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .picker-opt {
+            padding: 6px 12px;
+            border-radius: var(--radius-md);
+            border: 1.5px solid var(--toolbar-border);
+            background: transparent;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-family: inherit;
+        }
+        .picker-opt:hover { border-color: var(--accent); color: var(--accent); }
+        .picker-opt.is-selected {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .picker-opt-color {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform var(--transition-fast), border-color var(--transition-fast);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .picker-opt-color:hover { transform: scale(1.15); }
+        .picker-opt-color.is-selected { border-color: var(--accent); transform: scale(1.15); }
+        .picker-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .picker-btn {
+            padding: 8px 18px;
+            border-radius: var(--radius-xl);
+            border: none;
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        .picker-btn-secondary {
+            background: transparent;
+            border: 1px solid var(--toolbar-border);
+            color: var(--text-secondary);
+        }
+        .picker-btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+        .picker-btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+        .picker-btn-primary:hover { background: var(--accent-hover); }
+
+        /* ========== 首次使用引导浮层 ========== */
+        .onboarding-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.45);
+            z-index: 3000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease, visibility 0s linear 0.4s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .onboarding-overlay.is-active {
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.4s ease, visibility 0s linear 0s;
+        }
+        .onboarding-card {
+            background: #fffdf5;
+            border-radius: var(--radius-lg);
+            padding: 32px 36px;
+            max-width: 460px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .onboarding-overlay.is-active .onboarding-card {
+            transform: scale(1);
+        }
+        .onboarding-card h2 {
+            font-size: 1.4rem;
+            color: var(--accent);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .onboarding-card p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        .onboarding-card .onboarding-steps {
+            text-align: left;
+            margin: 0 0 24px 0;
+            padding: 0;
+            list-style: none;
+        }
+        .onboarding-card .onboarding-steps li {
+            padding: 8px 0 8px 32px;
+            position: relative;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .onboarding-card .onboarding-steps li::before {
+            content: attr(data-step);
+            position: absolute;
+            left: 0; top: 50%;
+            transform: translateY(-50%);
+            width: 22px; height: 22px;
+            background: var(--accent);
+            color: #fff;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .onboarding-card .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 10px 28px;
+            border-radius: var(--radius-xl);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background var(--transition-normal), transform var(--transition-fast);
+        }
+        .onboarding-card .btn-primary:hover { background: var(--accent-hover); }
+        .onboarding-card .btn-primary:active { transform: scale(0.97); }
+        .onboarding-card .skip-link {
+            display: block;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .onboarding-card .skip-link:hover { color: var(--accent); }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 900px) {
+            .wall-switcher { max-width: 200px; }
+            .paste-hint { display: none; }
+        }
+        @media (max-width: 700px) {
+            :root {
+                --note-width: 200px;
+                --note-min-h: 180px;
+            }
+            .toolbar { padding: 0 12px; height: 56px; gap: 8px; }
+            .toolbar.is-scrolled { height: 48px; }
+            .title { font-size: 1.1rem; gap: 6px; padding: 4px 8px; }
+            .title::before { width: 20px; height: 20px; }
+            .notes-container { margin-top: 56px; }
+            .sidebar { width: 260px; left: -260px; }
+            .delete-note { opacity: 0.6; }
+            .wall-switcher { max-width: 140px; }
+            .add-btn { padding: 7px 14px; font-size: 0.8rem; }
+        }
+        @media (max-width: 400px) {
+            :root { --note-width: 170px; }
+            .wall-switcher { display: none; }
+        }
+
+        /* 减少动画偏好 */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+<base target="_blank">
+<base target="_blank">
+
+        /* ── 页脚（合规备案） ── */
+        .app-footer {
+            text-align: center; padding: 16px 20px; color: #666;
+            font-size: 14px; background: #ffffff; border-top: 1px solid #e5e7eb;
+            margin-left: 0; width: 100%; box-sizing: border-box;
+        }
+        .app-footer a { color: #999; text-decoration: none; }
+        .app-footer a:hover { color: #165DFF; }
+        @media (max-width: 1024px) {
+            .app-footer { margin-left: 0; width: 100%; }
+        }
+
+</style>
+</head>
+<body>
+
+<!-- 首次使用引导 -->
+<div id="onboardingOverlay" class="onboarding-overlay">
+    <div class="onboarding-card">
+        <h2>欢迎使用墙面便签</h2>
+        <p>一个复古风格的数字便签板，支持多墙面时间轴、图片粘贴与链接自动识别。</p>
+        <ul class="onboarding-steps">
+            <li data-step="1">点击右上角「新增便签」创建你的第一张便签</li>
+            <li data-step="2">按住便签顶部的胶带区域即可拖拽移动</li>
+            <li data-step="3">点击便签内容即可编辑，按 Enter 保存</li>
+            <li data-step="4">点击标题可呼出侧边导航栏</li>
+            <li data-step="5">直接粘贴图片即可生成图片便签</li>
+            <li data-step="6">使用工具栏切换不同墙面，每天一面墙</li>
+            <li data-step="7">点击便签右下角 ☑ 按钮切换待办清单模式，勾选完成任务</li>
+        </ul>
+        <button class="btn-primary" id="startUsingBtn">开始使用</button>
+        <span class="skip-link" id="skipOnboarding">跳过引导</span>
+    </div>
+</div>
+
+<!-- 样式选择弹窗 -->
+<div id="stylePickerOverlay" class="style-picker-overlay">
+    <div class="style-picker-card">
+        <h3>便签样式</h3>
+        <div class="picker-section">
+            <div class="picker-label">便签颜色</div>
+            <div class="picker-options" id="pickerColors"></div>
+        </div>
+        <div class="picker-section">
+            <div class="picker-label">胶带样式</div>
+            <div class="picker-options" id="pickerTapes"></div>
+        </div>
+        <div class="picker-section">
+            <div class="picker-label">折角样式</div>
+            <div class="picker-options" id="pickerCorners"></div>
+        </div>
+        <div class="picker-actions">
+            <button class="picker-btn picker-btn-secondary" id="pickerCancel">取消</button>
+            <button class="picker-btn picker-btn-primary" id="pickerConfirm">应用</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast 容器 -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- 导航 -->
+<div id="sidebar" class="sidebar">
+    <div class="nav-loading" id="navLoading">
+        <div class="spinner"></div>
+        <div>正在加载导航...</div>
+    </div>
+</div>
+
+<!-- 主内容 -->
+<div class="main-content">
+    <div class="wall">
+        <div class="toolbar" id="toolbar">
+            <div class="toolbar-left">
+                <div class="title">
+                    墙面便签
+                </div>
+            </div>
+            <div class="toolbar-center">
+                <div class="wall-switcher" id="wallSwitcher"></div>
+                <button class="wall-add-btn" id="wallAddBtn" title="新建墙面">+</button>
+            </div>
+            <div class="toolbar-right toolbar-actions">
+                <span class="paste-hint">Ctrl+V 粘贴图片</span>
+                <button class="undo-btn" id="undoBtn" aria-label="撤销删除">撤销删除</button>
+                <button class="add-btn" id="addNoteBtn" aria-label="新增便签">新增便签</button>
+            </div>
+        </div>
+        <div id="notesContainer" class="notes-container" role="region" aria-label="便签区域">
+            <div id="emptyState" class="empty-state">
+                <div class="hint-icon"></div>
+                <div class="hint-title">还没有便签</div>
+                <div class="hint-sub">点击右上角「新增便签」开始记录，或 Ctrl+V 粘贴图片</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/utils.js"></script>
+<script src="/js/nav-loader.js"></script>
+
+<script>
+(function(){
+    'use strict';
+
+    // ========== 配置常量 ==========
+    const STORAGE_KEY = 'stickyNotes_v3';
+    const STORAGE_VERSION = 3;
+    const ONBOARDING_KEY = 'wallnotepad_onboarding_seen_v2';
+    const NOTE_WIDTH = 230;
+    const NOTE_MIN_HEIGHT = 200;
+    const DRAG_THRESHOLD = 5;
+
+    // 颜色配置
+    const COLOR_CONFIG = {
+        cream:     { bg: '#fff7e8', texture: 'rgba(0,0,0,0.01)', name: '米白' },
+        blue:      { bg: '#ecf3fc', texture: 'rgba(80,100,140,0.02)', name: '天蓝' },
+        pink:      { bg: '#fdeff2', texture: 'rgba(200,100,120,0.02)', name: '浅粉' },
+        green:     { bg: '#edf7e9', texture: 'rgba(70,110,50,0.02)', name: '薄荷绿' },
+        lavender:  { bg: '#f1ecfa', texture: 'rgba(110,80,150,0.02)', name: '淡紫' },
+        mint:      { bg: '#e2f0e6', texture: 'rgba(60,110,80,0.02)', name: '青绿' },
+        apricot:   { bg: '#fff0e0', texture: 'rgba(180,100,40,0.02)', name: '杏色' },
+        sage:      { bg: '#e8f0e0', texture: 'rgba(80,120,60,0.02)', name: '鼠尾草' },
+        butter:    { bg: '#fff8d6', texture: 'rgba(160,140,40,0.02)', name: '黄油' },
+        mist:      { bg: '#e8f4f8', texture: 'rgba(60,100,120,0.02)', name: '薄雾蓝' },
+    };
+    const COLOR_KEYS = Object.keys(COLOR_CONFIG);
+    function getRandomColorKey() { return COLOR_KEYS[Math.floor(Math.random() * COLOR_KEYS.length)]; }
+
+    // 胶带样式
+    const TAPE_STYLES = [
+        { key: 'transparent', name: '透明' },
+        { key: 'masking', name: '美纹纸' },
+        { key: 'washi-dots', name: '波点' },
+        { key: 'washi-stripes', name: '条纹' },
+        { key: 'kraft', name: '牛皮纸' },
+        { key: 'none', name: '无' },
+    ];
+    function getRandomTapeStyle() { return TAPE_STYLES[Math.floor(Math.random() * TAPE_STYLES.length)].key; }
+
+    // 折角样式
+    const CORNER_STYLES = [
+        { key: 'fold', name: '小折' },
+        { key: 'dogear', name: '大折' },
+        { key: 'curl', name: '卷角' },
+        { key: 'none', name: '无' },
+    ];
+    function getRandomCornerStyle() { return CORNER_STYLES[Math.floor(Math.random() * CORNER_STYLES.length)].key; }
+
+    // 注入动态配色
+    (function() {
+        const style = document.createElement('style');
+        let css = '';
+        for (const [key, cfg] of Object.entries(COLOR_CONFIG)) {
+            css += `.note-card.color-${key} { background-color: ${cfg.bg}; background-image: repeating-linear-gradient(45deg, ${cfg.texture} 0px, ${cfg.texture} 2px, transparent 2px, transparent 8px); }
+`;
+        }
+        style.textContent = css;
+        document.head.appendChild(style);
+    })();
+
+    // ========== DOM 引用 ==========
+    const container = document.getElementById('notesContainer');
+    const addBtn = document.getElementById('addNoteBtn');
+    const emptyState = document.getElementById('emptyState');
+    const undoBtn = document.getElementById('undoBtn');
+    const toastContainer = document.getElementById('toastContainer');
+    const toolbar = document.getElementById('toolbar');
+    const onboardingOverlay = document.getElementById('onboardingOverlay');
+    const startUsingBtn = document.getElementById('startUsingBtn');
+    const skipOnboarding = document.getElementById('skipOnboarding');
+    const wallSwitcher = document.getElementById('wallSwitcher');
+    const wallAddBtn = document.getElementById('wallAddBtn');
+    const stylePickerOverlay = document.getElementById('stylePickerOverlay');
+    const pickerColors = document.getElementById('pickerColors');
+    const pickerTapes = document.getElementById('pickerTapes');
+    const pickerCorners = document.getElementById('pickerCorners');
+    const pickerCancel = document.getElementById('pickerCancel');
+    const pickerConfirm = document.getElementById('pickerConfirm');
+
+    // ========== 状态 ==========
+    let appData = { walls: {}, currentWallId: null, wallCounter: 0, _version: STORAGE_VERSION };
+    let notesArray = [];
+    let nextId = Date.now();
+    let maxZIndex = 100;
+    let cachedContainerSize = { width: 1200, height: 800 };
+    let deletedStack = [];
+    let isFirstVisit = !localStorage.getItem(ONBOARDING_KEY);
+    let currentPickerNoteId = null;
+    let pickerState = { color: 'cream', tape: 'transparent', corner: 'fold' };
+
+    // ========== 容器尺寸 ==========
+    function updateContainerSize() {
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        cachedContainerSize = { width: rect.width, height: rect.height };
+    }
+    function getContainerSize() { return cachedContainerSize; }
+
+    // ========== 边界约束 ==========
+    function clampNotePosition(left, top, noteWidth, noteHeight) {
+        const { width: cw, height: ch } = getContainerSize();
+        let newLeft = Math.max(0, Math.min(left, cw - noteWidth));
+        let newTop = Math.max(0, Math.min(top, ch - noteHeight));
+        if (cw - noteWidth < 0) newLeft = 0;
+        if (ch - noteHeight < 0) newTop = 0;
+        return { left: newLeft, top: newTop };
+    }
+    function applyBoundaryToElement(noteElement, left, top) {
+        if (!noteElement || !container) return { left, top };
+        const clamped = clampNotePosition(left, top, noteElement.offsetWidth, noteElement.offsetHeight);
+        noteElement.style.left = clamped.left + 'px';
+        noteElement.style.top = clamped.top + 'px';
+        return clamped;
+    }
+
+    // ========== 本地存储 ==========
+    function saveToLocalStorage() {
+        const wall = appData.walls[appData.currentWallId];
+        if (wall) wall.notes = notesArray;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
+        catch(e) { console.warn('Storage save failed:', e); }
+    }
+    function loadFromStorage() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return false;
+        try {
+            const parsed = JSON.parse(stored);
+            if (parsed && parsed._version === STORAGE_VERSION && parsed.walls) {
+                appData = parsed;
+                if (!appData.currentWallId || !appData.walls[appData.currentWallId]) {
+                    const wallIds = Object.keys(appData.walls);
+                    appData.currentWallId = wallIds.length > 0 ? wallIds[0] : null;
+                }
+                if (appData.currentWallId) {
+                    notesArray = appData.walls[appData.currentWallId].notes || [];
+                    notesArray.forEach(n => { if (!n.mode) n.mode = 'text'; });
+                }
+                if (notesArray.length) nextId = Math.max(...notesArray.map(n => n.id), 0) + 1;
+                return true;
+            }
+            if (Array.isArray(parsed)) {
+                const wallId = 'wall-' + Date.now();
+                appData = {
+                    _version: STORAGE_VERSION,
+                    walls: {
+                        [wallId]: {
+                            name: '默认墙面',
+                            notes: parsed.map(item => ({
+                                id: item.id || (nextId++),
+                                left: item.left, top: item.top,
+                                text: item.text || '笔记',
+                                colorKey: (item.colorClass || item.colorKey || '').replace('color-', '') || getRandomColorKey(),
+                                tapeStyle: 'transparent',
+                                cornerStyle: 'fold',
+                                mode: 'text',
+                                rotation: (Math.random() - 0.5) * 3,
+                                type: 'text',
+                                createdAt: Date.now()
+                            })),
+                            createdAt: Date.now()
+                        }
+                    },
+                    currentWallId: wallId,
+                    wallCounter: 1
+                };
+                notesArray = appData.walls[wallId].notes;
+                if (notesArray.length) nextId = Math.max(...notesArray.map(n => n.id), 0) + 1;
+                saveToLocalStorage();
+                return true;
+            }
+        } catch(e) { console.warn('Storage load failed:', e); }
+        return false;
+    }
+
+    // ========== 墙面管理 ==========
+    function createWall(name) {
+        appData.wallCounter++;
+        const wallId = 'wall-' + Date.now() + '-' + appData.wallCounter;
+        appData.walls[wallId] = {
+            name: name || '墙面 ' + appData.wallCounter,
+            notes: [],
+            createdAt: Date.now()
+        };
+        return wallId;
+    }
+    function switchWall(wallId) {
+        if (!appData.walls[wallId]) return;
+        if (appData.currentWallId && appData.walls[appData.currentWallId]) {
+            appData.walls[appData.currentWallId].notes = notesArray;
+        }
+        appData.currentWallId = wallId;
+        notesArray = appData.walls[wallId].notes || [];
+        saveToLocalStorage();
+        document.querySelectorAll('.note-card').forEach(el => el.remove());
+        notesArray.forEach(note => createNoteElement(note));
+        updateEmptyState();
+        renderWallSwitcher();
+        showToast('已切换到「' + appData.walls[wallId].name + '」');
+    }
+    function deleteWall(wallId) {
+        if (!appData.walls[wallId]) return;
+        const wallIds = Object.keys(appData.walls);
+        if (wallIds.length <= 1) {
+            showToast('至少保留一个墙面');
+            return;
+        }
+        if (!confirm('确定删除墙面「' + appData.walls[wallId].name + '」？该墙面下所有便签将永久丢失。')) return;
+        delete appData.walls[wallId];
+        if (appData.currentWallId === wallId) {
+            const remaining = Object.keys(appData.walls);
+            appData.currentWallId = remaining[0];
+            notesArray = appData.walls[remaining[0]].notes || [];
+        }
+        saveToLocalStorage();
+        document.querySelectorAll('.note-card').forEach(el => el.remove());
+        notesArray.forEach(note => createNoteElement(note));
+        updateEmptyState();
+        renderWallSwitcher();
+        showToast('墙面已删除');
+    }
+    function renderWallSwitcher() {
+        if (!wallSwitcher) return;
+        wallSwitcher.innerHTML = '';
+        Object.entries(appData.walls).forEach(([id, wall]) => {
+            const btn = document.createElement('button');
+            btn.className = 'wall-tab' + (id === appData.currentWallId ? ' is-active' : '');
+            btn.title = wall.name;
+            btn.innerHTML = `<span class="wall-tab-name">${escapeHtml(wall.name)}</span>`;
+            if (Object.keys(appData.walls).length > 1) {
+                const close = document.createElement('span');
+                close.className = 'wall-tab-close';
+                close.innerHTML = '✕';
+                close.title = '删除墙面';
+                close.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteWall(id);
+                });
+                btn.appendChild(close);
+            }
+            btn.addEventListener('click', () => {
+                if (id !== appData.currentWallId) switchWall(id);
+            });
+            wallSwitcher.appendChild(btn);
+        });
+    }
+
+    // ========== Toast 通知 ==========
+    function showToast(message, actionText, actionCallback) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
+        toast.innerHTML = `<span>${message}</span>`;
+        if (actionText && actionCallback) {
+            const action = document.createElement('span');
+            action.className = 'toast-action';
+            action.textContent = actionText;
+            action.addEventListener('click', () => {
+                actionCallback();
+                hideToast(toast);
+            });
+            toast.appendChild(action);
+        }
+        toastContainer.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('is-visible'));
+        const hideTimer = setTimeout(() => hideToast(toast), 5000);
+        toast.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        toast.addEventListener('mouseleave', () => setTimeout(() => hideToast(toast), 3000));
+    }
+    function hideToast(toast) {
+        toast.classList.remove('is-visible');
+        setTimeout(() => toast.remove(), 300);
+    }
+
+    // ========== 空状态 ==========
+    function updateEmptyState() {
+        if (!emptyState) return;
+        notesArray.length === 0
+            ? emptyState.classList.add('visible')
+            : emptyState.classList.remove('visible');
+    }
+
+    // ========== 寻找空闲位置 ==========
+    function findFreePosition() {
+        const { width: cw, height: ch } = getContainerSize();
+        const gap = 20;
+        const cols = Math.max(1, Math.floor((cw - gap) / (NOTE_WIDTH + gap)));
+        for (let attempt = 0; attempt < 200; attempt++) {
+            let col = attempt % cols;
+            let row = Math.floor(attempt / cols);
+            let left = gap + col * (NOTE_WIDTH + gap);
+            let top = gap + row * (NOTE_MIN_HEIGHT + gap) + 70;
+            if (attempt > cols * 3) {
+                left += (Math.random() - 0.5) * 40;
+                top += (Math.random() - 0.5) * 40;
+            }
+            left = Math.max(gap, Math.min(left, cw - NOTE_WIDTH - gap));
+            top = Math.max(gap + 70, Math.min(top, ch - NOTE_MIN_HEIGHT - gap));
+            let overlap = false;
+            for (const note of notesArray) {
+                const nRect = {
+                    left: note.left, top: note.top,
+                    right: note.left + NOTE_WIDTH,
+                    bottom: note.top + NOTE_MIN_HEIGHT
+                };
+                if (left < nRect.right + gap && left + NOTE_WIDTH > nRect.left - gap &&
+                    top < nRect.bottom + gap && top + NOTE_MIN_HEIGHT > nRect.top - gap) {
+                    overlap = true; break;
+                }
+            }
+            if (!overlap) return { left, top };
+        }
+        return { left: gap + 20, top: gap + 100 + Math.random() * 150 };
+    }
+
+    // ========== URL 识别与渲染 ==========
+    const URL_REGEX = /(https?:\/\/[^\s<<>"{}|\^`\[\]]+)/g;
+    function renderTextWithLinks(text) {
+        if (!text) return '';
+        const escaped = escapeHtml(text);
+        return escaped.replace(URL_REGEX, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    }
+
+    // ========== DOM 创建 ==========
+    function createNoteDOM(noteObj) {
+        const noteDiv = document.createElement('div');
+        const tapeClass = 'tape-' + (noteObj.tapeStyle || 'transparent');
+        const cornerClass = 'corner-' + (noteObj.cornerStyle || 'fold');
+        noteDiv.className = `note-card color-${noteObj.colorKey} ${tapeClass} ${cornerClass}`;
+        noteDiv.setAttribute('data-id', noteObj.id);
+        noteDiv.setAttribute('role', 'article');
+        const labelText = (noteObj.type === 'image' ? '[图片]' : (noteObj.text || '').slice(0, 30));
+        noteDiv.setAttribute('aria-label', `便签: ${labelText}${labelText.length > 30 ? '...' : ''}`);
+        noteDiv.style.left = noteObj.left + 'px';
+        noteDiv.style.top = noteObj.top + 'px';
+        noteDiv.style.position = 'absolute';
+        const rot = noteObj.rotation || ((Math.random() - 0.5) * 3);
+        noteObj.rotation = rot;
+        noteDiv.style.transform = `rotate(${rot}deg)`;
+
+        const dragHandle = document.createElement('div');
+        dragHandle.className = 'drag-handle';
+        dragHandle.setAttribute('role', 'button');
+        dragHandle.setAttribute('aria-label', '按住拖拽移动便签');
+        dragHandle.setAttribute('tabindex', '0');
+        dragHandle.title = '按住胶带区域拖拽移动';
+
+        let imageWrap = null;
+        if (noteObj.type === 'image' && noteObj.imageData) {
+            imageWrap = document.createElement('div');
+            imageWrap.className = 'note-image-wrap';
+            const img = document.createElement('img');
+            img.src = noteObj.imageData;
+            img.alt = '便签图片';
+            imageWrap.appendChild(img);
+        }
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'note-content';
+        const isPlaceholder = !noteObj.text || noteObj.text === '笔记' || noteObj.text === '新便签' || noteObj.text === '点击编辑内容...';
+
+        if (noteObj.mode === 'todo') {
+            contentDiv.classList.remove('is-placeholder');
+            renderTodoContent(contentDiv, noteObj);
+        } else {
+            if (noteObj.type === 'image') {
+                contentDiv.style.minHeight = '40px';
+            }
+            if (isPlaceholder && noteObj.type !== 'image') {
+                contentDiv.classList.add('is-placeholder');
+                contentDiv.innerText = '点击编辑内容...';
+            } else {
+                if (noteObj.type === 'image') {
+                    contentDiv.innerHTML = noteObj.text ? renderTextWithLinks(noteObj.text) : '';
+                } else {
+                    contentDiv.innerHTML = renderTextWithLinks(noteObj.text);
+                }
+            }
+        }
+        contentDiv.setAttribute('contenteditable', 'false');
+        contentDiv.setAttribute('role', 'textbox');
+        contentDiv.setAttribute('aria-multiline', 'true');
+
+        const delBtn = document.createElement('div');
+        delBtn.className = 'delete-note';
+        delBtn.innerHTML = '✕';
+        delBtn.setAttribute('role', 'button');
+        delBtn.setAttribute('aria-label', '删除便签');
+        delBtn.setAttribute('tabindex', '0');
+        delBtn.title = '移除便签';
+
+        const styleMenu = document.createElement('div');
+        styleMenu.className = 'style-menu';
+        const styleBtn = document.createElement('button');
+        styleBtn.className = 'style-btn';
+        styleBtn.innerHTML = '◐';
+        styleBtn.title = '切换样式';
+        styleBtn.setAttribute('tabindex', '0');
+        styleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openStylePicker(noteObj.id);
+        });
+        styleMenu.appendChild(styleBtn);
+
+        const todoBtn = document.createElement('button');
+        todoBtn.className = 'style-btn todo-toggle-btn';
+        todoBtn.innerHTML = '☑';
+        todoBtn.title = noteObj.mode === 'todo' ? '切换为文本模式' : '切换为待办模式';
+        todoBtn.setAttribute('tabindex', '0');
+        if (noteObj.mode === 'todo') todoBtn.classList.add('is-active');
+        todoBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleTodoMode(noteObj);
+        });
+        styleMenu.appendChild(todoBtn);
+
+        const editHint = document.createElement('div');
+        editHint.className = 'edit-hint';
+        editHint.textContent = noteObj.mode === 'todo' ? '点击任务编辑 · Enter 新建 · 空项删除' : 'Enter 保存 · Shift+Enter 换行';
+
+        const timestamp = document.createElement('div');
+        timestamp.className = 'note-timestamp';
+        const date = noteObj.createdAt ? new Date(noteObj.createdAt) : new Date();
+        timestamp.textContent = `${date.getMonth()+1}/${date.getDate()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+
+        noteDiv.appendChild(dragHandle);
+        if (imageWrap) noteDiv.appendChild(imageWrap);
+        noteDiv.appendChild(contentDiv);
+        noteDiv.appendChild(delBtn);
+        noteDiv.appendChild(styleMenu);
+        noteDiv.appendChild(editHint);
+        noteDiv.appendChild(timestamp);
+        container.appendChild(noteDiv);
+        return { noteDiv, contentDiv, delBtn, dragHandle, editHint, imageWrap };
+    }
+
+    // ========== 编辑绑定 ==========
+    function bindEdit(contentDiv, noteObj) {
+        if (noteObj.mode === 'todo') {
+            return;
+        }
+
+        contentDiv.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A') return;
+            e.stopPropagation();
+            if (contentDiv.getAttribute('contenteditable') === 'true') return;
+            contentDiv.setAttribute('contenteditable', 'true');
+            contentDiv.classList.remove('is-placeholder');
+            contentDiv.innerText = noteObj.text || '';
+            contentDiv.focus();
+            const card = contentDiv.closest('.note-card');
+            if (card) card.classList.add('is-editing');
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.selectNodeContents(contentDiv);
+            range.collapse(false);
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+        });
+
+        function saveEdit() {
+            if (contentDiv.getAttribute('contenteditable') !== 'true') return;
+            let finalText = contentDiv.innerText.trim();
+            if (finalText === '') {
+                if (noteObj.type === 'image') {
+                    finalText = '';
+                } else {
+                    finalText = '笔记';
+                    contentDiv.classList.add('is-placeholder');
+                    contentDiv.innerText = '点击编辑内容...';
+                }
+            } else {
+                contentDiv.classList.remove('is-placeholder');
+            }
+            contentDiv.setAttribute('contenteditable', 'false');
+            const card = contentDiv.closest('.note-card');
+            if (card) {
+                card.classList.remove('is-editing');
+                card.setAttribute('aria-label', `便签: ${finalText.slice(0, 30)}${finalText.length > 30 ? '...' : ''}`);
+            }
+            if (noteObj.type === 'image') {
+                contentDiv.innerHTML = finalText ? renderTextWithLinks(finalText) : '';
+            } else {
+                contentDiv.innerHTML = renderTextWithLinks(finalText);
+            }
+            if (noteObj.text !== finalText) {
+                noteObj.text = finalText;
+                saveToLocalStorage();
+            }
+        }
+
+        contentDiv.addEventListener('blur', saveEdit);
+        contentDiv.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                contentDiv.blur();
+            }
+        });
+    }
+
+    // ========== Todo 模式 ==========
+    // 鲁棒解析：无前缀的换行自动合并到上一个任务，防止意外拆分行
+    function parseTodoText(text) {
+        if (!text) return [];
+        const lines = text.split('\n');
+        const todos = [];
+        let currentText = '';
+        let currentDone = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const match = line.match(/^- \[([ x])\] (.*)$/);
+            if (match) {
+                if (currentText) {
+                    todos.push({ id: todos.length, text: currentText.trim(), done: currentDone });
+                }
+                currentDone = match[1] === 'x';
+                currentText = match[2];
+            } else if (line.trim() !== '') {
+                // 追加到当前任务（处理长文本软换行或粘贴带来的换行）
+                currentText += ' ' + line.trim();
+            }
+        }
+        if (currentText) {
+            todos.push({ id: todos.length, text: currentText.trim(), done: currentDone });
+        }
+        return todos;
+    }
+
+    function serializeTodoText(todos) {
+        return todos.map(t => `- [${t.done ? 'x' : ' '}] ${t.text}`).join('\n');
+    }
+
+    function toggleTodoItem(noteObj, idx) {
+        const todos = parseTodoText(noteObj.text);
+        if (todos[idx]) {
+            todos[idx].done = !todos[idx].done;
+            noteObj.text = serializeTodoText(todos);
+        }
+    }
+
+    function deleteTodoItem(noteObj, idx) {
+        const todos = parseTodoText(noteObj.text);
+        todos.splice(idx, 1);
+        noteObj.text = serializeTodoText(todos);
+    }
+
+    function addTodoItem(noteObj, text) {
+        const todos = parseTodoText(noteObj.text);
+        todos.push({ id: Date.now(), text: text || '新任务', done: false });
+        noteObj.text = serializeTodoText(todos);
+    }
+
+    function updateTodoText(noteObj, idx, text) {
+        const todos = parseTodoText(noteObj.text);
+        if (todos[idx]) {
+            todos[idx].text = text;
+            noteObj.text = serializeTodoText(todos);
+        }
+    }
+
+    function enterTodoEditMode(itemEl, textSpan, noteObj, idx, container) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'todo-edit-input';
+        input.value = textSpan.textContent;
+
+        // 粘贴时过滤换行符，防止一个任务被拆成多个
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasteText = (e.clipboardData || window.clipboardData).getData('text');
+            const cleaned = pasteText.replace(/\r?\n+/g, ' ').trim();
+            const start = input.selectionStart || 0;
+            const end = input.selectionEnd || 0;
+            input.value = input.value.substring(0, start) + cleaned + input.value.substring(end);
+            input.selectionStart = input.selectionEnd = start + cleaned.length;
+        });
+
+        textSpan.replaceWith(input);
+        input.focus();
+        input.select();
+
+        function commit() {
+            const val = input.value.trim().replace(/\r?\n+/g, ' ');
+            if (val === '') {
+                deleteTodoItem(noteObj, idx);
+            } else {
+                updateTodoText(noteObj, idx, val);
+            }
+            renderTodoContent(container, noteObj);
+            saveToLocalStorage();
+        }
+
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.blur();
+                setTimeout(() => {
+                    addTodoItem(noteObj, '');
+                    renderTodoContent(container, noteObj);
+                    saveToLocalStorage();
+                    setTimeout(() => {
+                        const items = container.querySelectorAll('.todo-item');
+                        if (items[idx + 1]) {
+                            const nextText = items[idx + 1].querySelector('.todo-text');
+                            if (nextText) enterTodoEditMode(items[idx + 1], nextText, noteObj, idx + 1, container);
+                        }
+                    }, 10);
+                }, 10);
+            } else if (e.key === 'Backspace' && input.value === '') {
+                e.preventDefault();
+                input.blur();
+                deleteTodoItem(noteObj, idx);
+                renderTodoContent(container, noteObj);
+                saveToLocalStorage();
+                setTimeout(() => {
+                    const items = container.querySelectorAll('.todo-item');
+                    if (items[idx - 1]) {
+                        const prevText = items[idx - 1].querySelector('.todo-text');
+                        if (prevText) enterTodoEditMode(items[idx - 1], prevText, noteObj, idx - 1, container);
+                    }
+                }, 10);
+            }
+        });
+    }
+
+    function createTodoItemElement(todo, idx, noteObj, container) {
+        const item = document.createElement('div');
+        item.className = 'todo-item' + (todo.done ? ' is-done' : '');
+        item.dataset.index = idx;
+
+        const checkbox = document.createElement('span');
+        checkbox.className = 'todo-checkbox';
+        checkbox.innerHTML = todo.done ? '✓' : '';
+        checkbox.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleTodoItem(noteObj, idx);
+            renderTodoContent(container, noteObj);
+            saveToLocalStorage();
+        });
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'todo-text';
+        textSpan.textContent = todo.text;
+        textSpan.addEventListener('click', (e) => {
+            e.stopPropagation();
+            enterTodoEditMode(item, textSpan, noteObj, idx, container);
+        });
+
+        const delBtn = document.createElement('span');
+        delBtn.className = 'todo-delete';
+        delBtn.innerHTML = '×';
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteTodoItem(noteObj, idx);
+            renderTodoContent(container, noteObj);
+            saveToLocalStorage();
+        });
+
+        item.appendChild(checkbox);
+        item.appendChild(textSpan);
+        item.appendChild(delBtn);
+        return item;
+    }
+
+    function createTodoAddRow(noteObj, container) {
+        const addRow = document.createElement('div');
+        addRow.className = 'todo-add-row';
+        addRow.innerHTML = '<span class="todo-add-icon">+</span><span class="todo-add-text">添加任务</span>';
+        addRow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            addTodoItem(noteObj, '');
+            renderTodoContent(container, noteObj);
+            saveToLocalStorage();
+            setTimeout(() => {
+                const items = container.querySelectorAll('.todo-item');
+                const lastItem = items[items.length - 1];
+                if (lastItem) {
+                    const textSpan = lastItem.querySelector('.todo-text');
+                    if (textSpan) enterTodoEditMode(lastItem, textSpan, noteObj, items.length - 1, container);
+                }
+            }, 10);
+        });
+        return addRow;
+    }
+
+    function renderTodoContent(container, noteObj) {
+        const todos = parseTodoText(noteObj.text);
+        container.innerHTML = '';
+        const list = document.createElement('div');
+        list.className = 'todo-list';
+        todos.forEach((todo, idx) => {
+            list.appendChild(createTodoItemElement(todo, idx, noteObj, container));
+        });
+        list.appendChild(createTodoAddRow(noteObj, container));
+        container.appendChild(list);
+    }
+
+    function toggleTodoMode(noteObj) {
+        const wasTodo = noteObj.mode === 'todo';
+        noteObj.mode = wasTodo ? 'text' : 'todo';
+
+        if (!wasTodo) {
+            const currentText = noteObj.text || '';
+            const isPlaceholder = !currentText || currentText === '笔记' || currentText === '新便签' || currentText === '点击编辑内容...';
+            if (isPlaceholder || !currentText.trim()) {
+                noteObj.text = '- [ ] 新任务';
+            } else if (!currentText.includes('- [')) {
+                // 长文本转 Todo：整段作为一个任务，换行替换为空格，避免被拆成多个 checkbox
+                const cleanedText = currentText.replace(/\r?\n+/g, ' ').trim();
+                noteObj.text = `- [ ] ${cleanedText}`;
+            }
+        }
+
+        saveToLocalStorage();
+
+        const el = document.querySelector(`.note-card[data-id='${noteObj.id}']`);
+        if (!el) return;
+
+        const contentDiv = el.querySelector('.note-content');
+        const todoBtn = el.querySelector('.todo-toggle-btn');
+        const editHint = el.querySelector('.edit-hint');
+        if (!contentDiv) return;
+
+        if (todoBtn) {
+            todoBtn.title = noteObj.mode === 'todo' ? '切换为文本模式' : '切换为待办模式';
+            todoBtn.classList.toggle('is-active', noteObj.mode === 'todo');
+        }
+        if (editHint) {
+            editHint.textContent = noteObj.mode === 'todo' ? '点击任务编辑 · Enter 新建 · 空项删除' : 'Enter 保存 · Shift+Enter 换行';
+        }
+
+        if (noteObj.mode === 'todo') {
+            contentDiv.classList.remove('is-placeholder');
+            renderTodoContent(contentDiv, noteObj);
+        } else {
+            const isPlaceholder = !noteObj.text || noteObj.text === '笔记' || noteObj.text === '新便签' || noteObj.text === '点击编辑内容...';
+            if (isPlaceholder) {
+                contentDiv.classList.add('is-placeholder');
+                contentDiv.innerText = '点击编辑内容...';
+            } else {
+                contentDiv.classList.remove('is-placeholder');
+                contentDiv.innerHTML = renderTextWithLinks(noteObj.text);
+            }
+        }
+    }
+
+    // ========== 拖拽绑定（状态机重构版） ==========
+    function bindDrag(noteElement, dragHandle, noteObj) {
+        let state = 'idle';
+        let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+        let currentPointerId = null;
+        let dragRafId = null;
+        let pendingPos = null;
+        let unbindFns = [];
+
+        function cleanupDrag() {
+            if (dragRafId) { cancelAnimationFrame(dragRafId); dragRafId = null; }
+            pendingPos = null;
+            state = 'idle';
+            if (currentPointerId !== null) {
+                try { dragHandle.releasePointerCapture(currentPointerId); } catch(e) {}
+                currentPointerId = null;
+            }
+            noteElement.classList.remove('is-dragging');
+            document.body.classList.remove('is-dragging');
+            noteElement.style.transition = 'transform 0.1s ease, box-shadow 0.2s';
+            window.removeEventListener('pointermove', onWindowPointerMove);
+            window.removeEventListener('pointerup', onWindowPointerUp);
+            window.removeEventListener('pointercancel', onWindowPointerCancel);
+        }
+
+        function finalizePosition() {
+            const finalLeft = parseFloat(noteElement.style.left) || 0;
+            const finalTop = parseFloat(noteElement.style.top) || 0;
+            const clamped = clampNotePosition(finalLeft, finalTop, noteElement.offsetWidth, noteElement.offsetHeight);
+            noteElement.style.left = clamped.left + 'px';
+            noteElement.style.top = clamped.top + 'px';
+            noteElement.style.transform = `rotate(${noteObj.rotation || 0}deg)`;
+            if (noteObj.left !== clamped.left || noteObj.top !== clamped.top) {
+                noteObj.left = clamped.left;
+                noteObj.top = clamped.top;
+                saveToLocalStorage();
+            }
+        }
+
+        function scheduleMove(left, top) {
+            pendingPos = { left, top };
+            if (!dragRafId) {
+                dragRafId = requestAnimationFrame(() => {
+                    dragRafId = null;
+                    if (pendingPos && state === 'dragging') {
+                        const clamped = clampNotePosition(pendingPos.left, pendingPos.top, noteElement.offsetWidth, noteElement.offsetHeight);
+                        noteElement.style.left = clamped.left + 'px';
+                        noteElement.style.top = clamped.top + 'px';
+                        pendingPos = null;
+                    }
+                });
+            }
+        }
+
+        function onWindowPointerMove(e) {
+            if (e.pointerId !== currentPointerId) return;
+            const dx = Math.abs(e.clientX - startX);
+            const dy = Math.abs(e.clientY - startY);
+
+            if (state === 'pointerDown') {
+                if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+                    state = 'dragging';
+                    noteElement.classList.add('is-dragging');
+                    document.body.classList.add('is-dragging');
+                    noteElement.style.transition = 'none';
+                    noteElement.style.transform = 'rotate(0deg) scale(1.02)';
+                } else {
+                    return;
+                }
+            }
+            if (state !== 'dragging') return;
+            e.preventDefault();
+            const newLeft = startLeft + (e.clientX - startX);
+            const newTop = startTop + (e.clientY - startY);
+            scheduleMove(newLeft, newTop);
+        }
+
+        function onWindowPointerUp(e) {
+            if (e.pointerId !== currentPointerId) return;
+            const wasDragging = state === 'dragging';
+            cleanupDrag();
+            if (wasDragging) finalizePosition();
+        }
+
+        function onWindowPointerCancel(e) {
+            if (e.pointerId !== currentPointerId) return;
+            const wasDragging = state === 'dragging';
+            cleanupDrag();
+            if (wasDragging) finalizePosition();
+        }
+
+        function onPointerDown(e) {
+            if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (state !== 'idle') cleanupDrag();
+
+            currentPointerId = e.pointerId;
+            state = 'pointerDown';
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = parseFloat(noteElement.style.left) || 0;
+            startTop = parseFloat(noteElement.style.top) || 0;
+
+            maxZIndex++;
+            noteElement.style.zIndex = maxZIndex;
+            noteElement.style.transform = `rotate(${noteObj.rotation || 0}deg) scale(0.98)`;
+            noteElement.style.transition = 'transform 0.05s ease';
+
+            try { dragHandle.setPointerCapture(currentPointerId); } catch(err) {}
+
+            window.addEventListener('pointermove', onWindowPointerMove);
+            window.addEventListener('pointerup', onWindowPointerUp);
+            window.addEventListener('pointercancel', onWindowPointerCancel);
+        }
+
+        dragHandle.addEventListener('pointerdown', onPointerDown);
+        unbindFns.push(() => dragHandle.removeEventListener('pointerdown', onPointerDown));
+
+        function onVisibilityChange() {
+            if (document.hidden && state !== 'idle') {
+                const wasDragging = state === 'dragging';
+                cleanupDrag();
+                if (wasDragging) finalizePosition();
+            }
+        }
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        unbindFns.push(() => document.removeEventListener('visibilitychange', onVisibilityChange));
+
+        noteElement.addEventListener('pointerdown', (e) => {
+            if (e.target === dragHandle || dragHandle.contains(e.target)) return;
+            maxZIndex++;
+            noteElement.style.zIndex = maxZIndex;
+        });
+
+        return function unbindDrag() {
+            cleanupDrag();
+            unbindFns.forEach(fn => fn());
+            unbindFns = [];
+        };
+    }
+
+    function deleteNoteById(id, showUndo = true) {
+        const index = notesArray.findIndex(n => n.id === id);
+        if (index === -1) return;
+        const noteToDelete = notesArray[index];
+        if (noteToDelete && noteToDelete._unbindDrag) {
+            noteToDelete._unbindDrag();
+            delete noteToDelete._unbindDrag;
+        }
+        const deletedNote = { ...noteToDelete, _deletedAt: Date.now() };
+        notesArray.splice(index, 1);
+        const element = document.querySelector(`.note-card[data-id='${id}']`);
+        if (element) {
+            element.style.transform = 'scale(0.8)';
+            element.style.opacity = '0';
+            element.style.transition = 'all 0.2s ease';
+            setTimeout(() => element.remove(), 200);
+        }
+        saveToLocalStorage();
+        updateEmptyState();
+
+        if (showUndo) {
+            deletedStack.push(deletedNote);
+            undoBtn.classList.add('is-visible');
+            showToast('便签已删除', '撤销', () => undoDelete());
+            setTimeout(() => {
+                const idx = deletedStack.findIndex(n => n.id === deletedNote.id);
+                if (idx !== -1) {
+                    deletedStack.splice(idx, 1);
+                    if (deletedStack.length === 0) undoBtn.classList.remove('is-visible');
+                }
+            }, 8000);
+        }
+    }
+
+    function undoDelete() {
+        if (deletedStack.length === 0) return;
+        const note = deletedStack.pop();
+        delete note._deletedAt;
+        notesArray.push(note);
+        createNoteElement(note);
+        saveToLocalStorage();
+        updateEmptyState();
+        if (deletedStack.length === 0) undoBtn.classList.remove('is-visible');
+        showToast('已撤销删除');
+    }
+
+    // ========== 创建完整便签元素 ==========
+    function createNoteElement(noteObj) {
+        const { noteDiv, contentDiv, delBtn, dragHandle } = createNoteDOM(noteObj);
+        bindEdit(contentDiv, noteObj);
+        noteObj._unbindDrag = bindDrag(noteDiv, dragHandle, noteObj);
+        delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteNoteById(noteObj.id); });
+        delBtn.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                deleteNoteById(noteObj.id);
+            }
+        });
+        return noteDiv;
+    }
+
+    // ========== 新增便签 ==========
+    function addNewNote(text = '新便签', type = 'text', imageData = null, mode = 'text') {
+        if (!container) return;
+        const pos = findFreePosition();
+        const newId = nextId++;
+        const newNote = {
+            id: newId,
+            left: pos.left,
+            top: pos.top,
+            text: text,
+            colorKey: getRandomColorKey(),
+            tapeStyle: getRandomTapeStyle(),
+            cornerStyle: getRandomCornerStyle(),
+            rotation: (Math.random() - 0.5) * 3,
+            type: type,
+            mode: mode,
+            imageData: imageData,
+            createdAt: Date.now()
+        };
+        notesArray.push(newNote);
+        createNoteElement(newNote);
+        saveToLocalStorage();
+        updateEmptyState();
+
+        const el = document.querySelector(`.note-card[data-id='${newId}']`);
+        if (el) {
+            el.style.transform = `rotate(${newNote.rotation}deg) scale(0.5)`;
+            el.style.opacity = '0';
+            requestAnimationFrame(() => {
+                el.style.transition = 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease';
+                el.style.transform = `rotate(${newNote.rotation}deg) scale(1)`;
+                el.style.opacity = '1';
+                setTimeout(() => {
+                    el.style.transition = 'transform 0.1s ease, box-shadow 0.2s';
+                }, 350);
+            });
+        }
+    }
+
+    // ========== 图片粘贴 ==========
+    document.addEventListener('paste', (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        let hasImage = false;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                hasImage = true;
+                const blob = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    addNewNote('', 'image', event.target.result);
+                    showToast('图片便签已创建');
+                };
+                reader.readAsDataURL(blob);
+            }
+        }
+        if (hasImage) {
+            e.preventDefault();
+        }
+    });
+
+    // ========== 默认便签 ==========
+    function initDefaultNotes() {
+        notesArray = [];
+        const demoTexts = [
+            '复古牛皮纸质感',
+            '按住胶带区域拖拽',
+            '点击标题呼出侧边栏',
+            '右上角可撤销删除',
+            'Enter 保存 · Shift+Enter 换行',
+            'Ctrl+V 粘贴图片生成图片便签',
+            '链接 https://example.com 自动识别',
+            '每天一面墙，记录不同心情'
+        ];
+        const { width: cw, height: ch } = getContainerSize();
+        const gap = 20;
+        const cols = Math.max(1, Math.floor((cw - gap) / (NOTE_WIDTH + gap)));
+        for (let i = 0; i < demoTexts.length; i++) {
+            let col = i % cols;
+            let row = Math.floor(i / cols);
+            let left = gap + col * (NOTE_WIDTH + gap);
+            let top = gap + row * (NOTE_MIN_HEIGHT + gap) + 70;
+            left = Math.min(left, Math.max(gap, cw - NOTE_WIDTH - gap));
+            top = Math.min(top, Math.max(gap + 70, ch - NOTE_MIN_HEIGHT - gap));
+            notesArray.push({
+                id: nextId++,
+                left, top,
+                text: demoTexts[i],
+                colorKey: COLOR_KEYS[i % COLOR_KEYS.length],
+                tapeStyle: TAPE_STYLES[i % TAPE_STYLES.length].key,
+                cornerStyle: CORNER_STYLES[i % CORNER_STYLES.length].key,
+                rotation: (Math.random() - 0.5) * 3,
+                type: 'text',
+                mode: 'text',
+                createdAt: Date.now()
+            });
+        }
+    }
+
+    // ========== 加载与初始化 ==========
+    function loadAndInit() {
+        updateContainerSize();
+        const hasStored = loadFromStorage();
+        if (!hasStored) {
+            const wallId = createWall('默认墙面');
+            appData.currentWallId = wallId;
+            initDefaultNotes();
+            appData.walls[wallId].notes = notesArray;
+            saveToLocalStorage();
+        }
+        if (notesArray.length === 0 && appData.walls[appData.currentWallId]) {
+            initDefaultNotes();
+            appData.walls[appData.currentWallId].notes = notesArray;
+            saveToLocalStorage();
+        }
+        document.querySelectorAll('.note-card').forEach(el => el.remove());
+        notesArray.forEach(note => createNoteElement(note));
+        updateEmptyState();
+        renderWallSwitcher();
+    }
+
+    // ========== 窗口缩放 ==========
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            updateContainerSize();
+            for (const note of notesArray) {
+                const element = document.querySelector(`.note-card[data-id='${note.id}']`);
+                if (!element) continue;
+                const clamped = clampNotePosition(note.left, note.top, element.offsetWidth, element.offsetHeight);
+                if (clamped.left !== note.left || clamped.top !== note.top) {
+                    note.left = clamped.left;
+                    note.top = clamped.top;
+                    element.style.left = clamped.left + 'px';
+                    element.style.top = clamped.top + 'px';
+                }
+            }
+            saveToLocalStorage();
+        }, 150);
+    });
+
+    // 导航由 nav-loader.js 统一管理
+
+    // ========== 样式选择器 ==========
+    function openStylePicker(noteId) {
+        currentPickerNoteId = noteId;
+        const note = notesArray.find(n => n.id === noteId);
+        if (!note) return;
+        pickerState = {
+            color: note.colorKey || 'cream',
+            tape: note.tapeStyle || 'transparent',
+            corner: note.cornerStyle || 'fold'
+        };
+        renderPicker();
+        stylePickerOverlay.classList.add('is-active');
+    }
+    function closeStylePicker() {
+        stylePickerOverlay.classList.remove('is-active');
+        currentPickerNoteId = null;
+    }
+    function renderPicker() {
+        pickerColors.innerHTML = '';
+        Object.entries(COLOR_CONFIG).forEach(([key, cfg]) => {
+            const btn = document.createElement('div');
+            btn.className = 'picker-opt-color' + (pickerState.color === key ? ' is-selected' : '');
+            btn.style.backgroundColor = cfg.bg;
+            btn.title = cfg.name;
+            btn.addEventListener('click', () => {
+                pickerState.color = key;
+                renderPicker();
+            });
+            pickerColors.appendChild(btn);
+        });
+        pickerTapes.innerHTML = '';
+        TAPE_STYLES.forEach(t => {
+            const btn = document.createElement('button');
+            btn.className = 'picker-opt' + (pickerState.tape === t.key ? ' is-selected' : '');
+            btn.textContent = t.name;
+            btn.addEventListener('click', () => {
+                pickerState.tape = t.key;
+                renderPicker();
+            });
+            pickerTapes.appendChild(btn);
+        });
+        pickerCorners.innerHTML = '';
+        CORNER_STYLES.forEach(c => {
+            const btn = document.createElement('button');
+            btn.className = 'picker-opt' + (pickerState.corner === c.key ? ' is-selected' : '');
+            btn.textContent = c.name;
+            btn.addEventListener('click', () => {
+                pickerState.corner = c.key;
+                renderPicker();
+            });
+            pickerCorners.appendChild(btn);
+        });
+    }
+    function applyPicker() {
+        if (!currentPickerNoteId) return;
+        const note = notesArray.find(n => n.id === currentPickerNoteId);
+        if (!note) return;
+        note.colorKey = pickerState.color;
+        note.tapeStyle = pickerState.tape;
+        note.cornerStyle = pickerState.corner;
+        const el = document.querySelector(`.note-card[data-id='${currentPickerNoteId}']`);
+        if (el) {
+            COLOR_KEYS.forEach(k => el.classList.remove('color-' + k));
+            TAPE_STYLES.forEach(t => el.classList.remove('tape-' + t.key));
+            CORNER_STYLES.forEach(c => el.classList.remove('corner-' + c.key));
+            el.classList.add('color-' + note.colorKey);
+            el.classList.add('tape-' + note.tapeStyle);
+            el.classList.add('corner-' + note.cornerStyle);
+        }
+        saveToLocalStorage();
+        closeStylePicker();
+        showToast('样式已更新');
+    }
+    if (pickerCancel) pickerCancel.addEventListener('click', closeStylePicker);
+    if (pickerConfirm) pickerConfirm.addEventListener('click', applyPicker);
+    if (stylePickerOverlay) {
+        stylePickerOverlay.addEventListener('click', (e) => {
+            if (e.target === stylePickerOverlay) closeStylePicker();
+        });
+    }
+
+    // ========== 首次使用引导 ==========
+    function showOnboarding() {
+        if (!onboardingOverlay) return;
+        onboardingOverlay.classList.add('is-active');
+        onboardingOverlay.setAttribute('aria-hidden', 'false');
+    }
+    function hideOnboarding() {
+        if (!onboardingOverlay) return;
+        onboardingOverlay.classList.remove('is-active');
+        onboardingOverlay.setAttribute('aria-hidden', 'true');
+        localStorage.setItem(ONBOARDING_KEY, 'true');
+        isFirstVisit = false;
+    }
+    if (isFirstVisit) {
+        setTimeout(showOnboarding, 600);
+    }
+    if (startUsingBtn) startUsingBtn.addEventListener('click', hideOnboarding);
+    if (skipOnboarding) skipOnboarding.addEventListener('click', hideOnboarding);
+    onboardingOverlay?.addEventListener('click', (e) => {
+        if (e.target === onboardingOverlay) hideOnboarding();
+    });
+
+    // ========== 事件绑定 ==========
+    addBtn.addEventListener('click', () => addNewNote('新便签'));
+    undoBtn.addEventListener('click', undoDelete);
+
+    container.addEventListener('dblclick', (e) => {
+        if (e.target.closest('.note-card') || e.target.closest('.delete-note') || e.target.closest('.style-menu')) return;
+
+        const rect = container.getBoundingClientRect();
+        let left = e.clientX - rect.left - NOTE_WIDTH / 2;
+        let top  = e.clientY - rect.top - 16;
+
+        const clamped = clampNotePosition(left, top, NOTE_WIDTH, NOTE_MIN_HEIGHT);
+        const newId = nextId++;
+        const newNote = {
+            id: newId,
+            left: clamped.left,
+            top: clamped.top,
+            text: '',
+            colorKey: getRandomColorKey(),
+            tapeStyle: getRandomTapeStyle(),
+            cornerStyle: getRandomCornerStyle(),
+            rotation: (Math.random() - 0.5) * 3,
+            type: 'text',
+            mode: 'text',
+            createdAt: Date.now()
+        };
+        notesArray.push(newNote);
+        createNoteElement(newNote);
+        saveToLocalStorage();
+        updateEmptyState();
+
+        const el = document.querySelector(`.note-card[data-id='${newId}']`);
+        if (el) {
+            el.style.transform = `rotate(${newNote.rotation}deg) scale(0.5)`;
+            el.style.opacity = '0';
+            requestAnimationFrame(() => {
+                el.style.transition = 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease';
+                el.style.transform = `rotate(${newNote.rotation}deg) scale(1)`;
+                el.style.opacity = '1';
+                setTimeout(() => {
+                    el.style.transition = 'transform 0.1s ease, box-shadow 0.2s';
+                }, 350);
+            });
+        }
+
+        setTimeout(() => {
+            const contentEl = document.querySelector(`.note-card[data-id='${newId}'] .note-content`);
+            if (contentEl) {
+                contentEl.setAttribute('contenteditable', 'true');
+                contentEl.classList.remove('is-placeholder');
+                contentEl.innerText = '';
+                contentEl.focus();
+                const card = contentEl.closest('.note-card');
+                if (card) card.classList.add('is-editing');
+                const range = document.createRange();
+                const sel = window.getSelection();
+                range.selectNodeContents(contentEl);
+                range.collapse(false);
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+            }
+        }, 60);
+    });
+    if (wallAddBtn) {
+        wallAddBtn.addEventListener('click', () => {
+            const name = prompt('新墙面名称（留空使用默认）:', new Date().toLocaleDateString('zh-CN') + ' 的墙面');
+            if (name === null) return;
+            const wallId = createWall(name || undefined);
+            switchWall(wallId);
+        });
+    }
+
+    // ========== 启动 ==========
+    loadAndInit();
+})();
+</script>
+
+    <footer class="app-footer" style="text-align: center; padding: 16px; font-size: 13px; color: #6c757d; line-height: 1.8;">
+    © 2026 humanlifeos.art &nbsp;|&nbsp;
+    <a href="https://beian.miit.gov.cn/" target="_blank" style="color: #6c757d; text-decoration: none;">湘ICP备2026007930号</a> &nbsp;|&nbsp;
+    <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011402021877" target="_blank" style="color: #6c757d; text-decoration: none; display: inline-flex; align-items: center;">
+        <img src="https://beian.mps.gov.cn/img/ghs.png" style="height: 14px; margin-right: 4px;">沪公网安备 31011402021877号
+    </a>
+</footer>
+
+
+</body>
+</html>

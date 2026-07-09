@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>计时实验 · 倒计时与秒表</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/nav.css">
+    <style>
+        :root {
+            --blue: #3b82f6; --blue-dark: #2563eb; --amber: #f59e0b;
+            --red: #ef4444; --green: #10b981; --slate: #64748b;
+            --bg: #f1f5f9; --card-bg: #ffffff; --text: #1e293b;
+            --text-secondary: #64748b; --border-color: #e2e8f0;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --shadow-lg: 0 12px 32px rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #f6f9fc 0%, #eef2f5 100%);
+            min-height: 100vh;
+        }
+
+        .main-content {
+            padding: 1.5rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* ── 卡片网格 ── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        /* ── 通用卡片 ── */
+        .tool-card {
+            background: var(--card-bg);
+            border-radius: 1.25rem;
+            padding: 1.25rem 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: box-shadow 0.2s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .tool-card:hover { box-shadow: var(--shadow-lg); }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .card-header .card-icon {
+            width: 34px; height: 34px; border-radius: 0.6rem;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; color: #fff;
+        }
+        .card-header .card-title {
+            font-size: 0.95rem; font-weight: 700; color: var(--text);
+        }
+        .card-body { flex: 1; }
+
+        /* 卡片颜色主题 */
+        .card-blue   .card-icon { background: #3b82f6; } .card-blue   { border-top: 3px solid #3b82f6; }
+        .card-purple .card-icon { background: #8b5cf6; } .card-purple { border-top: 3px solid #8b5cf6; }
+        .card-red    .card-icon { background: #ef4444; } .card-red    { border-top: 3px solid #ef4444; }
+        .card-green  .card-icon { background: #10b981; } .card-green  { border-top: 3px solid #10b981; }
+        .card-amber  .card-icon { background: #f59e0b; } .card-amber  { border-top: 3px solid #f59e0b; }
+        .card-slate  .card-icon { background: #64748b; } .card-slate  { border-top: 3px solid #64748b; }
+        .card-pink   .card-icon { background: #ec4899; } .card-pink   { border-top: 3px solid #ec4899; }
+        .card-cyan   .card-icon { background: #06b6d4; } .card-cyan   { border-top: 3px solid #06b6d4; }
+        .card-indigo .card-icon { background: #6366f1; } .card-indigo { border-top: 3px solid #6366f1; }
+        .card-teal   .card-icon { background: #14b8a6; } .card-teal   { border-top: 3px solid #14b8a6; }
+
+        /* ── 通用组件 ── */
+        .btn {
+            padding: 0.6rem 1.2rem; border-radius: 0.6rem; font-weight: 600;
+            cursor: pointer; border: none; transition: all 0.2s; font-size: 0.85rem;
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+        }
+        .btn-primary { background: var(--blue); color: #fff; } .btn-primary:hover { background: var(--blue-dark); }
+        .btn-warning { background: var(--amber); color: #fff; } .btn-warning:hover { background: #d97706; }
+        .btn-success { background: var(--green); color: #fff; } .btn-success:hover { background: #059669; }
+        .btn-danger  { background: var(--red); color: #fff; }  .btn-danger:hover  { background: #dc2626; }
+        .btn-slate   { background: var(--slate); color: #fff; } .btn-slate:hover   { background: #475569; }
+        .btn-sm  { padding: 0.35rem 0.85rem; font-size: 0.78rem; }
+        .btn-xs  { padding: 0.25rem 0.6rem; font-size: 0.7rem; }
+        .btn-block { width: 100%; }
+
+        .input-field {
+            width: 100%; padding: 0.6rem 0.85rem; border: 2px solid var(--border-color);
+            border-radius: 0.6rem; font-size: 0.9rem; transition: border-color 0.2s;
+            outline: none; background: #fafbfc;
+        }
+        .input-field:focus { border-color: var(--blue); }
+
+        .result-box {
+            background: #f8fafc; border-radius: 0.6rem; padding: 0.75rem 1rem;
+            margin-top: 0.75rem; font-size: 0.85rem; color: var(--text);
+            border: 1px solid var(--border-color); word-break: break-all; line-height: 1.6;
+        }
+
+        .btn-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+        .btn-row .btn { flex: 1; min-width: 60px; }
+
+        .hidden { display: none !important; }
+
+        /* ── 计时器卡片（全宽） ── */
+        .card-timer { grid-column: 1 / -1; }
+        .switch-container {
+            display: flex; background: #f1f5f9; border-radius: 0.6rem; padding: 0.3rem;
+            margin-bottom: 1rem;
+        }
+        .switch-btn {
+            flex:1; text-align:center; padding:0.55rem 1rem; border-radius:0.5rem; cursor:pointer;
+            transition:all 0.2s; color:var(--slate); font-weight:600; font-size:0.85rem;
+        }
+        .switch-btn.active { background:var(--blue); color:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+        .switch-content { display: none; }
+        .switch-content.active { display: block; }
+
+        .time-input-group {
+            display: flex; justify-content: center; align-items: center; gap: 0.3rem; margin: 0.5rem 0;
+        }
+        .time-input-group input {
+            width: 4rem; padding: 0.5rem; border: 2px solid var(--border-color);
+            border-radius: 0.6rem; text-align: center; font-size: 1.8rem; font-weight: 700;
+            font-family: 'SF Mono', 'Fira Code', monospace; background: #fafbfc;
+        }
+        .time-input-group input:focus { border-color: var(--blue); outline: none; }
+        .time-sep { font-size: 1.8rem; font-weight: 300; color: var(--slate); }
+
+        .big-display {
+            font-size: 2.8rem; font-weight: 800; text-align: center; margin: 0.5rem 0;
+            color: var(--text); letter-spacing: -1px; font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .round-btn {
+            width: 36px; height: 36px; border-radius: 50%; background: #e2e8f0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.95rem; cursor: pointer; transition: background 0.2s; border: none;
+            flex-shrink: 0;
+        }
+        .round-btn:hover { background: #cbd5e1; }
+
+        /* 浮层 */
+        .popup-options {
+            position: absolute; bottom: 0.5rem; left: 0.5rem; right: 0.5rem;
+            display: flex; justify-content: center; gap: 0.35rem; flex-wrap: wrap;
+            background: #fff; padding: 0.6rem; border-radius: 0.6rem;
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.1);
+            transform: translateY(110%); opacity: 0; visibility: hidden;
+            transition: all 0.25s ease; z-index: 20;
+        }
+        .popup-options.show { transform: translateY(0); opacity: 1; visibility: visible; }
+        .popup-options button {
+            padding: 0.35rem 0.75rem; border-radius: 0.4rem; background: #e2e8f0;
+            color: var(--slate); cursor: pointer; border: none; font-size: 0.75rem; transition: background 0.2s;
+        }
+        .popup-options button:hover { background: #cbd5e1; }
+
+        /* 秒表标记 */
+        .marks-list { max-height: 100px; overflow-y: auto; margin-top: 0.5rem; }
+        .marks-list::-webkit-scrollbar { width: 3px; }
+        .marks-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        .mark-item { padding: 0.3rem 0.6rem; margin: 0.15rem 0; border-radius: 0.4rem; background: #f8fafc; font-size: 0.75rem; color: var(--slate); text-align: center; }
+
+        /* 番茄钟 */
+        .pomodoro-circle {
+            width: 130px; height: 130px; border-radius: 50%; border: 6px solid var(--border-color);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            margin: 0 auto 0.75rem; transition: border-color 0.3s;
+        }
+        .pomodoro-circle.work  { border-color: var(--red); }
+        .pomodoro-circle.break { border-color: var(--green); }
+        .pomo-time  { font-size: 2rem; font-weight: 800; font-family: 'SF Mono', monospace; }
+        .pomo-label { font-size: 0.7rem; color: var(--slate); }
+        .pomo-count { text-align: center; font-size: 0.78rem; color: var(--slate); margin-bottom: 0.5rem; }
+
+        /* 数字时钟 */
+        .fullscreen-clock {
+            background: #0f172a; color: #22d3ee; border-radius: 0.75rem;
+            padding: 1.25rem; text-align: center; cursor: pointer;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+        .clock-time { font-size: 2.4rem; font-weight: 700; letter-spacing: 1px; }
+        .clock-date { font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem; }
+        .clock-week { font-size: 1.1rem; color: #fbbf24; margin-top: 0.15rem; }
+
+        /* 多计时器列表 */
+        .multi-timer-item {
+            display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.75rem;
+            background: #f8fafc; border-radius: 0.6rem; margin-bottom: 0.35rem;
+            border: 1px solid var(--border-color); font-size: 0.85rem;
+        }
+        .multi-timer-item .timer-display { font-family: 'SF Mono', monospace; font-size: 1.1rem; font-weight: 700; }
+        .multi-timer-item .timer-display.ringing { color: var(--red); animation: blink 0.5s infinite; }
+        @keyframes blink { 50% { opacity: 0.4; } }
+
+        /* 节日卡片 */
+        .holiday-card {
+            text-align: center; padding: 0.6rem; border-radius: 0.75rem; margin-bottom: 0.4rem;
+            font-size: 0.82rem;
+        }
+        .holiday-card .h-icon { font-size: 1.6rem; }
+        .holiday-card .h-name { font-weight: 700; }
+        .holiday-card .h-cd { font-size: 0.75rem; color: var(--slate); }
+        .holiday-colors { background: linear-gradient(135deg, #fef3c7, #fef9c3); }
+        .holiday-colors:nth-child(2n) { background: linear-gradient(135deg, #fce7f3, #fdf2f8); }
+        .holiday-colors:nth-child(3n) { background: linear-gradient(135deg, #dbeafe, #eff6ff); }
+        .holiday-colors:nth-child(4n) { background: linear-gradient(135deg, #d1fae5, #ecfdf5); }
+
+        /* 弹窗 */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-box { background: #fff; border-radius: 1rem; padding: 1.5rem; width: 90%; max-width: 340px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .modal-box h3 { font-size: 1rem; margin-bottom: 0.75rem; }
+
+        /* 完成界面 */
+        .completion-screen { text-align: center; padding: 1rem 0; }
+        .completion-screen .done-text { font-size: 2rem; font-weight: 800; color: var(--blue); margin-bottom: 1rem; }
+
+        /* ── 响应式 ── */
+        @media (max-width: 700px) {
+            .cards-grid { grid-template-columns: 1fr; }
+            .card-timer { grid-column: 1; }
+            .tool-card { padding: 1rem 1.1rem; }
+            .time-input-group input { width: 3.2rem; font-size: 1.4rem; padding: 0.4rem; }
+            .time-sep { font-size: 1.4rem; }
+            .big-display { font-size: 2.2rem; }
+            .pomodoro-circle { width: 110px; height: 110px; }
+            .pomo-time { font-size: 1.6rem; }
+            .clock-time { font-size: 1.8rem; }
+        }
+
+    <!-- 统计 -->
+    <script>
+        var _hmt = _hmt || [];
+        (function() { var hm = document.createElement("script");
+            hm.src = "https://hm.baidu.com/hm.js?272119dae6cce7e3ded69c4a57f828d1";
+            var s = document.getElementsByTagName("script")[0]; s.parentNode.insertBefore(hm, s); })();
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-N13ZH72VV9"></script>
+    <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-N13ZH72VV9'); </script>
+
+        /* ── 页脚（合规备案） ── */
+        .app-footer {
+            text-align: center; padding: 16px 20px; color: #666;
+            font-size: 14px; background: #ffffff; border-top: 1px solid #e5e7eb;
+            margin-left: 0; width: 100%; box-sizing: border-box;
+        }
+        .app-footer a { color: #999; text-decoration: none; }
+        .app-footer a:hover { color: #165DFF; }
+        @media (max-width: 1024px) {
+            .app-footer { margin-left: 0; width: 100%; }
+        }
+
+</style>
+</head>
+<body>
+
+<div id="sidebar" class="sidebar"></div>
+
+<div class="main-content">
+<div class="cards-grid">
+
+    <!-- ════════════════ 1+2. 计时器 & 秒表（全宽卡片，切换） ════════════════ -->
+    <div class="tool-card card-blue card-timer" id="card-timer-stopwatch">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-clock"></i></div>
+            <div class="card-title">计时器 & 秒表</div>
+        </div>
+        <div class="switch-container">
+            <div id="timer-switch" class="switch-btn active">计时器</div>
+            <div id="stopwatch-switch" class="switch-btn">秒表</div>
+        </div>
+        <div class="card-body" style="position:relative;">
+            <!-- 计时器面板 -->
+            <div id="timer-content" class="switch-content active">
+                <div id="timer-input-area">
+                    <div class="time-input-group">
+                        <input type="number" id="timer-hours" min="0" value="0">
+                        <span class="time-sep">:</span>
+                        <input type="number" id="timer-minutes" min="0" max="59" value="0">
+                        <span class="time-sep">:</span>
+                        <input type="number" id="timer-seconds" min="0" max="59" value="0">
+                    </div>
+                    <p id="timer-total-time" class="hidden" style="text-align:center;font-size:0.8rem;color:var(--slate);margin-bottom:0.5rem;"></p>
+                </div>
+                <div class="hidden" id="timer-completion">
+                    <div class="completion-screen">
+                        <div class="done-text">计时结束!</div>
+                        <button class="btn btn-primary" id="timer-confirm">确认</button>
+                    </div>
+                </div>
+                <div class="btn-row" id="timer-buttons-row" style="justify-content:center;">
+                    <div class="round-btn" id="white-noise-btn" title="白噪音">♪</div>
+                    <button class="btn btn-primary" id="timer-start" style="flex:0 1 auto;min-width:120px;">开始</button>
+                    <div class="round-btn" id="common-time-btn" title="常用时间">◎</div>
+                </div>
+                <div class="btn-row hidden" id="timer-control-row">
+                    <button class="btn btn-slate" id="timer-reset">清零</button>
+                    <button class="btn btn-warning" id="timer-pause">暂停</button>
+                </div>
+                <div class="popup-options" id="white-noise-options">
+                    <button data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3">轻音乐</button>
+                    <button data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3">钢琴曲</button>
+                    <button data-src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3">自然之声</button>
+                    <button id="white-noise-none">无</button>
+                </div>
+                <div class="popup-options" id="common-time-options">
+                    <button data-seconds="300">5分</button>
+                    <button data-seconds="900">15分</button>
+                    <button data-seconds="1800">30分</button>
+                    <button data-seconds="3600">1时</button>
+                    <button id="add-time-btn">+</button>
+                </div>
+            </div>
+            <!-- 秒表面板 -->
+            <div id="stopwatch-content" class="switch-content">
+                <div class="big-display" id="stopwatch-display">00:00.00</div>
+                <button class="btn btn-primary btn-block" id="stopwatch-start">开始</button>
+                <div class="btn-row hidden" id="stopwatch-control">
+                    <button class="btn" style="background:#6366f1;color:#fff;" id="stopwatch-mark">标记</button>
+                    <button class="btn btn-warning" id="stopwatch-pause">暂停</button>
+                </div>
+                <div class="btn-row hidden" id="stopwatch-reset-continue">
+                    <button class="btn btn-slate" id="stopwatch-reset">清零</button>
+                    <button class="btn btn-success" id="stopwatch-continue">继续</button>
+                </div>
+                <div class="marks-list" id="stopwatch-marks"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════ 3. 番茄钟 ════════════════ -->
+    <div class="tool-card card-red" id="card-pomodoro">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-clock"></i></div>
+            <div class="card-title">番茄钟</div>
+        </div>
+        <div class="card-body" style="text-align:center;">
+            <div class="pomodoro-circle work" id="pomo-circle">
+                <div class="pomo-time" id="pomo-time">25:00</div>
+                <div class="pomo-label" id="pomo-label">工作中</div>
+            </div>
+            <div class="pomo-count" id="pomo-count">已完成 0 个番茄</div>
+            <div class="btn-row">
+                <button class="btn btn-primary btn-sm" id="pomo-start">开始</button>
+                <button class="btn btn-warning btn-sm" id="pomo-pause">暂停</button>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-slate btn-xs" id="pomo-reset">重置</button>
+                <button class="btn btn-xs" id="pomo-skip" style="background:#94a3b8;color:#fff;">跳过</button>
+            </div>
+            <div style="margin-top:0.5rem;font-size:0.7rem;color:var(--slate);">工作25分 · 短休5分 · 长休15分（每4轮）</div>
+        </div>
+    </div>
+
+    <!-- ════════════════ 4. 时间戳转换器 ════════════════ -->
+    <div class="tool-card card-purple" id="card-timestamp">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-hashtag"></i></div>
+            <div class="card-title">时间戳转换器</div>
+        </div>
+        <div class="card-body">
+            <div style="display:flex;gap:0.4rem;">
+                <input type="number" class="input-field" id="ts-input" placeholder="Unix 时间戳（秒）..." style="flex:1;font-size:0.85rem;">
+                <button class="btn btn-primary btn-xs" id="ts-now">当前</button>
+            </div>
+            <button class="btn btn-primary btn-block btn-sm" style="margin-top:0.5rem;" id="ts-convert">转为日期 →</button>
+            <div class="result-box" id="ts-result" style="font-size:0.8rem;">等待输入...</div>
+            <div style="margin-top:0.75rem;display:flex;gap:0.4rem;align-items:center;">
+                <input type="datetime-local" class="input-field" id="ts-datetime" style="flex:1;font-size:0.85rem;">
+                <button class="btn btn-slate btn-xs" id="ts-to-ts">→戳</button>
+            </div>
+            <div class="result-box" id="ts-reverse-result" style="font-size:0.8rem;">等待输入...</div>
+        </div>
+    </div>
+
+    <!-- ════════════════ 5. 日期计算器 ════════════════ -->
+    <div class="tool-card card-teal" id="card-datecalc">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-calendar-alt"></i></div>
+            <div class="card-title">日期计算器</div>
+        </div>
+        <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                <div><label style="font-size:0.75rem;color:var(--slate);">起始</label><input type="date" class="input-field" id="dc-start" style="font-size:0.85rem;"></div>
+                <div><label style="font-size:0.75rem;color:var(--slate);">结束</label><input type="date" class="input-field" id="dc-end" style="font-size:0.85rem;"></div>
+            </div>
+            <button class="btn btn-primary btn-block btn-sm" style="margin-top:0.5rem;" id="dc-calc">计算相差天数</button>
+            <div class="result-box" id="dc-result" style="font-size:0.8rem;">等待输入...</div>
+            <div style="display:flex;gap:0.4rem;margin-top:0.5rem;align-items:end;">
+                <div style="flex:1;"><label style="font-size:0.75rem;color:var(--slate);">从</label><input type="date" class="input-field" id="dc-base" style="font-size:0.85rem;"></div>
+                <div style="width:80px;"><label style="font-size:0.75rem;color:var(--slate);">±天</label><input type="number" class="input-field" id="dc-offset" value="30" style="font-size:0.85rem;"></div>
+                <button class="btn btn-slate btn-xs" id="dc-add" style="margin-bottom:2px;">推算</button>
+            </div>
+            <div class="result-box" id="dc-add-result" style="font-size:0.8rem;">等待输入...</div>
+        </div>
+    </div>
+
+    <!-- ════════════════ 6. 年龄计算器 ════════════════ -->
+    <div class="tool-card card-pink" id="card-age">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-birthday-cake"></i></div>
+            <div class="card-title">年龄计算器</div>
+        </div>
+        <div class="card-body">
+            <input type="date" class="input-field" id="age-birth" style="font-size:0.85rem;">
+            <button class="btn btn-primary btn-block btn-sm" style="margin-top:0.5rem;" id="age-calc">计算年龄</button>
+            <div class="result-box" id="age-result" style="text-align:center;font-size:1rem;font-weight:700;">请输入出生日期</div>
+            <div style="margin-top:0.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;" id="age-details"></div>
+        </div>
+    </div>
+
+    <!-- ════════════════ 7. 睡眠周期计算器 ════════════════ -->
+    <div class="tool-card card-indigo" id="card-sleep">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-moon"></i></div>
+            <div class="card-title">睡眠周期计算器</div>
+        </div>
+        <div class="card-body">
+            <p style="font-size:0.75rem;color:var(--slate);margin-bottom:0.5rem;">周期约90分钟，含入睡15分钟。推荐4-6个周期。</p>
+            <label style="font-size:0.8rem;font-weight:600;">我要 <span style="color:var(--blue);">起床</span> 的时间</label>
+            <div style="display:flex;gap:0.4rem;margin-top:0.25rem;">
+                <input type="time" class="input-field" id="sleep-wake" style="flex:1;font-size:0.85rem;">
+                <button class="btn btn-primary btn-xs" id="sleep-calc-wake">计算入睡</button>
+            </div>
+            <div class="result-box" id="sleep-wake-result" style="font-size:0.8rem;"></div>
+            <label style="font-size:0.8rem;font-weight:600;display:block;margin-top:0.5rem;">我 <span style="color:var(--green);">现在睡觉</span></label>
+            <button class="btn btn-success btn-block btn-xs" style="margin-top:0.25rem;" id="sleep-calc-now">计算起床时间</button>
+            <div class="result-box" id="sleep-now-result" style="font-size:0.8rem;"></div>
+        </div>
+    </div>
+
+    <!-- ════════════════ 8. 节日倒计时 ════════════════ -->
+    <div class="tool-card card-amber" id="card-holiday">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-gift"></i></div>
+            <div class="card-title">节日倒计时</div>
+        </div>
+        <div class="card-body" id="holiday-list"></div>
+    </div>
+
+    <!-- ════════════════ 9. 全屏数字时钟 ════════════════ -->
+    <div class="tool-card card-cyan" id="card-clock">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-digital-tachograph"></i></div>
+            <div class="card-title">数字时钟</div>
+        </div>
+        <div class="card-body">
+            <div class="fullscreen-clock" id="clock-display" title="点击全屏">
+                <div class="clock-time" id="clock-time">00:00:00</div>
+                <div class="clock-date" id="clock-date"></div>
+                <div class="clock-week" id="clock-week"></div>
+            </div>
+            <p style="text-align:center;margin-top:0.4rem;font-size:0.7rem;color:var(--slate);">点击时钟全屏显示</p>
+        </div>
+    </div>
+
+    <!-- ════════════════ 10. 多计时器并行 ════════════════ -->
+    <div class="tool-card card-green" id="card-multitimer">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-layer-group"></i></div>
+            <div class="card-title">多计时器并行</div>
+        </div>
+        <div class="card-body">
+            <div style="display:flex;gap:0.4rem;">
+                <input type="text" class="input-field" id="mt-label" placeholder="标签" style="flex:1;font-size:0.85rem;">
+                <input type="number" class="input-field" id="mt-minutes" value="5" min="1" placeholder="分钟" style="width:65px;font-size:0.85rem;">
+                <button class="btn btn-primary btn-xs" id="mt-add">+</button>
+            </div>
+            <div id="multi-timer-list" style="margin-top:0.5rem;"></div>
+        </div>
+    </div>
+
+</div><!-- /cards-grid -->
+</div><!-- /main-content -->
+
+<!-- 常用时间弹窗 -->
+<div class="modal-overlay hidden" id="add-time-modal">
+    <div class="modal-box">
+        <h3>添加常用时间</h3>
+        <input type="number" id="add-time-modal-input" placeholder="输入分钟数" class="input-field">
+        <div class="btn-row"><button class="btn btn-slate btn-sm" id="add-time-modal-cancel">取消</button><button class="btn btn-primary btn-sm" id="add-time-modal-submit">添加</button></div>
+    </div>
+</div>
+<div class="modal-overlay hidden" id="edit-time-modal">
+    <div class="modal-box">
+        <h3>编辑常用时间</h3>
+        <input type="number" id="edit-time-modal-input" placeholder="输入分钟数" class="input-field">
+        <div class="btn-row"><button class="btn btn-slate btn-sm" id="edit-time-modal-cancel">取消</button><button class="btn btn-primary btn-sm" id="edit-time-modal-submit">保存</button></div>
+    </div>
+</div>
+
+<audio id="alarm" loop>
+    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+</audio>
+<audio id="white-noise-audio" loop></audio>
+
+<script src="/js/nav-loader.js"></script>
+
+<script>
+(function() {
+    'use strict';
+
+    const alarm = document.getElementById('alarm');
+    const whiteNoiseAudio = document.getElementById('white-noise-audio');
+
+    // ════════════════ 计时器/秒表切换 ════════════════
+    (function() {
+        const timerSwitch = document.getElementById('timer-switch');
+        const stopwatchSwitch = document.getElementById('stopwatch-switch');
+        const timerContent = document.getElementById('timer-content');
+        const stopwatchContent = document.getElementById('stopwatch-content');
+        timerSwitch.addEventListener('click', () => {
+            timerSwitch.classList.add('active'); stopwatchSwitch.classList.remove('active');
+            timerContent.classList.add('active'); stopwatchContent.classList.remove('active');
+        });
+        stopwatchSwitch.addEventListener('click', () => {
+            stopwatchSwitch.classList.add('active'); timerSwitch.classList.remove('active');
+            stopwatchContent.classList.add('active'); timerContent.classList.remove('active');
+        });
+    })();
+
+    // ════════════════ 1. 计时器 ════════════════
+    (function() {
+        const timerHours = document.getElementById('timer-hours'), timerMinutes = document.getElementById('timer-minutes'),
+              timerSeconds = document.getElementById('timer-seconds'), timerTotalTime = document.getElementById('timer-total-time'),
+              timerStart = document.getElementById('timer-start'), timerControlRow = document.getElementById('timer-control-row'),
+              timerReset = document.getElementById('timer-reset'), timerPause = document.getElementById('timer-pause'),
+              timerButtonsRow = document.getElementById('timer-buttons-row'), timerInputArea = document.getElementById('timer-input-area'),
+              timerCompletion = document.getElementById('timer-completion'), timerConfirm = document.getElementById('timer-confirm'),
+              whiteNoiseBtn = document.getElementById('white-noise-btn'), commonTimeBtn = document.getElementById('common-time-btn'),
+              whiteNoiseOptions = document.getElementById('white-noise-options'), commonTimeOptions = document.getElementById('common-time-options'),
+              addTimeBtn = document.getElementById('add-time-btn'), addTimeModal = document.getElementById('add-time-modal'),
+              addTimeModalInput = document.getElementById('add-time-modal-input'), addTimeModalCancel = document.getElementById('add-time-modal-cancel'),
+              addTimeModalSubmit = document.getElementById('add-time-modal-submit'), editTimeModal = document.getElementById('edit-time-modal'),
+              editTimeModalInput = document.getElementById('edit-time-modal-input'), editTimeModalCancel = document.getElementById('edit-time-modal-cancel'),
+              editTimeModalSubmit = document.getElementById('edit-time-modal-submit');
+
+        let timerInterval, remaining = 0, total = 0, paused = false;
+
+        function updateTotal() {
+            const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+            timerTotalTime.textContent = '共 ' + (h>0?h+'时':'') + (m>0||h>0?String(m).padStart(2,'0')+'分':'') + String(s).padStart(2,'0')+'秒';
+        }
+        function tick() {
+            if (!paused && remaining > 0) {
+                remaining--;
+                timerHours.value = Math.floor(remaining/3600);
+                timerMinutes.value = Math.floor((remaining%3600)/60);
+                timerSeconds.value = remaining%60;
+            } else if (remaining === 0 && timerInterval) {
+                clearInterval(timerInterval); timerInterval = null;
+                timerInputArea.classList.add('hidden'); timerTotalTime.classList.add('hidden');
+                timerButtonsRow.classList.add('hidden'); timerControlRow.classList.add('hidden');
+                timerCompletion.classList.remove('hidden');
+                alarm.play().catch(()=>{});
+            }
+        }
+        function start(sec) {
+            if (sec !== undefined) remaining = sec; else remaining = (parseInt(timerHours.value)||0)*3600+(parseInt(timerMinutes.value)||0)*60+(parseInt(timerSeconds.value)||0);
+            total = remaining; if (remaining <= 0) return;
+            clearInterval(timerInterval);
+            timerStart.classList.add('hidden'); timerControlRow.classList.remove('hidden');
+            timerTotalTime.classList.remove('hidden'); timerButtonsRow.classList.add('hidden');
+            timerCompletion.classList.add('hidden'); timerInputArea.classList.remove('hidden');
+            updateTotal(); paused = false; timerPause.textContent = '暂停';
+            timerInterval = setInterval(tick, 1000);
+            whiteNoiseAudio.play().catch(()=>{});
+        }
+        function togglePause() {
+            paused = !paused; timerPause.textContent = paused ? '继续' : '暂停';
+            if (paused) whiteNoiseAudio.pause(); else whiteNoiseAudio.play().catch(()=>{});
+        }
+        function reset() {
+            clearInterval(timerInterval); timerInterval = null;
+            alarm.pause(); alarm.currentTime = 0; whiteNoiseAudio.pause(); whiteNoiseAudio.currentTime = 0;
+            timerStart.classList.remove('hidden'); timerControlRow.classList.add('hidden');
+            timerTotalTime.classList.add('hidden'); timerCompletion.classList.add('hidden');
+            timerButtonsRow.classList.remove('hidden'); timerInputArea.classList.remove('hidden');
+            timerHours.value='0'; timerMinutes.value='0'; timerSeconds.value='0';
+            remaining=0; total=0; paused=false;
+        }
+
+        timerStart.addEventListener('click', ()=>start());
+        timerReset.addEventListener('click', reset);
+        timerPause.addEventListener('click', togglePause);
+        timerConfirm.addEventListener('click', reset);
+
+        // 白噪音
+        whiteNoiseBtn.addEventListener('click', (e)=>{ e.stopPropagation(); whiteNoiseOptions.classList.toggle('show'); commonTimeOptions.classList.remove('show'); });
+        whiteNoiseOptions.addEventListener('click', (e)=>{
+            const t = e.target;
+            if (t.id==='white-noise-none') { whiteNoiseAudio.pause(); whiteNoiseAudio.src=''; }
+            else if (t.dataset.src) { whiteNoiseAudio.src=t.dataset.src; whiteNoiseAudio.loop=true; whiteNoiseAudio.play().catch(()=>{}); }
+            whiteNoiseOptions.classList.remove('show');
+        });
+
+        // 常用时间
+        function refreshCommonBtns() {
+            commonTimeOptions.querySelectorAll('button:not(#add-time-btn)').forEach(btn=>{
+                btn.onclick = function(){
+                    const sec = parseInt(this.dataset.seconds);
+                    timerHours.value=Math.floor(sec/3600); timerMinutes.value=Math.floor((sec%3600)/60); timerSeconds.value=sec%60;
+                    commonTimeOptions.classList.remove('show'); start(sec);
+                };
+                btn.ondblclick = function(){
+                    const min = parseInt(this.textContent.replace(/[^0-9]/g,''));
+                    editTimeModal.classList.remove('hidden'); editTimeModalInput.value=min; editTimeModal.dataset.button=this;
+                };
+                if (!btn.querySelector('.delete-btn')) {
+                    const del=document.createElement('span'); del.textContent='×'; del.style.cssText='margin-left:3px;color:var(--red);font-weight:700;cursor:pointer;';
+                    del.addEventListener('click', (e)=>{ e.stopPropagation(); btn.remove(); });
+                    btn.appendChild(del);
+                }
+            });
+        }
+        refreshCommonBtns();
+
+        commonTimeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); commonTimeOptions.classList.toggle('show'); whiteNoiseOptions.classList.remove('show'); });
+        addTimeBtn.addEventListener('click', ()=>addTimeModal.classList.remove('hidden'));
+        addTimeModalCancel.addEventListener('click', ()=>addTimeModal.classList.add('hidden'));
+        addTimeModalSubmit.addEventListener('click', ()=>{
+            const min=parseInt(addTimeModalInput.value);
+            if (!isNaN(min)&&min>0) {
+                const btn=document.createElement('button'); btn.dataset.seconds=min*60; btn.textContent=min+'分';
+                commonTimeOptions.insertBefore(btn, addTimeBtn);
+                addTimeModalInput.value=''; addTimeModal.classList.add('hidden'); refreshCommonBtns();
+            }
+        });
+        editTimeModalCancel.addEventListener('click', ()=>editTimeModal.classList.add('hidden'));
+        editTimeModalSubmit.addEventListener('click', ()=>{
+            const min=parseInt(editTimeModalInput.value);
+            if (!isNaN(min)&&min>0&&editTimeModal.dataset.button) {
+                const btn=editTimeModal.dataset.button;
+                btn.dataset.seconds=min*60; btn.childNodes[0].nodeValue=min+'分';
+                editTimeModal.classList.add('hidden'); refreshCommonBtns();
+            }
+        });
+        document.addEventListener('click', (e)=>{
+            if (!whiteNoiseBtn?.contains(e.target) && !whiteNoiseOptions?.contains(e.target)) whiteNoiseOptions?.classList.remove('show');
+            if (!commonTimeBtn?.contains(e.target) && !commonTimeOptions?.contains(e.target)) commonTimeOptions?.classList.remove('show');
+        });
+    })();
+
+    // ════════════════ 2. 秒表 ════════════════
+    (function() {
+        const display = document.getElementById('stopwatch-display'), startBtn = document.getElementById('stopwatch-start'),
+              controlRow = document.getElementById('stopwatch-control'), markBtn = document.getElementById('stopwatch-mark'),
+              pauseBtn = document.getElementById('stopwatch-pause'), resetContinue = document.getElementById('stopwatch-reset-continue'),
+              resetBtn = document.getElementById('stopwatch-reset'), continueBtn = document.getElementById('stopwatch-continue'),
+              marksList = document.getElementById('stopwatch-marks');
+
+        let interval, cs = 0, paused = false, lastMark = 0;
+
+        function update() {
+            if (!paused) { cs++;
+                const m=Math.floor(cs/6000), s=Math.floor((cs%6000)/100), c=cs%100;
+                display.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(c).padStart(2,'0')}`; }
+        }
+        function reset() {
+            clearInterval(interval); interval=null;
+            startBtn.classList.remove('hidden'); controlRow.classList.add('hidden'); resetContinue.classList.add('hidden');
+            cs=0; paused=false; lastMark=0; display.textContent='00:00.00'; marksList.innerHTML='';
+        }
+        startBtn.addEventListener('click', ()=>{
+            startBtn.classList.add('hidden'); controlRow.classList.remove('hidden'); resetContinue.classList.add('hidden');
+            paused=false; lastMark=cs; clearInterval(interval); interval=setInterval(update,10);
+        });
+        markBtn.addEventListener('click', ()=>{
+            const diff=cs-lastMark, im=Math.floor(diff/6000), is=Math.floor((diff%6000)/100), ic=diff%100;
+            const div=document.createElement('div'); div.className='mark-item';
+            div.textContent = `#${marksList.children.length+1} ${display.textContent} (+${String(im).padStart(2,'0')}:${String(is).padStart(2,'0')}.${String(ic).padStart(2,'0')})`;
+            marksList.appendChild(div); marksList.scrollTop=marksList.scrollHeight; lastMark=cs;
+        });
+        pauseBtn.addEventListener('click', ()=>{
+            paused=!paused;
+            if(paused){controlRow.classList.add('hidden');resetContinue.classList.remove('hidden');}
+            else{controlRow.classList.remove('hidden');resetContinue.classList.add('hidden');}
+        });
+        resetBtn.addEventListener('click', reset);
+        continueBtn.addEventListener('click', ()=>{ paused=false; controlRow.classList.remove('hidden'); resetContinue.classList.add('hidden'); });
+    })();
+
+    // ════════════════ 3. 番茄钟 ════════════════
+    (function() {
+        const circle=document.getElementById('pomo-circle'), timeDisp=document.getElementById('pomo-time'),
+              labelDisp=document.getElementById('pomo-label'), countDisp=document.getElementById('pomo-count'),
+              startBtn=document.getElementById('pomo-start'), pauseBtn=document.getElementById('pomo-pause'),
+              resetBtn=document.getElementById('pomo-reset'), skipBtn=document.getElementById('pomo-skip');
+
+        const WORK=25*60, SHORT=5*60, LONG=15*60;
+        let interval, remaining=WORK, totalPomos=0, paused=true, isWork=true, pomoCount=0;
+
+        function updateDisp() {
+            const m=Math.floor(remaining/60), s=remaining%60;
+            timeDisp.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            labelDisp.textContent=isWork?'工作中':(pomoCount%4===0?'长休息':'短休息');
+            circle.className='pomodoro-circle '+(isWork?'work':'break');
+            countDisp.textContent=`已完成 ${totalPomos} 个番茄 · 第 ${pomoCount%4+1}/4 轮`;
+        }
+        function tick() {
+            if(paused)return;
+            if(remaining>0){remaining--;updateDisp();return;}
+            alarm.play().catch(()=>{});
+            if(isWork){totalPomos++;pomoCount++;}
+            isWork=!isWork;
+            remaining=isWork?WORK:(pomoCount%4===0?LONG:SHORT);
+            updateDisp();
+        }
+        function toggle() {
+            if(paused&&remaining<=0){remaining=WORK;isWork=true;}
+            paused=!paused;
+            if(!paused){alarm.pause();alarm.currentTime=0;interval=setInterval(tick,1000);}
+            else clearInterval(interval);
+            updateDisp();
+        }
+        startBtn.addEventListener('click',toggle);
+        pauseBtn.addEventListener('click',toggle);
+        resetBtn.addEventListener('click',()=>{
+            clearInterval(interval);interval=null;
+            remaining=WORK;paused=true;isWork=true;pomoCount=0;totalPomos=0;
+            alarm.pause();alarm.currentTime=0;updateDisp();
+        });
+        skipBtn.addEventListener('click',()=>{
+            alarm.pause();alarm.currentTime=0;
+            if(isWork)pomoCount++;
+            isWork=!isWork;
+            remaining=isWork?WORK:(pomoCount%4===0?LONG:SHORT);
+            updateDisp();
+        });
+        updateDisp();
+    })();
+
+    // ════════════════ 4. 时间戳 ════════════════
+    (function() {
+        const tsInput=document.getElementById('ts-input'), tsNow=document.getElementById('ts-now'),
+              tsConvert=document.getElementById('ts-convert'), tsResult=document.getElementById('ts-result'),
+              tsDatetime=document.getElementById('ts-datetime'), tsToTs=document.getElementById('ts-to-ts'),
+              tsReverse=document.getElementById('ts-reverse-result');
+
+        tsNow.addEventListener('click',()=>{tsInput.value=Math.floor(Date.now()/1000);});
+        tsConvert.addEventListener('click',()=>{
+            const val=parseInt(tsInput.value);
+            if(isNaN(val)){tsResult.textContent='请输入有效时间戳';return;}
+            const d=new Date(val*1000), wd=['日','一','二','三','四','五','六'];
+            tsResult.innerHTML=`UTC: ${d.toUTCString()}<br>本地: ${d.toLocaleString('zh-CN')}<br>ISO 8601: ${d.toISOString()}<br>星期${wd[d.getDay()]}`;
+        });
+        tsToTs.addEventListener('click',()=>{
+            if(!tsDatetime.value){tsReverse.textContent='请选择日期时间';return;}
+            const ts=Math.floor(new Date(tsDatetime.value).getTime()/1000);
+            tsReverse.innerHTML=`Unix: <b>${ts}</b><br>毫秒: ${ts*1000}`;
+        });
+        tsInput.value=Math.floor(Date.now()/1000);
+        tsDatetime.value=new Date().toISOString().slice(0,16);
+    })();
+
+    // ════════════════ 5. 日期计算 ════════════════
+    (function() {
+        const dcStart=document.getElementById('dc-start'), dcEnd=document.getElementById('dc-end'),
+              dcCalc=document.getElementById('dc-calc'), dcResult=document.getElementById('dc-result'),
+              dcBase=document.getElementById('dc-base'), dcOffset=document.getElementById('dc-offset'),
+              dcAdd=document.getElementById('dc-add'), dcAddResult=document.getElementById('dc-add-result');
+        const today=new Date().toISOString().slice(0,10);
+        dcStart.value=today;dcEnd.value=today;dcBase.value=today;dcOffset.value='30';
+        const wd=['日','一','二','三','四','五','六'];
+
+        dcCalc.addEventListener('click',()=>{
+            if(!dcStart.value||!dcEnd.value){dcResult.textContent='请选择日期';return;}
+            const d1=new Date(dcStart.value),d2=new Date(dcEnd.value),diff=Math.abs(Math.round((d2-d1)/86400000));
+            dcResult.innerHTML=`相差 <b>${diff}</b> 天 · 约 <b>${Math.floor(diff/7)}</b> 周零 <b>${diff%7}</b> 天<br>${dcStart.value}(周${wd[d1.getDay()]}) → ${dcEnd.value}(周${wd[d2.getDay()]})`;
+        });
+        dcAdd.addEventListener('click',()=>{
+            if(!dcBase.value){dcAddResult.textContent='请选择日期';return;}
+            const offset=parseInt(dcOffset.value)||0, d=new Date(dcBase.value); d.setDate(d.getDate()+offset);
+            dcAddResult.innerHTML=`结果: <b>${d.toISOString().slice(0,10)}</b> (周${wd[d.getDay()]})<br>${dcBase.value} ${offset>=0?'+':''}${offset} 天`;
+        });
+    })();
+
+    // ════════════════ 6. 年龄计算 ════════════════
+    (function() {
+        const ageBirth=document.getElementById('age-birth'), ageCalc=document.getElementById('age-calc'),
+              ageResult=document.getElementById('age-result'), ageDetails=document.getElementById('age-details');
+
+        ageCalc.addEventListener('click',()=>{
+            if(!ageBirth.value){ageResult.textContent='请输入出生日期';return;}
+            const birth=new Date(ageBirth.value), now=new Date();
+            if(birth>now){ageResult.textContent='出生日期不能晚于今天';return;}
+            let y=now.getFullYear()-birth.getFullYear(), m=now.getMonth()-birth.getMonth(), d=now.getDate()-birth.getDate();
+            if(d<0){m--;d+=new Date(now.getFullYear(),now.getMonth(),0).getDate();}
+            if(m<0){y--;m+=12;}
+            const totalDays=Math.floor((now-birth)/86400000), totalWeeks=Math.floor(totalDays/7);
+            const nextBd=new Date(now.getFullYear(),birth.getMonth(),birth.getDate());
+            if(nextBd<now)nextBd.setFullYear(nextBd.getFullYear()+1);
+            const daysToBd=Math.ceil((nextBd-now)/86400000);
+
+            ageResult.innerHTML=`<b>${y}</b> 岁 <b>${m}</b> 个月 <b>${d}</b> 天`;
+            ageDetails.innerHTML=`
+                <div style="background:#dbeafe;padding:0.5rem;border-radius:0.5rem;text-align:center;"><div style="font-size:1.3rem;font-weight:800;">${totalDays}</div><div style="font-size:0.65rem;">总天数</div></div>
+                <div style="background:#fef3c7;padding:0.5rem;border-radius:0.5rem;text-align:center;"><div style="font-size:1.3rem;font-weight:800;">${totalWeeks}</div><div style="font-size:0.65rem;">总周数</div></div>
+                <div style="background:#fce7f3;padding:0.5rem;border-radius:0.5rem;text-align:center;"><div style="font-size:1.3rem;font-weight:800;">${daysToBd}</div><div style="font-size:0.65rem;">距下次生日</div></div>`;
+        });
+    })();
+
+    // ════════════════ 7. 睡眠周期 ════════════════
+    (function() {
+        const wakeInput=document.getElementById('sleep-wake'), calcWake=document.getElementById('sleep-calc-wake'),
+              wakeResult=document.getElementById('sleep-wake-result'), calcNow=document.getElementById('sleep-calc-now'),
+              nowResult=document.getElementById('sleep-now-result');
+        const FALL=15, CYCLE=90;
+        function fmt(m){const h=Math.floor(m/60)%24;return `${String(h).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;}
+
+        calcWake.addEventListener('click',()=>{
+            if(!wakeInput.value){wakeResult.textContent='请选择起床时间';return;}
+            const [h,m]=wakeInput.value.split(':').map(Number), wakeMin=h*60+m;
+            let html='<b>推荐入睡时间:</b><br>';
+            for(let c=6;c>=3;c--){const sm=wakeMin-(c*CYCLE+FALL);html+=`• ${fmt(((sm%1440)+1440)%1440)} — ${c}周期(${c*1.5}h)<br>`;}
+            html+=`<span style="font-size:0.7rem;color:var(--slate);">含${FALL}分入睡</span>`;
+            wakeResult.innerHTML=html;
+        });
+        calcNow.addEventListener('click',()=>{
+            const now=new Date(),nowMin=now.getHours()*60+now.getMinutes();
+            let html='<b>推荐起床时间:</b><br>';
+            for(let c=3;c<=6;c++){const wm=nowMin+FALL+c*CYCLE;html+=`• ${fmt(((wm%1440)+1440)%1440)} — ${c}周期(${c*1.5}h)<br>`;}
+            html+=`<span style="font-size:0.7rem;color:var(--slate);">含${FALL}分入睡</span>`;
+            nowResult.innerHTML=html;
+        });
+    })();
+
+    // ════════════════ 8. 节日倒计时 ════════════════
+    (function renderHolidays() {
+        const container=document.getElementById('holiday-list'), now=new Date(), year=now.getFullYear();
+        const lunarYearMap = {
+            2026: { spring:[2,17], de:[5,30], mid:[9,25], eve:[2,16] },
+            2027: { spring:[2,6],  de:[5,19], mid:[9,15], eve:[2,5] },
+            2028: { spring:[1,26], de:[5,7],  mid:[10,3], eve:[1,25] },
+            2029: { spring:[2,13], de:[5,27], mid:[9,22], eve:[2,12] },
+            2030: { spring:[2,3],  de:[5,16], mid:[9,12], eve:[2,2] },
+        };
+        const ly = lunarYearMap[year] || lunarYearMap[2026];
+        const holidays = [
+            { name:'元旦', icon:'🎉', date:new Date(year+1,0,1) },
+            { name:'春节', icon:'🧧', date:new Date(year,ly.spring[0]-1,ly.spring[1]) },
+            { name:'清明节', icon:'🌿', date:new Date(year,3,5) },
+            { name:'劳动节', icon:'💼', date:new Date(year,4,1) },
+            { name:'端午节', icon:'🐉', date:new Date(year,ly.de[0]-1,ly.de[1]) },
+            { name:'中秋节', icon:'🌕', date:new Date(year,ly.mid[0]-1,ly.mid[1]) },
+            { name:'国庆节', icon:'🇨🇳', date:new Date(year,9,1) },
+            { name:'圣诞节', icon:'🎄', date:new Date(year,11,25) },
+        ];
+        const upcoming = holidays.map(h=>{
+            if(h.date<now){
+                const ny = h.date.getFullYear()+1;
+                if (['春节','端午节','中秋节'].includes(h.name)) {
+                    const nly = lunarYearMap[ny] || lunarYearMap[2026];
+                    const k = h.name==='春节'?'spring':h.name==='端午节'?'de':'mid';
+                    return {...h, date: new Date(ny, nly[k][0]-1, nly[k][1])};
+                }
+                return {...h, date: new Date(ny, h.date.getMonth(), h.date.getDate())};
+            }
+            return h;
+        }).sort((a,b)=>a.date-b.date).slice(0,5);
+
+        container.innerHTML = upcoming.map((h,i)=>{
+            const diff=Math.ceil((h.date-now)/86400000);
+            return `<div class="holiday-card holiday-colors"><div class="h-icon">${h.icon}</div><div class="h-name">${h.name}</div><div class="h-cd">${h.date.toISOString().slice(0,10)} · <b>${diff}</b> 天</div></div>`;
+        }).join('');
+    })();
+
+    // ════════════════ 9. 数字时钟 ════════════════
+    let clockInterval;
+    (function startClock() {
+        if (clockInterval) return;
+        function update() {
+            const now=new Date();
+            document.getElementById('clock-time').textContent=now.toLocaleTimeString('zh-CN',{hour12:false});
+            document.getElementById('clock-date').textContent=now.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+            document.getElementById('clock-week').textContent='星期'+['日','一','二','三','四','五','六'][now.getDay()];
+        }
+        update(); clockInterval=setInterval(update,1000);
+    })();
+    document.getElementById('clock-display').addEventListener('click',function(){
+        if(document.fullscreenElement)document.exitFullscreen();else this.requestFullscreen().catch(()=>{});
+    });
+
+    // ════════════════ 10. 多计时器 ════════════════
+    (function() {
+        const mtLabel=document.getElementById('mt-label'), mtMinutes=document.getElementById('mt-minutes'),
+              mtAdd=document.getElementById('mt-add'), list=document.getElementById('multi-timer-list');
+        const timers=[];
+
+        function createTimer(label, totalSec) {
+            const id=Date.now(), timer={id, label:label||'计时器', totalSec, remaining:totalSec, interval:null, done:false};
+            timers.push(timer); render(); startMT(timer);
+        }
+        function startMT(timer) {
+            timer.interval=setInterval(()=>{
+                if(timer.remaining>0)timer.remaining--;else{clearInterval(timer.interval);timer.interval=null;timer.done=true;alarm.play().catch(()=>{});}
+                render();
+            },1000);
+        }
+        function removeTimer(id) {
+            const idx=timers.findIndex(t=>t.id===id);
+            if(idx>=0){clearInterval(timers[idx].interval);timers.splice(idx,1);}render();
+        }
+        function render() {
+            list.innerHTML=timers.map(t=>{
+                const m=Math.floor(t.remaining/60), s=t.remaining%60;
+                const cls=t.done?'ringing':'', prog=t.totalSec>0?((1-t.remaining/t.totalSec)*100).toFixed(0):0;
+                return `<div class="multi-timer-item">
+                    <span style="flex:1;font-weight:600;font-size:0.82rem;">${t.label}</span>
+                    <span style="font-size:0.65rem;color:var(--slate);">${prog}%</span>
+                    <span class="timer-display ${cls}">${t.done?'⏰ 完成!':`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`}</span>
+                    <button class="btn btn-danger btn-xs" data-id="${t.id}">✕</button></div>`;
+            }).join('');
+            list.querySelectorAll('.btn-danger').forEach(b=>b.addEventListener('click',()=>removeTimer(parseInt(b.dataset.id))));
+        }
+        mtAdd.addEventListener('click',()=>{
+            const min=parseInt(mtMinutes.value);
+            if(isNaN(min)||min<=0)return;
+            createTimer(mtLabel.value.trim(),min*60); mtLabel.value=''; mtMinutes.value='5';
+        });
+        mtMinutes.addEventListener('keydown',(e)=>{if(e.key==='Enter')mtAdd.click();});
+    })();
+})();
+</script>
+
+    <footer class="app-footer" style="text-align: center; padding: 16px; font-size: 13px; color: #6c757d; line-height: 1.8;">
+    © 2026 humanlifeos.art &nbsp;|&nbsp;
+    <a href="https://beian.miit.gov.cn/" target="_blank" style="color: #6c757d; text-decoration: none;">湘ICP备2026007930号</a> &nbsp;|&nbsp;
+    <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011402021877" target="_blank" style="color: #6c757d; text-decoration: none; display: inline-flex; align-items: center;">
+        <img src="https://beian.mps.gov.cn/img/ghs.png" style="height: 14px; margin-right: 4px;">沪公网安备 31011402021877号
+    </a>
+</footer>
+
+
+</body>
+</html>

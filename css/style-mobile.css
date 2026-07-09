@@ -1,0 +1,245 @@
+@charset "UTF-8";
+/* style-mobile.css — 独立原生 App，不沿用任何 PC 布局 */
+
+:root {
+    --blue: #007AFF;
+    --red: #FF3B30;
+    --green: #34C759;
+    --orange: #FF9500;
+    --purple: #AF52DE;
+    --bg: #f2f2f7;
+    --card: #fff;
+    --text: #1c1c1e;
+    --t2: #8e8e93;
+    --t3: #c7c7cc;
+    --sep: rgba(60,60,67,0.08);
+}
+
+*,*:before,*:after{box-sizing:border-box;margin:0;padding:0}
+:focus,:focus-visible{outline:none!important}
+html{font-size:16px;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+    background:var(--bg);color:var(--text);line-height:1.5;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+
+/* ============================================================ */
+/*  隐藏所有 PC 元素                                             */
+/* ============================================================ */
+.sidebar,.mobile-nav-toggle,.sidebar-overlay,.mobile-bottom-nav,
+#mobile-menu-btn,.header-card .import-btn,.header-card .export-btn,
+.lg\:col-span-1.sticky,/* PC 日历侧栏在移动端用 Tab2 替代 */
+#week-view,#month-view,#week-summary,#month-summary,
+#upcoming-events,#view-container .flex.space-x-2 .filter-btn:nth-child(2),
+#view-container .flex.space-x-2 .filter-btn:nth-child(3),
+#view-container .flex.space-x-2 .filter-btn:nth-child(4)
+{display:none!important}
+
+/* ============================================================ */
+/*  全局布局                                                     */
+/* ============================================================ */
+.main-content{margin:0!important;width:100%!important}
+.header-card{
+    position:fixed;top:0;left:0;right:0;z-index:50;
+    padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0));
+    background:rgba(249,249,249,0.92);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+.header-card h1{font-size:18px;font-weight:700;letter-spacing:-0.3px}
+.header-card .container{width:100%;padding:0}
+.header-card .flex.items-center.space-x-2{display:flex;align-items:center;gap:4px}
+.header-card .data-btn{width:32px;height:32px;padding:0;border-radius:50%;background:rgba(0,0,0,0.04);color:var(--blue);font-size:15px;display:flex;align-items:center;justify-content:center}
+.header-card .data-btn span{display:none}
+
+.content-container{padding-top:56px}
+.container{width:100%;padding:0}
+
+/* 全单列 */
+.grid,.lg\:grid-cols-4{display:flex!important;flex-direction:column!important;gap:0!important;padding:0!important}
+.lg\:col-span-3,.lg\:col-span-1,.lg\:col-span-2{width:100%!important}
+
+/* ============================================================ */
+/*  Tab 1: 今天                                                   */
+/* ============================================================ */
+/* 隐藏视图切换按钮 — 用底部 Tab 代替 */
+#day-view-btn,#week-view-btn,#month-view-btn{display:none!important}
+
+/* 日期大标题 */
+#selected-date{font-size:26px;font-weight:800;letter-spacing:-0.5px}
+#day-of-week{font-size:14px;color:var(--t2);margin-top:2px}
+
+/* 容器卡片化 */
+.bg-white{
+    background:var(--card);border-radius:16px;
+    margin:8px 12px;padding:16px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.04);
+}
+
+/* 今天的统计三格 */
+.grid-cols-1.md\:grid-cols-3{
+    display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:8px!important
+}
+.bg-primary\/5,.bg-success\/5,.bg-warning\/5{
+    border-radius:14px;padding:12px 8px;text-align:center
+}
+.bg-primary\/5 .w-10,.bg-success\/5 .w-10,.bg-warning\/5 .w-10{
+    width:32px;height:32px;margin:0 auto 6px;border-radius:50%
+}
+.bg-primary\/5 .text-lg,.bg-success\/5 .text-lg,.bg-warning\/5 .text-lg{
+    font-size:22px;font-weight:700
+}
+
+/* 事件列表 */
+.event-item{
+    background:var(--card);border-radius:12px;
+    padding:14px 16px;margin-bottom:6px;font-size:16px;
+    display:flex;align-items:center;
+    box-shadow:0 1px 2px rgba(0,0,0,0.03);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.event-item:active{background:#f0f0f5}
+
+/* 空状态 */
+#empty-state{padding:40px 20px!important;text-align:center}
+
+/* 进度环 — 放卡片内 */
+#progress-title{font-size:17px;font-weight:600}
+.w-40.h-40{width:100px!important;height:100px!important}
+#progress-text{font-size:20px!important;font-weight:700}
+#progress-subtitle{font-size:11px!important;color:var(--t2)}
+
+/* FAB 添加按钮 */
+#add-event-btn{
+    position:fixed;bottom:100px;right:16px;z-index:35;
+    width:50px;height:50px;border-radius:50%;
+    background:var(--blue);color:#fff;
+    box-shadow:0 4px 16px rgba(0,122,255,0.35);
+    font-size:24px;display:flex;align-items:center;justify-content:center;
+    transition:transform 0.2s;
+    min-width:auto;padding:0
+}
+#add-event-btn:active{transform:scale(0.9)}
+#add-event-btn span{display:none}
+#add-event-btn i{margin:0;font-size:22px}
+
+/* ============================================================ */
+/*  Tab 2: 日历                                                   */
+/* ============================================================ */
+/* PC 日历侧栏移到 Tab2，但 HTML 是同一个。用 JS 控制显示 */
+.calendar-day{
+    aspect-ratio:1/1;border-radius:50%;font-size:14px;font-weight:500;
+    display:flex;align-items:center;justify-content:center;color:var(--text)
+}
+.calendar-day-active{background:var(--blue);color:#fff;font-weight:600}
+.calendar-day:not(.calendar-day-active):active{background:rgba(0,122,255,0.1)}
+
+.grid-cols-7{
+    display:grid!important;grid-template-columns:repeat(7,1fr)!important;gap:2px!important
+}
+
+/* 日历内日期标题 */
+#calendar-grid ~ div .text-center{font-size:11px;font-weight:600;color:var(--t2)}
+
+/* ============================================================ */
+/*  Tab 3: AI                                                     */
+/* ============================================================ */
+#ai-chat-toggle{display:none!important}/* PC 浮动按钮隐藏 */
+
+#ai-chat-window{
+    position:relative!important;/* Tab 内嵌 */
+    width:100%!important;height:calc(100vh - 160px)!important;
+    max-height:none!important;border-radius:0!important;
+    z-index:auto!important;box-shadow:none!important;
+    margin:0!important;display:flex!important;flex-direction:column
+}
+#ai-chat-window.hidden{display:none!important}
+
+/* AI 确认弹窗 */
+#ai-confirm-modal>.bg-white{width:88vw!important;max-width:320px!important;border-radius:16px!important}
+
+/* ============================================================ */
+/*  Tab 4: 统计                                                   */
+/* ============================================================ */
+/* 进度环容器 */
+#progress-title{font-size:17px;font-weight:700}
+
+/* 分类汇总卡片 */
+.category-summary-card{border-radius:14px;max-height:none;overflow-y:visible}
+.summary-task-item{font-size:14px;padding:12px;border-radius:10px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+.summary-task-item:active{background:#f0f0f5}
+.task-title-container{flex:1;display:flex;align-items:center;min-width:0;margin-right:12px;overflow:hidden}
+.task-title-main{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.subtask-count-badge{font-size:11px;background:rgba(0,0,0,0.04);border-radius:4px;padding:2px 6px;margin-left:6px;color:var(--t2);white-space:nowrap;flex-shrink:0}
+.task-date-badge{font-size:11px;color:var(--t2);background:rgba(0,0,0,0.03);border-radius:4px;padding:3px 8px;white-space:nowrap;flex-shrink:0}
+.date-today{color:var(--blue);background:rgba(0,122,255,0.06)}
+.date-tomorrow{color:var(--green);background:rgba(52,199,89,0.06)}
+.date-this-week{color:var(--purple);background:rgba(175,82,222,0.06)}
+.summary-checkbox{width:18px;height:18px;margin-right:10px;flex-shrink:0;accent-color:var(--blue)}
+
+/* ============================================================ */
+/*  分类颜色                                                      */
+/* ============================================================ */
+.light-work{background:rgba(0,122,255,0.1)}.text-work{color:var(--blue)}
+.light-study{background:rgba(175,82,222,0.1)}.text-study{color:var(--purple)}
+.light-life{background:rgba(52,199,89,0.1)}.text-life{color:var(--green)}
+.light-other{background:rgba(255,149,0,0.1)}.text-other{color:var(--orange)}
+
+/* ============================================================ */
+/*  模态框 — 底部 Action Sheet                                   */
+/* ============================================================ */
+#event-modal>.bg-white,#import-modal>.bg-white{
+    border-radius:20px 20px 0 0!important;position:fixed!important;
+    bottom:0!important;left:0!important;right:0!important;
+    max-height:88vh!important;overflow-y:auto!important;
+    width:100%!important;max-width:100%!important;margin:0!important;
+    box-shadow:0 -8px 32px rgba(0,0,0,0.12)!important
+}
+input,select,textarea{font-size:16px!important}
+
+/* ============================================================ */
+/*  底部 Tab Bar                                                  */
+/* ============================================================ */
+.mobile-tab-bar{
+    position:fixed;bottom:0;left:0;right:0;z-index:100;
+    display:flex;background:rgba(249,249,249,0.94);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-top:0.5px solid var(--sep);
+    padding:4px 0 env(safe-area-inset-bottom,0)
+}
+.tab-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:3px;padding:6px 0 4px;
+    background:none;color:var(--t2);font-size:10px;font-weight:500;
+    min-height:50px;transition:color 0.15s
+}
+.tab-item i{font-size:22px}
+.tab-item.active{color:var(--blue)}
+
+/* 底部安全区 */
+body.has-mobile-tabs{padding-bottom:calc(84px + env(safe-area-inset-bottom,0))}
+body.has-mobile-tabs #toast-container{bottom:100px}
+body.has-mobile-tabs .app-footer{margin-bottom:60px}
+body.has-mobile-tabs #add-event-btn{bottom:100px}
+
+/* ============================================================ */
+/*  杂项                                                          */
+/* ============================================================ */
+button,.data-btn,.filter-btn,.view-btn,.tab-item{border:none!important}
+.scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none}
+.scrollbar-hide::-webkit-scrollbar{display:none}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding-top:16px;margin-top:16px;border-top:0.5px solid var(--sep)}
+.subtask-progress-bar{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;margin-bottom:8px}
+.subtask-progress-fill{height:100%;border-radius:3px;transition:width 0.3s}
+.subtask-delete-btn{color:var(--red);background:none;font-size:18px;padding:8px}
+.subtask-delete-btn:active{background:rgba(255,59,48,0.08);border-radius:6px}
+.dot-pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--blue);animation:dotPulse 1.2s infinite ease-in-out}
+@keyframes dotPulse{0%,100%{opacity:0.2;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+#toast-container{position:fixed;bottom:100px;right:14px;left:14px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.app-footer{font-size:11px;padding:20px 16px;text-align:center;color:var(--t2)}
+.app-footer a{color:var(--t3);text-decoration:none}
+::selection{background:var(--blue);color:#fff}
+
+/* 筛选栏 — 只保留"全部" */
+#view-container .flex.space-x-2{gap:8px}
+.filter-btn.active{background:var(--blue);color:#fff;font-weight:600}

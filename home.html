@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>总览 · 人类生活实验日志</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/home.css">
+
+    <!-- 百度统计 -->
+    <script>
+        var _hmt = _hmt || [];
+        (function() {
+            var hm = document.createElement("script");
+            hm.src = "https://hm.baidu.com/hm.js?272119dae6cce7e3ded69c4a57f828d1";
+            var s = document.getElementsByTagName("script")[0];
+            s.parentNode.insertBefore(hm, s);
+        })();
+    </script>
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-N13ZH72VV9"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){ dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-N13ZH72VV9');
+    </script>
+</head>
+<body>
+
+    <!-- 导航栏（由 nav-loader.js 动态注入） -->
+    <div class="sidebar" id="sidebar"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <div class="main-container">
+
+            <!-- 左列：问候语 + 天气 + 图片轮播 -->
+            <div class="left-column">
+                <div class="time-greeting" id="time-greeting">
+                    <div class="greeting" id="greeting-text"></div>
+                    <div class="sub-text" id="sub-text"></div>
+                </div>
+                <div class="weather-card loading" id="weather-card">
+                    <div class="weather-main">
+                        <span class="weather-icon" id="weather-icon">--</span>
+                        <span class="weather-temp" id="weather-temp">--°</span>
+                        <span class="weather-location">上海·嘉定</span>
+                    </div>
+                    <div class="weather-detail" id="weather-detail">
+                        <span>体感 --°</span>
+                        <span>💧 --%</span>
+                        <span>🌬 --m/s</span>
+                    </div>
+                    <div class="weather-tip" id="weather-tip">加载天气中...</div>
+                </div>
+                <div class="carousel-container">
+                    <div class="carousel-slides" id="carousel-slides">
+                        <div class="carousel-slide">
+                            <img src="https://picsum.photos/450/350?random=1" alt="示例图片1" />
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="https://picsum.photos/450/350?random=2" alt="示例图片2" />
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="https://picsum.photos/450/350?random=3" alt="示例图片3" />
+                        </div>
+                        <div class="carousel-slide">
+                            <img src="https://picsum.photos/450/350?random=4" alt="示例图片4" />
+                        </div>
+                    </div>
+                    <div class="carousel-prev" id="carousel-prev"><span>&lt;</span></div>
+                    <div class="carousel-next" id="carousel-next"><span>&gt;</span></div>
+                    <div class="carousel-dots" id="carousel-dots"></div>
+                </div>
+                <div class="today-progress" id="today-progress">
+                    <div class="progress-label">
+                        <span>今日进度</span>
+                        <span class="progress-percent" id="progress-percent">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                </div>
+                <div class="today-progress" id="week-progress">
+                    <div class="progress-label">
+                        <span>本周进度</span>
+                        <span class="progress-percent" id="week-percent">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill week-fill" id="week-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中列：时钟 + 日历 -->
+            <div class="clock-container">
+                <div class="clock" id="clock">
+                    <div class="hand hour-hand" id="hour-hand"></div>
+                    <div class="hand minute-hand" id="minute-hand"></div>
+                    <div class="hand second-hand" id="second-hand"></div>
+                </div>
+                <div class="date-time-card">
+                    <div class="date-time" id="date-time"></div>
+                </div>
+                <div class="calendar" id="calendar">
+                    <div class="calendar-header">
+                        <div class="month-arrow" id="month-prev">&lt;</div>
+                        <select id="year-select"></select>
+                        <select id="month-select"></select>
+                        <div class="month-arrow" id="month-next">&gt;</div>
+                        <div class="today-button" id="today-button">今</div>
+                    </div>
+                    <div class="calendar-body">
+                        <table></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右列：倒计时 + 卡片 -->
+            <div class="countdown-container">
+                <div class="ring-container">
+                    <div class="progress-ring" id="progress-ring"></div>
+                    <div class="inner-circle">
+                        <div class="countdown-text" id="countdown-text"></div>
+                    </div>
+                </div>
+                <div class="cards-container">
+                    <div class="card holiday-card-item" id="holiday-card-1">
+                        <span class="card-label"></span>
+                        <span class="card-number"></span> 天
+                    </div>
+                    <div class="card holiday-card-item" id="holiday-card-2">
+                        <span class="card-label"></span>
+                        <span class="card-number"></span> 天
+                    </div>
+                    <div class="card clickable memorial-card" id="memorial-card">
+                        <span id="memorial-text">+ 设置纪念日</span>
+                        <span class="card-number" id="memorial-days"></span><span id="memorial-unit"> 天</span>
+                    </div>
+                    <div class="card rent-card" id="rent-card">
+                        距交房租 <span class="card-number" id="rent-days"></span> 天
+                    </div>
+                    <div class="card" id="weekend-card">
+                        距周末 <span class="card-number" id="weekend-days"></span> 天
+                    </div>
+                    <div class="card" id="salary-card">
+                        距发工资 <span class="card-number" id="salary-days"></span> 天
+                    </div>
+                    <div class="card clickable" id="fun-card">
+                        再坚持一下下
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="/js/nav-loader.js"></script>
+    <script src="/js/home.js"></script>
+
+    <footer class="app-footer" style="text-align: center; padding: 16px; font-size: 13px; color: #6c757d; line-height: 1.8;">
+    © 2026 humanlifeos.art &nbsp;|&nbsp;
+    <a href="https://beian.miit.gov.cn/" target="_blank" style="color: #6c757d; text-decoration: none;">湘ICP备2026007930号</a> &nbsp;|&nbsp;
+    <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011402021877" target="_blank" style="color: #6c757d; text-decoration: none; display: inline-flex; align-items: center;">
+        <img src="https://beian.mps.gov.cn/img/ghs.png" style="height: 14px; margin-right: 4px;">沪公网安备 31011402021877号
+    </a>
+</footer>
+
+
+</body>
+</html>

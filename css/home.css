@@ -1,0 +1,674 @@
+/* home.css - 首页样式（导航样式见 nav.css，由 nav-loader.js 自动注入）*/
+
+/* body flex 布局：main-content 自动撑满，footer 贴底，无溢出滚动条 */
+html, body {
+    margin: 0;
+    padding: 0;
+}
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* 页面布局 - 侧栏由 nav.css 定义，这里只处理内容区偏移 */
+.main-content {
+    padding: 120px 60px 60px 200px;
+    flex: 1;
+    min-height: 0; /* 覆盖 nav.css 的 min-height:100vh，避免撑出滚动条 */
+    box-sizing: border-box;
+}
+
+/* 三列横排，gap 实际生效 */
+.main-container {
+    display: flex;
+    align-items: stretch;       /* 三列等高 */
+    justify-content: flex-start;/* gap 生效的前提 */
+    gap: 250px;                  /* 改这个数字控制列间距 */
+    flex-wrap: nowrap;
+}
+
+/* ── 左列：问候语 + 轮播 ── */
+.left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    align-items: center;
+    flex-shrink: 0;
+    width: 400px;
+}
+
+/* ── 中列：时钟 + 日历 ── */
+.clock-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* 顶底对齐 */
+    align-items: center;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.clock {
+    width: 280px;
+    height: 280px;
+    position: relative;
+    border-radius: 50%;
+    background-color: transparent;
+    flex-shrink: 0;
+}
+
+.clock::before {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    background-color: #333;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+.hand {
+    position: absolute;
+    bottom: 50%;
+    left: 50%;
+    transform-origin: bottom;
+    background-color: #333;
+    border-radius: 10px;
+}
+
+.hour-hand   { width: 8px;  height: 75px; }
+.minute-hand { width: 6px;  height: 105px; }
+.second-hand { width: 2px;  height: 125px; background-color: red; }
+
+.clock-scale {
+    position: absolute;
+    width: 2px;
+    height: 10px;
+    background-color: #333;
+    top: 0;
+    left: 50%;
+    transform-origin: 50% 140px;
+}
+
+.clock-scale.big { height: 20px; }
+
+.clock-number {
+    position: absolute;
+    font-size: 15px;
+    font-weight: bold;
+    top: 50%;
+    left: 50%;
+    transform-origin: 50% 100px;
+}
+
+.date-time-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 14px 28px;
+    margin: 18px 0 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    text-align: center;
+}
+.date-time {
+    font-size: 15px;
+    line-height: 2;
+}
+
+/* ── 日历 ── */
+.calendar {
+    font-size: 14px;
+    text-align: center;
+    margin-top: 16px;
+    width: 100%;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.calendar-header select {
+    padding: 4px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+    cursor: pointer;
+}
+
+.calendar table { border-collapse: collapse; width: 100%; }
+.calendar th {
+    padding: 6px 2px; text-align: center;
+    font-size: 12px; color: #888; font-weight: 600;
+    border-bottom: 1px solid #eee;
+}
+.calendar td {
+    padding: 4px 2px; text-align: center; vertical-align: top;
+    height: 48px; width: 14.28%; position: relative;
+    cursor: default; border-radius: 4px; transition: background 0.15s;
+}
+.calendar td:hover { background: #f0f4ff; }
+
+/* 公历日期 */
+.solar-day {
+    display: block; font-size: 14px; font-weight: 600; line-height: 1.2;
+}
+/* 农历日期 */
+.lunar-day {
+    display: block; font-size: 10px; color: #999; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* 农历节日（红色） */
+.lunar-festival { color: #e53e3e; font-weight: 700; font-size: 10px; display: block; line-height: 1.3; }
+
+/* 节日/节气标签 */
+.day-badge {
+    display: block; font-size: 9px; font-weight: 700; line-height: 1.3;
+    padding: 0 2px; border-radius: 2px; white-space: nowrap;
+}
+.holiday-badge { color: #fff; background: #e53e3e; }
+.solar-badge   { color: #e53e3e; }
+.lunar-badge   { color: #d69e2e; }
+.term-badge    { color: #38a169; }
+
+/* 今天 */
+.calendar .today { background-color: #ffcc00; }
+.calendar .today .solar-day { color: #000; font-size: 16px; }
+
+/* 周末 */
+.calendar .weekend .solar-day { color: #e53e3e; }
+.calendar .weekend .lunar-day { color: #e53e3e88; }
+
+/* 法定休息日 */
+.calendar .rest-day { background: #fff5f5; }
+.calendar .rest-day .solar-day { color: #c53030; }
+
+/* 调休补班 */
+.calendar .work-day { background: #fffff0; }
+.calendar .work-day .solar-day { color: #d69e2e; }
+
+/* 节假日当天高亮 */
+.calendar td:has(.holiday-badge) { background: #fff5f5; }
+
+.today-button {
+    display: none;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    background-color: transparent;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 24px;
+    text-align: center;
+    margin-left: 10px;
+}
+
+.today-button.visible { display: block; }
+
+.month-arrow {
+    width: 26px; height: 26px;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 14px; color: #555;
+    background: #fff; transition: all 0.15s;
+    flex-shrink: 0;
+}
+.month-arrow:hover { background: #e8f0fe; border-color: #3b82f6; color: #3b82f6; }
+
+/* ── 右列：倒计时 + 卡片 ── */
+.countdown-container {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    flex-shrink: 0;
+}
+
+.ring-container {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    flex-shrink: 0;
+}
+
+.progress-ring {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    position: absolute;
+    background: conic-gradient(#007BFF 0deg, #ccc 0deg);
+    transition: background 0.5s;
+}
+
+/* 环状态切换时的过渡动画，掩盖 conic-gradient 硬切 */
+.progress-ring.switching {
+    animation: ring-switch 0.35s ease-out;
+}
+
+@keyframes ring-switch {
+    0%   { transform: scale(0.9); opacity: 0.5; }
+    100% { transform: scale(1);   opacity: 1; }
+}
+
+/* 休息中状态 */
+.progress-ring.resting {
+    background: #a0c4a0;
+    animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+    0%, 100% { opacity: 0.75; }
+    50% { opacity: 1; }
+}
+
+.inner-circle {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 0 10px;
+    box-sizing: border-box;
+}
+
+.countdown-text {
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    white-space: pre-line;
+}
+
+/* ── 卡片 ── */
+.cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 0;
+}
+
+.card {
+    width: 200px;
+    height: 60px;
+    border: 2px solid #007BFF;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: transparent;
+    font-size: 16px;
+    cursor: default;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+.card.clickable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.card-number {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+#fun-card { justify-content: center; }
+
+/* 纪念日卡片 */
+.memorial-card {
+    border-color: #ec4899 !important;
+    font-size: 14px;
+    color: #be185d;
+}
+.memorial-card .card-number {
+    color: #db2777;
+}
+
+/* 节日 & 房租卡片 */
+.holiday-card-item {
+    border-color: #f59e0b !important;
+    font-size: 14px;
+}
+.holiday-card-item .card-label {
+    max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.holiday-card-item .card-number { color: #d97706; }
+
+.rent-card {
+    border-color: #8b5cf6 !important;
+}
+
+/* ── 图片轮播 ── */
+.carousel-container {
+    width: 400px;
+    height: 290px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.carousel-slides { display: flex; height: 100%; transition: transform 0.5s ease-in-out; }
+.carousel-slide  { min-width: 100%; height: 100%; }
+.carousel-slide img { width: 100%; height: 100%; object-fit: cover; }
+
+.carousel-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 5px;
+}
+
+.carousel-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background-color: rgba(255,255,255,0.5);
+    cursor: pointer;
+}
+
+.carousel-dot.active { background-color: white; }
+
+.carousel-prev,
+.carousel-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px; height: 40px;
+    background-color: rgba(0,0,0,0.3);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.carousel-prev:hover,
+.carousel-next:hover { background-color: rgba(0,0,0,0.5); }
+.carousel-prev { left: 10px; }
+.carousel-next { right: 10px; }
+
+/* ── 今日进度条 ── */
+.today-progress {
+    width: 100%;
+    max-width: 400px;
+}
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #64748b;
+}
+.progress-percent {
+    font-weight: 700;
+    font-size: 14px;
+    color: #007BFF;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+}
+.progress-track {
+    width: 100%;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 99px;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #007BFF, #38bdf8);
+    border-radius: 99px;
+    transition: width 0.6s ease;
+}
+.week-fill {
+    background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+/* ── 时间问候语 ── */
+.time-greeting {
+    text-align: center;
+    width: 100%;
+    background-color: white;
+    padding: 40px 0;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-sizing: border-box;
+}
+
+.time-greeting .greeting { font-size: 36px; font-weight: bold; color: #333; }
+.time-greeting .sub-text { font-size: 20px; margin-top: 5px; color: #666; }
+
+/* ── 天气卡片 ── */
+.weather-card {
+    width: 100%;
+    background: linear-gradient(135deg, #e8f4fd 0%, #f0f7ff 100%);
+    border-radius: 12px;
+    padding: 14px 18px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    box-sizing: border-box;
+    cursor: default;
+    transition: opacity 0.4s ease;
+}
+.weather-card.loading {
+    opacity: 0;
+}
+.weather-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.weather-icon { font-size: 32px; line-height: 1; }
+.weather-temp {
+    font-size: 28px; font-weight: 800; color: #1e293b;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+}
+.weather-location {
+    font-size: 13px; color: #64748b; margin-left: auto;
+}
+.weather-detail {
+    display: flex; gap: 16px; margin-top: 6px;
+    font-size: 12px; color: #64748b;
+}
+.weather-tip {
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px dashed #cbd5e1;
+    font-size: 12px; color: #475569;
+    display: flex; align-items: center; gap: 4px;
+}
+
+/* ===== 平板端 (≤1024px) ===== */
+@media (max-width: 1024px) {
+    .main-content {
+        padding: 100px 30px 40px 30px;
+    }
+
+    .main-container {
+        flex-direction: column;
+        gap: 40px;
+        align-items: center;
+    }
+
+    .left-column {
+        width: 100%;
+        max-width: 500px;
+    }
+
+    .carousel-container {
+        width: 100%;
+        max-width: 500px;
+        height: 240px;
+    }
+
+    .clock {
+        width: 220px;
+        height: 220px;
+    }
+
+    .clock-scale { transform-origin: 50% 110px; }
+    .clock-number { transform-origin: 50% 80px; }
+    .hour-hand { height: 60px; }
+    .minute-hand { height: 85px; }
+    .second-hand { height: 100px; }
+
+    .ring-container,
+    .progress-ring {
+        width: 160px;
+        height: 160px;
+    }
+
+    .inner-circle {
+        width: 130px;
+        height: 130px;
+        top: 15px;
+        left: 15px;
+    }
+
+    .cards-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: center;
+    }
+
+    .card {
+        width: 160px;
+        height: 50px;
+        font-size: 14px;
+        padding: 0 14px;
+    }
+
+    .card-number { font-size: 20px; }
+}
+
+/* ===== 手机端 (≤768px) ===== */
+@media (max-width: 768px) {
+    .main-content {
+        padding: 80px 16px 30px 16px;
+    }
+
+    .main-container {
+        gap: 32px;
+    }
+
+    .left-column {
+        max-width: 100%;
+    }
+
+    .time-greeting {
+        padding: 24px 0;
+    }
+
+    .time-greeting .greeting {
+        font-size: 26px;
+    }
+
+    .time-greeting .sub-text {
+        font-size: 16px;
+    }
+
+    .weather-card { padding: 10px 14px; }
+    .weather-temp { font-size: 22px; }
+    .weather-icon { font-size: 26px; }
+    .weather-detail { font-size: 11px; gap: 10px; }
+    .weather-tip { font-size: 11px; }
+
+    .carousel-container {
+        max-width: 100%;
+        height: 200px;
+    }
+
+    .clock {
+        width: 180px;
+        height: 180px;
+    }
+
+    .clock-scale { transform-origin: 50% 90px; }
+    .clock-number { transform-origin: 50% 65px; font-size: 12px; }
+    .hour-hand { height: 48px; }
+    .minute-hand { height: 68px; }
+    .second-hand { height: 80px; }
+
+    .date-time {
+        font-size: 14px;
+    }
+
+    .calendar {
+        font-size: 12px;
+    }
+
+    .calendar th, .calendar td {
+        padding: 3px;
+    }
+
+    .ring-container,
+    .progress-ring {
+        width: 140px;
+        height: 140px;
+    }
+
+    .inner-circle {
+        width: 112px;
+        height: 112px;
+        top: 14px;
+        left: 14px;
+    }
+
+    .countdown-text {
+        font-size: 15px;
+    }
+
+    .card {
+        width: 140px;
+        height: 44px;
+        font-size: 13px;
+        padding: 0 10px;
+    }
+
+    .card-number { font-size: 18px; }
+    .cards-container { gap: 12px; }
+}
+
+
+/* ── 页脚（合规备案） ── */
+/* ── 页脚（合规备案） ── */
+.app-footer {
+    text-align: center;
+    padding: 16px 20px;
+    color: #666;
+    font-size: 14px;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    margin-left: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+.app-footer a {
+    color: #999;
+    text-decoration: none;
+}
+.app-footer a:hover {
+    color: #165DFF;
+}
+@media (max-width: 1024px) {
+    .app-footer {
+margin-left: 0;
+width: 100%;
+    }
+}

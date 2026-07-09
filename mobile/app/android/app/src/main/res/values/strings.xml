@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LifeOs</string>
+    <string name="title_activity_main">LifeOs</string>
+    <string name="package_name">art.humanlifeos.todo</string>
+    <string name="custom_url_scheme">art.humanlifeos.todo</string>
+    <string name="widget_description">LifeOs - 在桌面显示今日日程</string>
+</resources>

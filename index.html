@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>灵感便签 · 云端存储版</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link rel="stylesheet" href="/css/nav.css">
+
+    <style>
+        /* ========== CSS 变量系统 ========== */
+        :root {
+            --wall-bg: #e8e0ce;
+            --wall-dark: #cfc7b0;
+            --toolbar-bg: rgba(245, 240, 225, 0.9);
+            --toolbar-border: rgba(120, 90, 50, 0.25);
+            --text-primary: #3b2c1f;
+            --text-secondary: #6b5a45;
+            --text-muted: #9a8a70;
+            --accent: #8b6942;
+            --accent-hover: #6d4f32;
+            --danger: #b85c3a;
+            --danger-hover: #9a4a2a;
+            --shadow-sm: 0 2px 6px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+            --shadow-lg: 0 12px 24px rgba(0,0,0,0.18);
+            --shadow-card: 0 8px 15px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,245,200,0.7) inset;
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 40px;
+            --transition-fast: 0.1s ease;
+            --transition-normal: 0.2s ease;
+            --transition-slow: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            --note-width: 230px;
+            --note-min-h: 200px;
+            --drag-h: 32px;
+        }
+
+        /* ========== 全局重置 ========== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Microsoft YaHei', 'KaiTi', '华文楷书', cursive, monospace;
+            background: var(--wall-dark);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+        }
+        /* 拖拽时全局禁用选择 */
+        body.is-dragging, body.is-dragging * { user-select: none !important; }
+
+        /* ========== 主容器 ========== */
+        .main-content { height: 100%; }
+        .wall {
+            position: relative;
+            width: 100%; height: 100%;
+            background-color: var(--wall-bg);
+            background-image:
+                radial-gradient(circle at 25% 40%, rgba(180,160,130,0.12) 2%, transparent 2.5%),
+                radial-gradient(circle at 70% 85%, rgba(140,115,80,0.1) 1.8%, transparent 2%),
+                repeating-linear-gradient(45deg, rgba(100,70,40,0.03) 0px, rgba(100,70,40,0.03) 2px, transparent 2px, transparent 8px);
+            background-size: 45px 45px, 60px 60px, auto;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        /* ========== 顶部工具栏 ========== */
+        .toolbar {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 64px;
+            background: var(--toolbar-bg);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            z-index: 100;
+            border-bottom: 1px solid var(--toolbar-border);
+            box-shadow: var(--shadow-sm);
+            transition: height var(--transition-normal), box-shadow var(--transition-normal);
+        }
+        .toolbar.is-scrolled {
+            height: 52px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .title {
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.08);
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity var(--transition-fast), transform var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            border-radius: var(--radius-md);
+            position: relative;
+        }
+        .title::before {
+            content: "";
+            display: inline-block;
+            width: 24px; height: 24px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b6942' width='24' height='24'%3E%3Cpath d='M4 4v16h16V4H4zm2 2h12v12H6V6zm2 2v8h8V8H8z'/%3E%3C/svg%3E") no-repeat center;
+            background-size: contain;
+            flex-shrink: 0;
+        }
+        .title:hover { opacity: 0.85; }
+        .title:active { transform: scale(0.98); }
+        
+        /* 云端图标 */
+        .title::after {
+            content: "☁️";
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, #f5e7d3, #e8d5b8);
+            border: none;
+            padding: 9px 22px;
+            border-radius: var(--radius-xl);
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--accent-hover);
+            cursor: pointer;
+            box-shadow: 0 4px 0 #b2977a, var(--shadow-sm);
+            transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .add-btn::before {
+            content: "+";
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .add-btn:hover {
+            background: linear-gradient(135deg, #f8ead6, #ecd9be);
+        }
+        .add-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #b2977a, var(--shadow-sm);
+        }
+        .add-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* 撤销按钮 */
+        .undo-btn {
+            background: transparent;
+            border: 1.5px solid var(--toolbar-border);
+            padding: 8px 14px;
+            border-radius: var(--radius-xl);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            font-family: inherit;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(10px);
+        }
+        .undo-btn.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+        }
+        .undo-btn:hover {
+            background: rgba(139, 105, 66, 0.08);
+            border-color: var(--accent);
+        }
+
+        /* 导航由 nav.css + nav-loader.js 统一管理 */
+
+        /* ========== 便签卡片 ========== */
+        .note {
+            position: absolute;
+            min-width: 180px;
+            min-height: var(--note-min-h);
+            padding: 0;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-card);
+            transition: box-shadow var(--transition-fast);
+            cursor: default;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+        }
+        .note:hover {
+            box-shadow: 0 12px 20px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,245,200,0.7) inset;
+        }
+        .note.is-dragging {
+            box-shadow: 0 20px 35px rgba(0,0,0,0.35), 0 0 0 2px rgba(255,245,200,0.9) inset;
+            z-index: 1000 !important;
+        }
+
+        /* 拖拽柄 */
+        .note-drag-handle {
+            height: var(--drag-h);
+            cursor: move;
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 8px;
+            gap: 6px;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .note-drag-handle::before {
+            content: "";
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 32px; height: 4px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 2px;
+        }
+
+        /* 操作按钮 */
+        .note-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+        .note:hover .note-actions { opacity: 1; }
+        .note-btn {
+            width: 24px; height: 24px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background var(--transition-fast);
+        }
+        .note-btn:hover { background: rgba(0,0,0,0.1); }
+        .note-btn.delete:hover { background: rgba(184, 92, 58, 0.2); }
+        .note-btn svg {
+            width: 14px; height: 14px;
+            stroke: rgba(0,0,0,0.5);
+            stroke-width: 2;
+            fill: none;
+        }
+        .note-btn.delete:hover svg { stroke: var(--danger); }
+
+        /* 内容区域 */
+        .note-content {
+            flex: 1;
+            padding: 8px 12px 12px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .note-content textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 120px;
+            border: none;
+            background: transparent;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: rgba(0,0,0,0.85);
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            resize: none;
+            outline: none;
+            overflow-y: auto;
+        }
+        .note-content textarea::placeholder {
+            color: rgba(0,0,0,0.25);
+        }
+
+        /* 调整大小手柄 */
+        .note-resize {
+            position: absolute;
+            bottom: 0; right: 0;
+            width: 20px; height: 20px;
+            cursor: nwse-resize;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+        .note:hover .note-resize { opacity: 0.5; }
+        .note-resize::before,
+        .note-resize::after {
+            content: "";
+            position: absolute;
+            background: rgba(0,0,0,0.3);
+            border-radius: 1px;
+        }
+        .note-resize::before {
+            width: 10px; height: 2px;
+            bottom: 6px; right: 3px;
+            transform: rotate(-45deg);
+        }
+        .note-resize::after {
+            width: 6px; height: 2px;
+            bottom: 3px; right: 3px;
+            transform: rotate(-45deg);
+        }
+
+        /* 颜色主题 */
+        .note.yellow {
+            background: linear-gradient(145deg, #fff9c4, #fff59d);
+            border-top: 2px solid #fdd835;
+        }
+        .note.pink {
+            background: linear-gradient(145deg, #fce4ec, #f8bbd0);
+            border-top: 2px solid #f06292;
+        }
+        .note.blue {
+            background: linear-gradient(145deg, #e3f2fd, #bbdefb);
+            border-top: 2px solid #42a5f5;
+        }
+        .note.green {
+            background: linear-gradient(145deg, #e8f5e9, #c8e6c9);
+            border-top: 2px solid #66bb6a;
+        }
+        .note.purple {
+            background: linear-gradient(145deg, #f3e5f5, #e1bee7);
+            border-top: 2px solid #ab47bc;
+        }
+        .note.orange {
+            background: linear-gradient(145deg, #fff3e0, #ffe0b2);
+            border-top: 2px solid #ffa726;
+        }
+
+        /* ========== 首次使用引导 ========== */
+        .onboarding-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-slow);
+        }
+        .onboarding-overlay.is-active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .onboarding-card {
+            background: var(--toolbar-bg);
+            backdrop-filter: blur(12px);
+            padding: 32px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            max-width: 480px;
+            text-align: center;
+        }
+        .onboarding-title {
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+        .onboarding-text {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .onboarding-btn {
+            background: linear-gradient(135deg, #f5e7d3, #e8d5b8);
+            border: none;
+            padding: 10px 24px;
+            border-radius: var(--radius-xl);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-hover);
+            cursor: pointer;
+            transition: transform var(--transition-fast);
+        }
+        .onboarding-btn:hover { transform: scale(1.05); }
+        .onboarding-skip {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            margin-top: 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        /* ========== 加载状态 ========== */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(232, 224, 206, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(139, 105, 66, 0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 768px) {
+            .toolbar {
+                padding: 0 16px;
+                height: 56px;
+            }
+            .title {
+                font-size: 1.2rem;
+            }
+            .add-btn {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
+            .note {
+                min-width: 160px;
+                min-height: 180px;
+            }
+        }
+
+        /* ── 页脚（合规备案） ── */
+        .app-footer {
+            text-align: center; padding: 16px 20px; color: #666;
+            font-size: 14px; background: #ffffff; border-top: 1px solid #e5e7eb;
+            margin-left: 0; width: 100%; box-sizing: border-box;
+        }
+        .app-footer a { color: #999; text-decoration: none; }
+        .app-footer a:hover { color: #165DFF; }
+        @media (max-width: 1024px) {
+            .app-footer { margin-left: 0; width: 100%; }
+        }
+
+</style>
+</head>
+<body>
+
+<!-- 加载状态 -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+</div>
+
+<!-- 侧边导航 -->
+<div id="sidebar" class="sidebar"></div>
+
+<!-- 主内容 -->
+<div class="main-content">
+    <!-- 工具栏 -->
+    <div class="toolbar" id="toolbar">
+        <div class="title" id="titleBtn">
+            墙面便签
+        </div>
+        <div class="toolbar-actions">
+            <button class="undo-btn" id="undoBtn" title="撤销删除">撤销删除</button>
+            <button class="add-btn" id="addBtn">添加便签</button>
+        </div>
+    </div>
+
+    <!-- 墙面 -->
+    <div class="wall" id="wall"></div>
+</div>
+
+<!-- 首次使用引导 -->
+<div class="onboarding-overlay" id="onboardingOverlay" aria-hidden="true">
+    <div class="onboarding-card">
+        <div class="onboarding-title">欢迎使用墙面便签 ☁️</div>
+        <div class="onboarding-text">
+            这是一个云端便签应用，您的数据将自动保存到服务器。<br><br>
+            点击「添加便签」开始使用，<br>
+            拖动便签可移动位置，右下角可调整大小。
+        </div>
+        <button class="onboarding-btn" id="startUsingBtn">开始使用</button>
+        <button class="onboarding-skip" id="skipOnboarding">不再提示</button>
+    </div>
+</div>
+
+<script src="/js/utils.js"></script>
+<script src="/js/nav-loader.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    // ========== 配置 ==========
+    const API_BASE_URL = '/api'; // API基础路径
+    // 自动附加登录 token
+    const _origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+      opts = opts || {};
+      const token = localStorage.getItem('auth_token');
+      if (token && typeof url === 'string' && url.startsWith('/api')) {
+        opts.headers = opts.headers || {};
+        opts.headers['Authorization'] = 'Bearer ' + token;
+      }
+      return _origFetch.call(window, url, opts);
+    };
+    const ONBOARDING_KEY = 'wallnotepad-onboarded';
+
+    // ========== DOM 元素 ==========
+    const wall = document.getElementById('wall');
+    const addBtn = document.getElementById('addBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const titleBtn = document.getElementById('titleBtn');
+    const toolbar = document.getElementById('toolbar');
+    const sidebar = document.getElementById('sidebar');
+    const onboardingOverlay = document.getElementById('onboardingOverlay');
+    const startUsingBtn = document.getElementById('startUsingBtn');
+    const skipOnboarding = document.getElementById('skipOnboarding');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    // ========== 状态 ==========
+    let notes = [];
+    let zIndexCounter = 1;
+    let lastDeletedNote = null;
+    let isFirstVisit = !localStorage.getItem(ONBOARDING_KEY);
+    let saveTimeout = null;
+
+    // ========== API 调用函数 ==========
+    async function fetchAPI(endpoint, options = {}) {
+        try {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || '请求失败');
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('API调用失败:', error);
+            throw error;
+        }
+    }
+
+    // 从服务器加载便签
+    async function loadNotesFromServer() {
+        try {
+            const result = await fetchAPI('/notes');
+            return result.data || [];
+        } catch (error) {
+            console.error('加载便签失败:', error);
+            return [];
+        }
+    }
+
+    // 创建新便签
+    async function createNoteOnServer(noteData) {
+        try {
+            const result = await fetchAPI('/notes', {
+                method: 'POST',
+                body: JSON.stringify(noteData)
+            });
+            return result.data;
+        } catch (error) {
+            console.error('创建便签失败:', error);
+            return null;
+        }
+    }
+
+    // 更新便签
+    async function updateNoteOnServer(id, noteData) {
+        try {
+            const result = await fetchAPI(`/notes/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(noteData)
+            });
+            return result.data;
+        } catch (error) {
+            console.error('更新便签失败:', error);
+            return null;
+        }
+    }
+
+    // 删除便签
+    async function deleteNoteFromServer(id) {
+        try {
+            await fetchAPI(`/notes/${id}`, {
+                method: 'DELETE'
+            });
+            return true;
+        } catch (error) {
+            console.error('删除便签失败:', error);
+            return false;
+        }
+    }
+
+    // 撤销删除
+    async function undoDeleteOnServer(id) {
+        try {
+            const result = await fetchAPI(`/notes/${id}/undo`, {
+                method: 'POST'
+            });
+            return result.data;
+        } catch (error) {
+            console.error('撤销删除失败:', error);
+            return null;
+        }
+    }
+
+    // 获取最近删除的便签
+    async function getRecentDeletedNote() {
+        try {
+            const result = await fetchAPI('/notes/recent-deleted');
+            return result.data;
+        } catch (error) {
+            console.error('获取最近删除失败:', error);
+            return null;
+        }
+    }
+
+    // ========== 便签操作 ==========
+    function createNoteElement(note) {
+        const noteEl = document.createElement('div');
+        noteEl.className = `note ${note.color || 'yellow'}`;
+        noteEl.dataset.id = note.id;
+        noteEl.style.left = `${note.x}px`;
+        noteEl.style.top = `${note.y}px`;
+        noteEl.style.width = `${note.width}px`;
+        noteEl.style.height = `${note.height}px`;
+        noteEl.style.zIndex = note.z_index || zIndexCounter;
+
+        noteEl.innerHTML = `
+            <div class="note-drag-handle">
+                <div class="note-actions">
+                    <button class="note-btn color-btn" title="切换颜色">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></svg>
+                    </button>
+                    <button class="note-btn delete" title="删除">
+                        <svg viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="note-content">
+                <textarea placeholder="在这里输入内容...">${note.content || ''}</textarea>
+            </div>
+            <div class="note-resize"></div>
+        `;
+
+        // 绑定事件
+        setupNoteEvents(noteEl, note);
+
+        return noteEl;
+    }
+
+    function setupNoteEvents(noteEl, note) {
+        const textarea = noteEl.querySelector('textarea');
+        const colorBtn = noteEl.querySelector('.color-btn');
+        const deleteBtn = noteEl.querySelector('.delete');
+        const resizeHandle = noteEl.querySelector('.note-resize');
+        const dragHandle = noteEl.querySelector('.note-drag-handle');
+
+        // 内容变化事件（防抖保存）
+        textarea.addEventListener('input', () => {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(async () => {
+                const noteData = notes.find(n => n.id === note.id);
+                if (noteData) {
+                    noteData.content = textarea.value;
+                    await updateNoteOnServer(note.id, { content: textarea.value });
+                }
+            }, 500);
+        });
+
+        // 切换颜色
+        colorBtn.addEventListener('click', async () => {
+            const colors = ['yellow', 'pink', 'blue', 'green', 'purple', 'orange'];
+            const currentIndex = colors.indexOf(note.color || 'yellow');
+            const nextColor = colors[(currentIndex + 1) % colors.length];
+            
+            note.color = nextColor;
+            noteEl.className = `note ${nextColor}`;
+            
+            await updateNoteOnServer(note.id, { color: nextColor });
+        });
+
+        // 删除
+        deleteBtn.addEventListener('click', async () => {
+            if (confirm('确定要删除这个便签吗？')) {
+                const success = await deleteNoteFromServer(note.id);
+                if (success) {
+                    lastDeletedNote = { ...note };
+                    noteEl.remove();
+                    notes = notes.filter(n => n.id !== note.id);
+                    showUndoButton();
+                    
+                    // 5秒后隐藏撤销按钮
+                    setTimeout(() => {
+                        hideUndoButton();
+                    }, 5000);
+                }
+            }
+        });
+
+        // 拖拽
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        dragHandle.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.note-btn')) return;
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            initialX = noteEl.offsetLeft;
+            initialY = noteEl.offsetTop;
+            
+            noteEl.classList.add('is-dragging');
+            document.body.classList.add('is-dragging');
+            
+            zIndexCounter++;
+            noteEl.style.zIndex = zIndexCounter;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            let newX = initialX + dx;
+            let newY = initialY + dy;
+            
+            // 边界限制
+            const maxX = wall.clientWidth - noteEl.offsetWidth;
+            const maxY = wall.clientHeight - noteEl.offsetHeight;
+            
+            newX = Math.max(0, Math.min(newX, maxX));
+            newY = Math.max(64, Math.min(newY, maxY)); // 顶部留出工具栏空间
+            
+            noteEl.style.left = `${newX}px`;
+            noteEl.style.top = `${newY}px`;
+        });
+
+        document.addEventListener('mouseup', async () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            noteEl.classList.remove('is-dragging');
+            document.body.classList.remove('is-dragging');
+            
+            // 更新位置
+            const newX = parseFloat(noteEl.style.left);
+            const newY = parseFloat(noteEl.style.top);
+            
+            const noteData = notes.find(n => n.id === note.id);
+            if (noteData) {
+                noteData.x = newX;
+                noteData.y = newY;
+                noteData.z_index = parseInt(noteEl.style.zIndex);
+                
+                await updateNoteOnServer(note.id, {
+                    x: newX,
+                    y: newY,
+                    z_index: parseInt(noteEl.style.zIndex)
+                });
+            }
+        });
+
+        // 调整大小
+        let isResizing = false;
+        let resizeStartX, resizeStartY, initialWidth, initialHeight;
+
+        resizeHandle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            isResizing = true;
+            resizeStartX = e.clientX;
+            resizeStartY = e.clientY;
+            initialWidth = noteEl.offsetWidth;
+            initialHeight = noteEl.offsetHeight;
+            
+            document.body.classList.add('is-dragging');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            const dx = e.clientX - resizeStartX;
+            const dy = e.clientY - resizeStartY;
+            
+            const newWidth = Math.max(180, initialWidth + dx);
+            const newHeight = Math.max(200, initialHeight + dy);
+            
+            noteEl.style.width = `${newWidth}px`;
+            noteEl.style.height = `${newHeight}px`;
+        });
+
+        document.addEventListener('mouseup', async () => {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            document.body.classList.remove('is-dragging');
+            
+            const newWidth = noteEl.offsetWidth;
+            const newHeight = noteEl.offsetHeight;
+            
+            const noteData = notes.find(n => n.id === note.id);
+            if (noteData) {
+                noteData.width = newWidth;
+                noteData.height = newHeight;
+                
+                await updateNoteOnServer(note.id, {
+                    width: newWidth,
+                    height: newHeight
+                });
+            }
+        });
+
+        // 点击提升层级
+        noteEl.addEventListener('mousedown', () => {
+            zIndexCounter++;
+            noteEl.style.zIndex = zIndexCounter;
+            
+            const noteData = notes.find(n => n.id === note.id);
+            if (noteData) {
+                noteData.z_index = zIndexCounter;
+            }
+        });
+    }
+
+    // 添加新便签
+    async function addNewNote(content = '') {
+        const colors = ['yellow', 'pink', 'blue', 'green', 'purple', 'orange'];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        
+        // 计算位置（避免重叠）
+        const offsetX = 50 + (notes.length % 5) * 30;
+        const offsetY = 100 + Math.floor(notes.length / 5) * 30;
+        
+        const noteData = {
+            content,
+            color: randomColor,
+            x: offsetX,
+            y: offsetY,
+            width: 230,
+            height: 200,
+            z_index: ++zIndexCounter
+        };
+        
+        const createdNote = await createNoteOnServer(noteData);
+        
+        if (createdNote) {
+            notes.push(createdNote);
+            const noteEl = createNoteElement(createdNote);
+            wall.appendChild(noteEl);
+            
+            // 聚焦到新便签
+            const textarea = noteEl.querySelector('textarea');
+            setTimeout(() => textarea.focus(), 100);
+        }
+    }
+
+    // 撤销删除
+    async function undoDelete() {
+        if (!lastDeletedNote) return;
+        
+        const restoredNote = await undoDeleteOnServer(lastDeletedNote.id);
+        
+        if (restoredNote) {
+            notes.push(restoredNote);
+            const noteEl = createNoteElement(restoredNote);
+            wall.appendChild(noteEl);
+            
+            lastDeletedNote = null;
+            hideUndoButton();
+        }
+    }
+
+    // 显示/隐藏撤销按钮
+    function showUndoButton() {
+        undoBtn.classList.add('is-visible');
+    }
+
+    function hideUndoButton() {
+        undoBtn.classList.remove('is-visible');
+    }
+
+    // ========== 导航由 nav-loader.js 统一管理 ==========
+
+    // ========== 初始化 ==========
+    async function loadAndInit() {
+        // 从服务器加载便签
+        notes = await loadNotesFromServer();
+        
+        // 渲染便签
+        notes.forEach(note => {
+            const noteEl = createNoteElement(note);
+            wall.appendChild(noteEl);
+            
+            if (note.z_index > zIndexCounter) {
+                zIndexCounter = note.z_index;
+            }
+        });
+        
+        // 隐藏加载状态
+        loadingOverlay.style.display = 'none';
+    }
+
+    // ========== 事件绑定 ==========
+    addBtn.addEventListener('click', () => addNewNote('新便签'));
+    undoBtn.addEventListener('click', undoDelete);
+
+    // 键盘事件
+    document.addEventListener('keydown', (e) => {
+        // Ctrl+Z 撤销删除
+        if (e.ctrlKey && e.key === 'z' && lastDeletedNote) {
+            e.preventDefault();
+            undoDelete();
+        }
+    });
+
+    // 首次使用引导
+    if (isFirstVisit) {
+        setTimeout(() => {
+            onboardingOverlay.classList.add('is-active');
+        }, 600);
+    }
+
+    startUsingBtn?.addEventListener('click', () => {
+        onboardingOverlay.classList.remove('is-active');
+        localStorage.setItem(ONBOARDING_KEY, 'true');
+    });
+
+    skipOnboarding?.addEventListener('click', () => {
+        onboardingOverlay.classList.remove('is-active');
+        localStorage.setItem(ONBOARDING_KEY, 'true');
+    });
+
+    // ========== 启动 ==========
+    loadAndInit();
+})();
+</script>
+
+    <footer class="app-footer" style="text-align: center; padding: 16px; font-size: 13px; color: #6c757d; line-height: 1.8;">
+    © 2026 humanlifeos.art &nbsp;|&nbsp;
+    <a href="https://beian.miit.gov.cn/" target="_blank" style="color: #6c757d; text-decoration: none;">湘ICP备2026007930号</a> &nbsp;|&nbsp;
+    <a href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011402021877" target="_blank" style="color: #6c757d; text-decoration: none; display: inline-flex; align-items: center;">
+        <img src="https://beian.mps.gov.cn/img/ghs.png" style="height: 14px; margin-right: 4px;">沪公网安备 31011402021877号
+    </a>
+</footer>
+
+
+</body>
+</html>
