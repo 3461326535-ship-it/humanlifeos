@@ -222,6 +222,162 @@ class EventModel {
     });
   }
 
+  // ===== 追补重复事件：确保重复任务链条到达今天 =====
+  static catchUpRecurringEvents(userId, callback) {
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+
+    const where = userId != null
+      ? "WHERE recurrence IS NOT NULL AND recurrence != '' AND user_id = ?"
+      : "WHERE recurrence IS NOT NULL AND recurrence != '' AND user_id IS NULL";
+    const params = userId != null ? [userId] : [];
+
+    // 1. 找出所有重复事件，按日期降序排列
+    db.all(
+      `SELECT * FROM events ${where} ORDER BY date DESC`,
+      params,
+      (err, rows) => {
+        if (err) return callback(err);
+        if (rows.length === 0) return callback(null);
+
+        // 2. 按 (title, recurrence, user) 分组，每组取最新日期的事件
+        const chainMap = {};
+        rows.forEach(e => {
+          const key = `${e.title}|||${e.recurrence}|||${e.user_id != null ? e.user_id : 'guest'}`;
+          if (!chainMap[key]) {
+            chainMap[key] = e; // rows 已按 date DESC 排序，第一个就是最新的
+          }
+        });
+
+        // 3. 计算每个链条需要追补的日期
+        const toCreate = [];
+        Object.values(chainMap).forEach(latestEvent => {
+          const endDate = latestEvent.recurrence_end_date || null;
+          const stopDate = endDate && endDate < todayStr ? endDate : todayStr;
+
+          let nextDate = computeNextRecurrenceDate(latestEvent.date, latestEvent.recurrence);
+
+          while (nextDate <= stopDate) {
+            // 避免重复：检查该链条该日期是否已有事件
+            const alreadyExists = rows.some(r =>
+              r.title === latestEvent.title &&
+              r.date === nextDate &&
+              r.recurrence === latestEvent.recurrence &&
+              (r.user_id != null ? r.user_id : 'guest') === (latestEvent.user_id != null ? latestEvent.user_id : 'guest')
+            );
+
+            if (!alreadyExists) {
+              toCreate.push({
+                title: latestEvent.title,
+                date: nextDate,
+                time: latestEvent.time,
+                category: latestEvent.category || '其他',
+                description: latestEvent.description || '',
+                reminder: latestEvent.reminder ? 1 : 0,
+                recurrence: latestEvent.recurrence,
+                recurrence_end_date: latestEvent.recurrence_end_date || null,
+                // 子任务：需要从 latestEvent 加载，见下文
+                _latestEventId: latestEvent.id,
+              });
+            }
+
+            nextDate = computeNextRecurrenceDate(nextDate, latestEvent.recurrence);
+          }
+        });
+
+        if (toCreate.length === 0) return callback(null);
+
+        // 4. 批量加载最新事件的子任务
+        const latestIds = [...new Set(toCreate.map(t => t._latestEventId))];
+        const placeholders = latestIds.map(() => '?').join(',');
+
+        db.all(
+          `SELECT * FROM subtasks WHERE event_id IN (${placeholders})`,
+          latestIds,
+          (err2, allSubtasks) => {
+            if (err2) return callback(err2);
+
+            // 按 event_id 分组子任务
+            const subtaskMap = {};
+            allSubtasks.forEach(st => {
+              if (!subtaskMap[st.event_id]) subtaskMap[st.event_id] = [];
+              subtaskMap[st.event_id].push(st);
+            });
+
+            // 5. 创建追补事件（带上子任务）
+            let created = 0;
+            let hasError = false;
+
+            toCreate.forEach(data => {
+              const subtasks = (subtaskMap[data._latestEventId] || []).map(st => ({
+                title: st.title,
+                completed: false, // 新事件子任务重置为未完成
+              }));
+
+              EventModel.createEvent(userId, {
+                title: data.title,
+                date: data.date,
+                time: data.time,
+                category: data.category,
+                description: data.description,
+                reminder: data.reminder,
+                recurrence: data.recurrence,
+                recurrence_end_date: data.recurrence_end_date,
+                subtasks: subtasks,
+              }, (err3) => {
+                if (hasError) return;
+                if (err3) {
+                  // SQLITE_CONSTRAINT(19)：并发安全 — 重复事件已由另一个请求创建，静默跳过
+                  if (err3.errno === 19) {
+                    // 不算错误，继续
+                  } else {
+                    hasError = true;
+                    return callback(err3);
+                  }
+                }
+                created++;
+                if (created === toCreate.length) callback(null);
+              });
+            });
+          }
+        );
+      }
+    );
+  }
+
+  // ===== 完成重复事件后创建下一个事件（跳至今天之后）=====
+  // 用于 PUT/PATCH 完成 + AI 批量完成等所有完成路径
+  static fillRecurringChain(userId, completedEvent) {
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+
+    const endDate = completedEvent.recurrence_end_date || null;
+
+    // 从完成日期 +1 间隔开始，跳到第一个超过今天的日期
+    let nextDate = computeNextRecurrenceDate(completedEvent.date, completedEvent.recurrence);
+    while (nextDate <= todayStr) {
+      nextDate = computeNextRecurrenceDate(nextDate, completedEvent.recurrence);
+    }
+
+    if (!endDate || nextDate <= endDate) {
+      EventModel.createEvent(userId, {
+        title: completedEvent.title,
+        date: nextDate,
+        time: completedEvent.time,
+        category: completedEvent.category || '其他',
+        description: completedEvent.description || '',
+        reminder: completedEvent.reminder ? 1 : 0,
+        recurrence: completedEvent.recurrence,
+        recurrence_end_date: completedEvent.recurrence_end_date || null,
+        subtasks: (completedEvent.subtasks || []).map(st => ({ title: st.title, completed: false })),
+      }, () => {});
+    }
+  }
+
   // ===== 按日期获取事件 =====
   static getEventsByDate(userId, date, callback) {
     const where = userId != null ? 'WHERE date = ? AND user_id = ?' : 'WHERE date = ? AND user_id IS NULL';
@@ -238,6 +394,19 @@ class EventModel {
       EventModel._attachSubtasks(events, callback);
     });
   }
+}
+
+// 计算下一个重复日期
+function computeNextRecurrenceDate(currentDate, recurrence) {
+  const d = new Date(currentDate + 'T00:00:00');
+  switch (recurrence) {
+    case 'daily': d.setDate(d.getDate() + 1); break;
+    case 'weekly': d.setDate(d.getDate() + 7); break;
+    case 'monthly': d.setMonth(d.getMonth() + 1); break;
+    case 'yearly': d.setFullYear(d.getFullYear() + 1); break;
+    default: return currentDate;
+  }
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
 module.exports = EventModel;

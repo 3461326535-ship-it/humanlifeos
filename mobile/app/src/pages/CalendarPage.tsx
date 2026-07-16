@@ -15,6 +15,36 @@ interface CalendarPageProps {
 
 const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
+// 8 色事件条背景（与 Web 端 cat-light-0~7 一致，inline 方式避免 Tailwind purge）
+const EVENT_BG_COLORS = [
+  'rgba(0,122,255,0.20)',
+  'rgba(175,82,222,0.20)',
+  'rgba(255,45,85,0.20)',
+  'rgba(255,149,0,0.20)',
+  'rgba(52,199,89,0.20)',
+  'rgba(90,200,250,0.20)',
+  'rgba(255,59,48,0.20)',
+  'rgba(88,86,214,0.20)',
+];
+
+function hashCategoryIndex(categoryName: string): number {
+  let hash = 0;
+  for (let i = 0; i < categoryName.length; i++) {
+    hash = ((hash << 5) - hash) + categoryName.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash) % 8;
+}
+
+function calculateTaskPoints(task: Task): { totalPoints: number; completedPoints: number } {
+  if (!task.subtasks || task.subtasks.length === 0) {
+    return { totalPoints: 1, completedPoints: task.completed ? 1 : 0 };
+  }
+  const totalPoints = task.subtasks.length;
+  const completedPoints = task.subtasks.filter(st => st.completed).length;
+  return { totalPoints, completedPoints };
+}
+
 const colorDotMap: Record<string, string> = {
   blue: '#E8887E',  // macaron coral red (was primary blue)
   green: '#34C759',
@@ -106,6 +136,32 @@ export default function CalendarPage({
       if (!a.time && !b.time) return 0;
       return a.time.localeCompare(b.time);
     });
+
+  // 本月分类汇总（与 Web 端 renderMonthCategorySummary 一致）
+  const monthCategorySummary = useMemo(() => {
+    const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+    const f = (d: Date) => formatDateKey(d);
+
+    const monthTasks = tasks.filter(t => t.date >= f(firstDay) && t.date <= f(lastDay));
+
+    const catMap: Record<string, { total: number; completed: number; totalPoints: number; completedPoints: number }> = {};
+    monthTasks.forEach(t => {
+      const cat = t.categoryId || '其他';
+      if (!catMap[cat]) catMap[cat] = { total: 0, completed: 0, totalPoints: 0, completedPoints: 0 };
+      const pts = calculateTaskPoints(t);
+      catMap[cat].total++;
+      if (t.completed) catMap[cat].completed++;
+      catMap[cat].totalPoints += pts.totalPoints;
+      catMap[cat].completedPoints += pts.completedPoints;
+    });
+
+    return Object.entries(catMap).map(([category, stats]) => ({
+      category,
+      ...stats,
+      completionRate: stats.totalPoints > 0 ? Math.round((stats.completedPoints / stats.totalPoints) * 100) : 0,
+    }));
+  }, [tasks, currentMonth]);
 
   const goPrev = () => {
     if (viewMode === 'month') {
@@ -202,7 +258,7 @@ export default function CalendarPage({
               ))}
             </div>
 
-            {/* Days */}
+            {/* Days — 卡片式日格（与 Web 端一致） */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={`${currentMonth.getFullYear()}-${currentMonth.getMonth()}`}
@@ -210,45 +266,81 @@ export default function CalendarPage({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
-                className="grid grid-cols-7 gap-y-1"
+                className="grid grid-cols-7 gap-0.5"
               >
                 {monthCells.map((cell, idx) => {
                   const cellKey = formatDateKey(cell.fullDate);
                   const isSelected = cellKey === selectedKey;
                   const isToday = cellKey === todayKey;
-                  const dayTasks = tasks.filter((t) => t.date === cellKey);
+                  const dayTasks = tasks
+                    .filter((t) => t.date === cellKey)
+                    .sort((a, b) => {
+                      if (a.time && !b.time) return -1;
+                      if (!a.time && b.time) return 1;
+                      if (!a.time && !b.time) return 0;
+                      return a.time.localeCompare(b.time);
+                    });
+                  const maxShow = 4;
+                  const remaining = dayTasks.length - maxShow;
 
                   return (
                     <motion.div
                       key={idx}
-                      whileTap={{ scale: 0.9 }}
+                      whileTap={{ scale: 0.97 }}
                       onClick={() => cell.isCurrentMonth && setSelectedDate(cell.fullDate)}
-                      className={`flex flex-col items-center justify-center h-10 rounded-full cursor-pointer relative ${
+                      className={`month-day-cell ${
                         isSelected
-                          ? 'bg-[var(--primary-blue)]'
+                          ? 'ring-2 ring-[var(--primary-blue)]'
                           : isToday
                           ? 'border-2 border-[var(--primary-blue)]'
                           : ''
-                      } ${!cell.isCurrentMonth ? 'opacity-30' : ''}`}
+                      } ${!cell.isCurrentMonth ? 'opacity-40' : ''}`}
                     >
-                      <span
-                        className={`text-[14px] font-medium ${
-                          isSelected ? 'text-white' : 'text-[var(--text-primary)]'
-                        }`}
-                      >
-                        {cell.date}
-                      </span>
-                      {dayTasks.length > 0 && (
-                        <div className="flex items-center gap-[2px] mt-[1px]">
-                          {dayTasks.slice(0, 3).map((t, i) => (
-                            <div
-                              key={i}
-                              className="w-1 h-1 rounded-full"
-                              style={{ backgroundColor: colorDotMap[t.color] || '#E8887E' }}
-                            />
-                          ))}
-                        </div>
-                      )}
+                      {/* 日期头：仅数字 */}
+                      <div className="mb-0.5">
+                        <span
+                          className={`text-[11px] font-medium ${
+                            isSelected ? 'text-[var(--primary-blue)]' : 'text-[var(--text-primary)]'
+                          }`}
+                        >
+                          {cell.date}
+                        </span>
+                      </div>
+
+                      {/* 任务列表 */}
+                      <div className="flex-1 overflow-y-auto no-scrollbar">
+                        {dayTasks.length > 0 ? (
+                          <>
+                            {dayTasks.slice(0, maxShow).map((task, i) => {
+                              let title = task.title;
+                              if (task.subtasks && task.subtasks.length > 0) {
+                                const done = task.subtasks.filter(st => st.completed).length;
+                                title = `[${done}/${task.subtasks.length}] ${task.title}`;
+                              }
+                              const bgColor = EVENT_BG_COLORS[hashCategoryIndex(task.categoryId || '其他')];
+                              return (
+                                <div
+                                  key={i}
+                                  className="compact-event"
+                                  style={{ backgroundColor: bgColor }}
+                                  title={`${task.time || ''} - ${task.title}`}
+                                >
+                                  {title}
+                                </div>
+                              );
+                            })}
+                            {remaining > 0 && (
+                              <div className="text-[10px] text-[var(--primary-blue)] cursor-pointer mt-0.5 pl-1">
+                                +{remaining} 更多
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-[10px] text-[var(--text-tertiary)] italic flex-1 flex items-center justify-center">
+                            无日程
+                          </div>
+                        )}
+                      </div>
                     </motion.div>
                   );
                 })}
@@ -304,6 +396,51 @@ export default function CalendarPage({
                       </div>
                     )}
                   </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Month Category Summary — 与 Web 端 renderMonthCategorySummary 一致 */}
+        {viewMode === 'month' && monthCategorySummary.length > 0 && (
+          <div className="mt-4 px-4">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">本月分类汇总</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {monthCategorySummary.map((cat) => {
+                const colorIdx = hashCategoryIndex(cat.category);
+                const bgColor = EVENT_BG_COLORS[colorIdx];
+                return (
+                  <div
+                    key={cat.category}
+                    className="category-summary-card bg-white border border-gray-100 rounded-xl shadow-sm p-3"
+                  >
+                    {/* 分类头 */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: bgColor }} />
+                        <span className="text-xs font-medium text-[var(--text-primary)]">
+                          {cat.category}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-medium text-[var(--text-tertiary)] bg-gray-50 px-1.5 py-0.5 rounded-full">
+                        {cat.total}
+                      </span>
+                    </div>
+                    {/* 进度条 */}
+                    <div className="flex justify-between text-[10px] text-[var(--text-tertiary)] mb-1">
+                      <span>完成率: {cat.completionRate}%</span>
+                      <span>{cat.completedPoints}/{cat.totalPoints} 任务点</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${
+                          cat.completionRate === 100 ? 'bg-[var(--green)]' : 'bg-[var(--primary-blue)]'
+                        }`}
+                        style={{ width: `${cat.completionRate}%` }}
+                      />
+                    </div>
+                  </div>
                 );
               })}
             </div>

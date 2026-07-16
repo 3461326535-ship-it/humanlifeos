@@ -700,6 +700,13 @@ router.post('/confirm', validate({
           EventModel.updateEvent(uid(req), id, { ...event, completed: true }, (err2) => {
             if (hasError) return;
             if (err2) { hasError = true; return res.json({ success: false, reply: '批量完成失败：' + sanitizeError(err2) }); }
+
+            // 如果完成的是一条重复任务，创建下一个事件（跟手动完成行为一致）
+            const hasRecurrence = event.recurrence && ['daily', 'weekly', 'monthly', 'yearly'].includes(event.recurrence);
+            if (!event.completed && hasRecurrence) {
+              EventModel.fillRecurringChain(uid(req), { ...event, completed: true });
+            }
+
             completed++;
             if (completed === eventIds.length) {
               res.json({ success: true, reply: `✅ 已批量完成 ${completed} 个任务！`, actionExecuted: true });

@@ -8,12 +8,17 @@ const { sanitizeError } = require('../../middleware/sanitizeError');
 function uid(req) { return req.user ? req.user.userId : null; }
 
 router.get('/', (req, res) => {
-  EventModel.getAllEvents(uid(req), (err, events) => {
-    if (err) {
-      res.status(500).json({ error: sanitizeError(err) });
-    } else {
-      res.json(events);
-    }
+  const userId = uid(req);
+  // 先追补重复事件（确保每日任务不会因漏完成而断链），再返回事件列表
+  EventModel.catchUpRecurringEvents(userId, (_catchUpErr) => {
+    // 即使追补失败也不影响正常返回事件
+    EventModel.getAllEvents(userId, (err, events) => {
+      if (err) {
+        res.status(500).json({ error: sanitizeError(err) });
+      } else {
+        res.json(events);
+      }
+    });
   });
 });
 
@@ -78,40 +83,13 @@ router.put('/:id', validate({
       const justCompleted = !wasCompleted && nowCompleted;
 
       if (justCompleted && hasRecurrence) {
-        const nextDate = computeNextDate(updatedEvent.date, updatedEvent.recurrence);
-        const endDate = updatedEvent.recurrence_end_date;
-
-        if (!endDate || nextDate <= endDate) {
-          EventModel.createEvent(userId, {
-            title: updatedEvent.title,
-            date: nextDate,
-            time: updatedEvent.time,
-            category: updatedEvent.category || '其他',
-            description: updatedEvent.description || '',
-            reminder: updatedEvent.reminder ? 1 : 0,
-            recurrence: updatedEvent.recurrence,
-            recurrence_end_date: updatedEvent.recurrence_end_date || null,
-            subtasks: (updatedEvent.subtasks || []).map(st => ({ title: st.title, completed: false })),
-          }, () => {});
-        }
+        EventModel.fillRecurringChain(userId, updatedEvent);
       }
 
       res.json(updatedEvent);
     });
   });
 });
-
-function computeNextDate(currentDate, recurrence) {
-  const d = new Date(currentDate + 'T00:00:00');
-  switch (recurrence) {
-    case 'daily': d.setDate(d.getDate() + 1); break;
-    case 'weekly': d.setDate(d.getDate() + 7); break;
-    case 'monthly': d.setMonth(d.getMonth() + 1); break;
-    case 'yearly': d.setFullYear(d.getFullYear() + 1); break;
-    default: return currentDate;
-  }
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
 
 // 切换事件完成状态（乐观更新兼容：无请求体，仅翻转 completed）
 router.patch('/:id/toggle', (req, res) => {
@@ -143,22 +121,7 @@ router.patch('/:id/toggle', (req, res) => {
       const justCompleted = !wasCompleted && nowCompleted;
 
       if (justCompleted && hasRecurrence) {
-        const nextDate = computeNextDate(updatedEvent.date, updatedEvent.recurrence);
-        const endDate = updatedEvent.recurrence_end_date;
-
-        if (!endDate || nextDate <= endDate) {
-          EventModel.createEvent(userId, {
-            title: updatedEvent.title,
-            date: nextDate,
-            time: updatedEvent.time,
-            category: updatedEvent.category || '其他',
-            description: updatedEvent.description || '',
-            reminder: updatedEvent.reminder ? 1 : 0,
-            recurrence: updatedEvent.recurrence,
-            recurrence_end_date: updatedEvent.recurrence_end_date || null,
-            subtasks: (updatedEvent.subtasks || []).map(st => ({ title: st.title, completed: false })),
-          }, () => {});
-        }
+        EventModel.fillRecurringChain(userId, updatedEvent);
       }
 
       res.json(updatedEvent);

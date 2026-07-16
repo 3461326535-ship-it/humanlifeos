@@ -88,6 +88,17 @@ function initDatabase() {
   // ── 迁移：给旧表加 user_id 列（如果不存在）──
   db.run(`ALTER TABLE events ADD COLUMN user_id INTEGER REFERENCES users(id)`, () => {});
 
+  // ── 迁移：recurrence 和 recurrence_end_date 列（如果旧表不存在）──
+  db.run(`ALTER TABLE events ADD COLUMN recurrence TEXT`, () => {});
+  db.run(`ALTER TABLE events ADD COLUMN recurrence_end_date TEXT`, () => {});
+
+  // ── 部分唯一索引：阻止同一链条同一天出现重复事件 ──
+  db.run(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_events_chain_unique
+    ON events(title, date, recurrence, user_id)
+    WHERE recurrence IS NOT NULL AND recurrence != ''
+  `, () => {});
+
   // ── 用户表（登录鉴权）──
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

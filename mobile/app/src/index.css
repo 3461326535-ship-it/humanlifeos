@@ -84,4 +84,56 @@
   .fab-shadow {
     box-shadow: 0 4px 12px rgba(74, 144, 217, 0.4);
   }
+
+  /* ── 月视图卡片日格（移动端优化：更紧凑，适配 7 列）── */
+  .month-day-cell {
+    border-radius: 8px;
+    padding: 4px 3px;
+    background: var(--bg-card);
+    min-height: 62px;
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+  }
+  .month-day-cell:active {
+    border-color: var(--divider);
+  }
+
+  /* ── 紧凑事件条（移动端优化：更小 padding 以显示 3-4 个汉字）── */
+  .compact-event {
+    font-size: 10px;
+    padding: 1px 4px;
+    margin-bottom: 1px;
+    border-radius: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+    transition: transform 0.2s;
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .compact-event:active {
+    transform: translateX(2px);
+  }
+
+  /* ── 8 色调色板（移动端提高透明度，小格子也能看见颜色）── */
+  .event-bg-0 { background: rgba(0,122,255,0.20); }
+  .event-bg-1 { background: rgba(175,82,222,0.20); }
+  .event-bg-2 { background: rgba(255,45,85,0.20); }
+  .event-bg-3 { background: rgba(255,149,0,0.20); }
+  .event-bg-4 { background: rgba(52,199,89,0.20); }
+  .event-bg-5 { background: rgba(90,200,250,0.20); }
+  .event-bg-6 { background: rgba(255,59,48,0.20); }
+  .event-bg-7 { background: rgba(88,86,214,0.20); }
+
+  /* 分类汇总卡片 hover */
+  .category-summary-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .category-summary-card:active {
+    transform: translateY(1px);
+  }
 }
