@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Task, Category, CategoryStat, SyncStatus } from '@/types';
 import { authFetch, normalizeCategoryName, hexToColorName, COLORS } from '@/lib/taskMapping';
 import { loadTasks as loadLocalTasks, saveTasks, loadCategories, saveCategories, generateLocalId, isLocalId, addDeletedId } from '@/lib/storage';
-import { fullSync, pushTask, deleteRemoteTask, migrateGuestData } from '@/lib/sync';
+import { fullSync, pushTask, deleteRemoteTask, deleteRemoteTaskChain, migrateGuestData } from '@/lib/sync';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { scheduleTaskReminder, cancelTaskReminder } from '@/lib/notifySchedule';
 import { API_BASE } from '@/config';
@@ -333,6 +333,33 @@ export function useTasks() {
     }
   }, []);
 
+  // ---- 删除整个重复链条（从该任务日期起）----
+  const deleteTaskChain = useCallback(async (taskId: string) => {
+    const targetTask = tasksRef.current.find(t => t.id === taskId);
+    if (!targetTask || !targetTask.recurrence) return;
+
+    cancelTaskReminder(taskId);
+
+    // 乐观本地删除：删掉同链中 date >= 该任务日期的所有任务
+    setTasks(prev => {
+      const updated = prev.filter(t => {
+        if (t.id === taskId) return false;
+        if (t.recurrence === targetTask.recurrence &&
+            t.title === targetTask.title &&
+            t.date >= targetTask.date) return false;
+        return true;
+      });
+      saveTasks(updated);
+      return updated;
+    });
+
+    // 后台远端删除
+    if (navigator.onLine && !isLocalId(taskId)) {
+      await deleteRemoteTaskChain(taskId);
+      // 链删除后服务端已变更（剩余事件被"封口"），下次同步时会自动对齐
+    }
+  }, []);
+
   // ---- 切换完成状态（乐观本地更新）----
   const toggleTask = useCallback(async (taskId: string) => {
     const currentTask = tasksRef.current.find(t => t.id === taskId);
@@ -581,6 +608,7 @@ export function useTasks() {
     addTask,
     updateTask,
     deleteTask,
+    deleteTaskChain,
     toggleTask,
     toggleSubtask,
     getTasksByDate,

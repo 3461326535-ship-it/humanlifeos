@@ -35,9 +35,9 @@ function getWeekRange(): { start: string; end: string; startDate: Date; endDate:
   };
 }
 
-// ── 保存 AI 报告到聊天记录 ──
+// ── 保存 AI 报告到聊天记录（本地 + 服务端同步）──
 
-export function saveReportToChat(report: string): void {
+export function saveReportToChat(report: string, userPrompt?: string): void {
   try {
     const raw = localStorage.getItem(CHAT_STORAGE_KEY);
     const messages: any[] = raw ? JSON.parse(raw) : [];
@@ -52,6 +52,24 @@ export function saveReportToChat(report: string): void {
     window.dispatchEvent(new CustomEvent('chat-updated'));
   } catch {
     // localStorage full — silently skip
+  }
+
+  // 同步保存到服务端，保证 PC/Web 也能看到
+  if (userPrompt) {
+    try {
+      authFetch(`${API_BASE}/ai/history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'user', message: userPrompt },
+            { role: 'assistant', message: report },
+          ],
+        }),
+      }).catch(() => {}); // fire-and-forget
+    } catch {
+      // 网络故障静默跳过
+    }
   }
 }
 
@@ -101,8 +119,7 @@ ${completed.length > 0 ? `\n✅ 已完成任务：\n${completedList}` : ''}
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const report = data.reply || generateLocalDailyReport(todayStr, todayTasks, completed, uncompleted);
-    return report;
+    return data.reply || generateLocalDailyReport(todayStr, todayTasks, completed, uncompleted);
   } catch {
     return generateLocalDailyReport(todayStr, todayTasks, completed, uncompleted);
   }
@@ -213,8 +230,7 @@ ${uncompleted.length > 0 ? `⚠️ 未完成任务：\n${uncompletedList}` : '�
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const report = data.reply || generateLocalWeeklyReport(start, end, weekTasks.length, completed.length, uncompleted, pct);
-    return report;
+    return data.reply || generateLocalWeeklyReport(start, end, weekTasks.length, completed.length, uncompleted, pct);
   } catch {
     return generateLocalWeeklyReport(start, end, weekTasks.length, completed.length, uncompleted, pct);
   }

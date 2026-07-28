@@ -11,7 +11,7 @@ interface StatsPageProps {
   tasks: Task[];
   categoryStats: CategoryStat[];
   onToggleTask: (id: string) => void;
-  onDeleteTask: (id: string) => void;
+  onDeleteTask: (id: string, deleteChain?: boolean) => void;
   getCategoryColor: (categoryId: string) => string;
   getCategoryName: (categoryId: string) => string;
 }

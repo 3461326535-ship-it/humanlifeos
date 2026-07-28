@@ -10,7 +10,7 @@ interface TaskDetailPageProps {
   categoryName: string;
   onBack: () => void;
   onToggle: (taskId: string) => void;
-  onDelete: (taskId: string) => void;
+  onDelete: (taskId: string, deleteChain?: boolean) => void;
   onEdit: (task: Task) => void;
 }
 
@@ -49,10 +49,12 @@ export default function TaskDetailPage({
     return `${y}年${m}月${d}日 ${weekDays[date.getDay()]}`;
   };
 
-  const handleDelete = () => {
-    onDelete(task.id);
+  const handleDelete = (deleteChain = false) => {
+    onDelete(task.id, deleteChain);
     onBack();
   };
+
+  const isRecurring = task.recurrence && ['daily', 'weekly', 'monthly', 'yearly'].includes(task.recurrence);
 
   return (
     <motion.div
@@ -328,18 +330,43 @@ export default function TaskDetailPage({
             animate={{ y: 0 }}
             className="w-full bg-white rounded-t-2xl p-4"
           >
-            <p className="text-[16px] font-semibold text-[var(--text-primary)] text-center mb-1">
-              删除任务
-            </p>
-            <p className="text-[14px] text-[var(--text-tertiary)] text-center mb-4">
-              确定要删除「{task.title}」吗？此操作不可撤销。
-            </p>
-            <button
-              onClick={handleDelete}
-              className="w-full h-12 rounded-xl bg-[var(--red)] text-white text-[16px] font-semibold active:scale-[0.98] transition-all mb-2"
-            >
-              删除
-            </button>
+            {!isRecurring ? (
+              <>
+                <p className="text-[16px] font-semibold text-[var(--text-primary)] text-center mb-1">
+                  删除任务
+                </p>
+                <p className="text-[14px] text-[var(--text-tertiary)] text-center mb-4">
+                  确定要删除「{task.title}」吗？此操作不可撤销。
+                </p>
+                <button
+                  onClick={() => handleDelete(false)}
+                  className="w-full h-12 rounded-xl bg-[var(--red)] text-white text-[16px] font-semibold active:scale-[0.98] transition-all mb-2"
+                >
+                  删除
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-[16px] font-semibold text-[var(--text-primary)] text-center mb-1">
+                  删除周期性任务
+                </p>
+                <p className="text-[14px] text-[var(--text-tertiary)] text-center mb-4">
+                  「{task.title}」是{recurrenceLabels[task.recurrence || ''] || ''}重复任务，请选择删除方式：
+                </p>
+                <button
+                  onClick={() => handleDelete(false)}
+                  className="w-full h-12 rounded-xl border border-gray-300 text-[var(--text-primary)] text-[15px] active:scale-[0.98] transition-all mb-2 flex items-center justify-center gap-2"
+                >
+                  <span>📅</span> 仅删除当天
+                </button>
+                <button
+                  onClick={() => handleDelete(true)}
+                  className="w-full h-12 rounded-xl bg-[var(--red)] text-white text-[15px] font-semibold active:scale-[0.98] transition-all mb-2 flex items-center justify-center gap-2"
+                >
+                  <span>🗑️</span> 删除该系列之后全部
+                </button>
+              </>
+            )}
             <button
               onClick={() => setShowDeleteConfirm(false)}
               className="w-full h-12 rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] text-[16px] active:scale-[0.98] transition-all"

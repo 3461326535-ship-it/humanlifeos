@@ -96,7 +96,7 @@ interface TodayPageProps {
   }) => void;
   onToggleTask: (id: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
-  onDeleteTask: (id: string) => void;
+  onDeleteTask: (id: string, deleteChain?: boolean) => void;
   getCategoryColor: (categoryId: string) => string;
   getCategoryName: (categoryId: string) => string;
 }
@@ -419,8 +419,8 @@ export default function TodayPage({
             categoryName={getCategoryName(selectedTask.categoryId)}
             onBack={() => setSelectedTask(null)}
             onToggle={onToggleTask}
-            onDelete={(id) => {
-              onDeleteTask(id);
+            onDelete={(id, deleteChain) => {
+              onDeleteTask(id, deleteChain);
               setSelectedTask(null);
             }}
             onEdit={(task) => {

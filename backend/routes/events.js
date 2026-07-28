@@ -46,7 +46,15 @@ router.post('/', validate({
 }), (req, res) => {
   EventModel.createEvent(uid(req), req.body, (err, event) => {
     if (err) {
-      res.status(500).json({ error: sanitizeError(err) });
+      return res.status(500).json({ error: sanitizeError(err) });
+    }
+
+    // 有重复规则 → 前置生成所有未来实例，保证"添加之初就在"
+    const hasRecurrence = event.recurrence && ['daily', 'weekly', 'monthly', 'yearly'].includes(event.recurrence);
+    if (hasRecurrence) {
+      EventModel.generateForwardInstances(uid(req), event, () => {
+        res.status(201).json(event);
+      });
     } else {
       res.status(201).json(event);
     }
@@ -72,19 +80,9 @@ router.put('/:id', validate({
     if (fetchErr) return res.status(500).json({ error: sanitizeError(fetchErr) });
     if (!oldEvent) return res.status(404).json({ error: '事件不存在' });
 
-    const wasCompleted = oldEvent.completed;
-    const nowCompleted = req.body.completed === true || req.body.completed === 1 || req.body.completed === '1';
-
     EventModel.updateEvent(userId, id, req.body, (err, updatedEvent) => {
       if (err) return res.status(500).json({ error: sanitizeError(err) });
       if (!updatedEvent) return res.status(404).json({ error: '事件不存在' });
-
-      const hasRecurrence = updatedEvent.recurrence && ['daily', 'weekly', 'monthly', 'yearly'].includes(updatedEvent.recurrence);
-      const justCompleted = !wasCompleted && nowCompleted;
-
-      if (justCompleted && hasRecurrence) {
-        EventModel.fillRecurringChain(userId, updatedEvent);
-      }
 
       res.json(updatedEvent);
     });
@@ -100,7 +98,6 @@ router.patch('/:id/toggle', (req, res) => {
     if (fetchErr) return res.status(500).json({ error: sanitizeError(fetchErr) });
     if (!event) return res.status(404).json({ error: '事件不存在' });
 
-    const wasCompleted = event.completed;
     const nowCompleted = !event.completed;
 
     // 构建更新数据：翻转 completed，同步所有子任务
@@ -116,14 +113,6 @@ router.patch('/:id/toggle', (req, res) => {
       if (err) return res.status(500).json({ error: sanitizeError(err) });
       if (!updatedEvent) return res.status(404).json({ error: '事件不存在' });
 
-      // 如果从"未完成"→"完成"且有重复规则，生成下一个重复事件
-      const hasRecurrence = updatedEvent.recurrence && ['daily', 'weekly', 'monthly', 'yearly'].includes(updatedEvent.recurrence);
-      const justCompleted = !wasCompleted && nowCompleted;
-
-      if (justCompleted && hasRecurrence) {
-        EventModel.fillRecurringChain(userId, updatedEvent);
-      }
-
       res.json(updatedEvent);
     });
   });
@@ -131,13 +120,25 @@ router.patch('/:id/toggle', (req, res) => {
 
 router.delete('/:id', (req, res) => {
   const id = parseInt(req.params.id);
-  EventModel.deleteEvent(uid(req), id, (err, result) => {
-    if (err) {
-      res.status(500).json({ error: sanitizeError(err) });
-    } else {
-      res.json(result);
-    }
-  });
+  const deleteChain = req.query.chain === 'true';
+
+  if (deleteChain) {
+    EventModel.deleteEventChain(uid(req), id, (err, result) => {
+      if (err) {
+        res.status(500).json({ error: sanitizeError(err) });
+      } else {
+        res.json(result);
+      }
+    });
+  } else {
+    EventModel.deleteEvent(uid(req), id, (err, result) => {
+      if (err) {
+        res.status(500).json({ error: sanitizeError(err) });
+      } else {
+        res.json(result);
+      }
+    });
+  }
 });
 
 module.exports = router;

@@ -701,12 +701,6 @@ router.post('/confirm', validate({
             if (hasError) return;
             if (err2) { hasError = true; return res.json({ success: false, reply: '批量完成失败：' + sanitizeError(err2) }); }
 
-            // 如果完成的是一条重复任务，创建下一个事件（跟手动完成行为一致）
-            const hasRecurrence = event.recurrence && ['daily', 'weekly', 'monthly', 'yearly'].includes(event.recurrence);
-            if (!event.completed && hasRecurrence) {
-              EventModel.fillRecurringChain(uid(req), { ...event, completed: true });
-            }
-
             completed++;
             if (completed === eventIds.length) {
               res.json({ success: true, reply: `✅ 已批量完成 ${completed} 个任务！`, actionExecuted: true });
@@ -782,14 +776,17 @@ router.get('/history', (req, res) => {
     ? `WHERE user_id = ? AND created_at >= datetime('now', '-7 days')`
     : `WHERE user_id IS NULL AND created_at >= datetime('now', '-7 days')`;
   const params = userId != null ? [userId] : [];
+  // 取最近 500 条（DESC + 前端 reverse），避免 ASC + LIMIT 截掉最新消息
   db.all(
-    `SELECT role, message, created_at FROM chat_history ${where} ORDER BY created_at ASC LIMIT 100`,
+    `SELECT role, message, created_at FROM chat_history ${where} ORDER BY id DESC LIMIT 500`,
     params,
     (err, rows) => {
       if (err) {
         console.error('[History] GET 查询失败:', err.message);
         return res.json({ history: [] });
       }
+      // 反转回时间正序
+      rows.reverse();
       res.json({ history: rows.map(r => ({
         role: r.role,
         message: r.message,
@@ -811,22 +808,28 @@ router.post('/history', validate({
   }
 
   const userId = uid(req);
-  const stmt = db.prepare(
-    `INSERT INTO chat_history (role, message, user_id) VALUES (?, ?, ?)`
-  );
+  const validMessages = messages.filter(msg => msg.role && msg.message);
+  if (validMessages.length === 0) {
+    return res.json({ success: false });
+  }
 
-  let inserted = 0;
-  let errors = 0;
-  messages.forEach(msg => {
-    if (!msg.role || !msg.message) return;
-    stmt.run(msg.role, msg.message, userId != null ? userId : null, (err) => {
-      if (err) { errors++; } else { inserted++; }
+  // 用 db.serialize 保证插入顺序（user → assistant），避免异步竞态导致时序混乱
+  db.serialize(() => {
+    const stmt = db.prepare(
+      `INSERT INTO chat_history (role, message, user_id) VALUES (?, ?, ?)`
+    );
+    let inserted = 0;
+    validMessages.forEach(msg => {
+      stmt.run(msg.role, msg.message, userId != null ? userId : null, (err) => {
+        if (!err) inserted++;
+      });
     });
-  });
-  stmt.finalize(() => {
-    db.run(`DELETE FROM chat_history WHERE user_id ${userId != null ? '= ?' : 'IS NULL'} AND created_at < datetime('now', '-7 days')`,
-      userId != null ? [userId] : []);
-    res.json({ success: inserted > 0, inserted });
+    stmt.finalize(() => {
+      // 清理超过7天的记录
+      db.run(`DELETE FROM chat_history WHERE user_id ${userId != null ? '= ?' : 'IS NULL'} AND created_at < datetime('now', '-7 days')`,
+        userId != null ? [userId] : []);
+      res.json({ success: inserted > 0, inserted });
+    });
   });
 });
 

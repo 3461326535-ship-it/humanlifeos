@@ -1274,6 +1274,23 @@ async function handleEventFormSubmit(e) {
             if (idx !== -1) events[idx] = updatedEvent;
         } else {
             events.push(updatedEvent);
+            // 如果是周期性任务，前置生成的所有未来实例已在后端就绪，重新拉取以即时体现
+            if (updatedEvent.recurrence) {
+                try {
+                    const reloadRes = await fetch(`${API_BASE}/events`);
+                    if (reloadRes.ok) {
+                        const freshEvents = await reloadRes.json();
+                        events.length = 0;
+                        freshEvents.forEach(ev => {
+                            ev.completed = !!ev.completed;
+                            if (ev.subtasks) {
+                                ev.subtasks = ev.subtasks.map(st => ({ ...st, completed: !!st.completed }));
+                            }
+                            events.push(ev);
+                        });
+                    }
+                } catch (_) { /* 静默失败，下次刷新时会加载 */ }
+            }
         }
         showToast(id ? '✅ 日程已更新' : '✅ 日程已添加');
     } catch (err) {
@@ -1305,29 +1322,86 @@ async function handleEventFormSubmit(e) {
     updateProgressStats();
 }
 
+// 删除确认弹窗 DOM 引用（初始化在 DOMContentLoaded 中）
+let chainDeleteModal, chainDeleteMessage, chainDeleteSingleBtn, chainDeleteAllBtn, chainDeleteCancelBtn;
+let pendingDeleteId = null;
+
+function initChainDeleteModal() {
+    chainDeleteModal = document.getElementById('chain-delete-modal');
+    chainDeleteMessage = document.getElementById('chain-delete-message');
+    chainDeleteSingleBtn = document.getElementById('chain-delete-single');
+    chainDeleteAllBtn = document.getElementById('chain-delete-all');
+    chainDeleteCancelBtn = document.getElementById('chain-delete-cancel');
+
+    if (!chainDeleteModal) return;
+
+    chainDeleteSingleBtn.addEventListener('click', () => {
+        chainDeleteModal.classList.add('hidden');
+        performDelete(pendingDeleteId, false);
+    });
+    chainDeleteAllBtn.addEventListener('click', () => {
+        chainDeleteModal.classList.add('hidden');
+        performDelete(pendingDeleteId, true);
+    });
+    chainDeleteCancelBtn.addEventListener('click', () => {
+        chainDeleteModal.classList.add('hidden');
+        pendingDeleteId = null;
+    });
+    // 点击遮罩关闭
+    chainDeleteModal.addEventListener('click', (e) => {
+        if (e.target === chainDeleteModal) {
+            chainDeleteModal.classList.add('hidden');
+            pendingDeleteId = null;
+        }
+    });
+}
+
 async function deleteEvent(id) {
+    const event = events.find(e => e.id === id);
+    // 如果是周期性任务，显示自定义弹窗
+    if (event && event.recurrence && ['daily', 'weekly', 'monthly', 'yearly'].includes(event.recurrence)) {
+        pendingDeleteId = id;
+        const recLabel = { daily: '每天', weekly: '每周', monthly: '每月', yearly: '每年' }[event.recurrence] || event.recurrence;
+        const dateLabel = event.date;
+        chainDeleteMessage.textContent = `"${event.title}" 是「${recLabel}」周期性任务。要删除 ${dateLabel} 这一天，还是删除该系列中 ${dateLabel} 及之后的所有任务？`;
+        chainDeleteModal.classList.remove('hidden');
+        return;
+    }
+    // 普通事件：原生确认
     if (confirm('确定要删除这个日程吗？')) {
-        showLoading('正在删除...');
-        try {
-            const res = await fetch(`${API_BASE}/events/${id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        performDelete(id, false);
+    }
+}
+
+async function performDelete(id, deleteChain) {
+    showLoading('正在删除...');
+    try {
+        const url = deleteChain ? `${API_BASE}/events/${id}?chain=true` : `${API_BASE}/events/${id}`;
+        const res = await fetch(url, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+        if (deleteChain && result.deleted) {
+            // 批量删除：重新加载所有事件
+            await loadEventsFromAPI();
+            showToast(`🗑️ 已删除 ${result.deleted} 个日程（${result.fromDate} 起）`);
+        } else {
             events = events.filter(event => event.id !== id);
             showToast('🗑️ 日程已删除');
-        } catch (err) {
-            console.error('删除失败:', err);
-            showToast('❌ 删除失败，请重试', 'error');
-            return;
-        } finally {
-            hideLoading();
         }
-        renderEventList();
-        renderCalendar();
-        renderWeekView();
-        renderMonthView();
-        renderUpcomingEvents();
-        updateEventStats();
-        updateProgressStats();
+    } catch (err) {
+        console.error('删除失败:', err);
+        showToast('❌ 删除失败，请重试', 'error');
+        return;
+    } finally {
+        hideLoading();
     }
+    renderEventList();
+    renderCalendar();
+    renderWeekView();
+    renderMonthView();
+    renderUpcomingEvents();
+    updateEventStats();
+    updateProgressStats();
 }
 
 // ===== 修改：切换事件完成状态（乐观更新 + 回滚）=====
@@ -2366,6 +2440,7 @@ function updateNotifyBtnUI() {
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', () => {
     init();
+    initChainDeleteModal();
     setupAiChatListeners();
     setupNotifyUI();
     loadNotifySettings();

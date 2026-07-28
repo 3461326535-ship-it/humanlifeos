@@ -509,6 +509,30 @@
         </div>
     </div>
 
+    <!-- 删除周期性任务确认弹窗 -->
+    <div id="chain-delete-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] hidden flex items-center justify-center">
+        <div class="bg-white rounded-2xl w-[360px] max-w-[90vw] shadow-2xl p-5 transform transition-all">
+            <div class="flex items-center mb-3">
+                <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
+                    <i class="fa fa-repeat text-purple-600"></i>
+                </div>
+                <h3 class="font-semibold text-dark">删除周期性任务</h3>
+            </div>
+            <p id="chain-delete-message" class="mb-4 text-gray-600 text-sm"></p>
+            <div class="flex flex-col gap-2">
+                <button id="chain-delete-single" class="w-full px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-left text-sm">
+                    📅 仅删除当天
+                </button>
+                <button id="chain-delete-all" class="w-full px-4 py-2.5 bg-red-50 border border-red-200 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-left text-sm">
+                    🗑️ 删除该系列之后全部
+                </button>
+                <button id="chain-delete-cancel" class="w-full px-4 py-2.5 border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 引入我们自己的JavaScript文件 -->
     <script src="/js/nav-loader.js"></script>
     <script src="/js/script.js"></script>

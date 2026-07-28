@@ -59,6 +59,18 @@ export async function deleteRemoteTask(id: string): Promise<boolean> {
   }
 }
 
+// 删除整个重复链条（从该任务日期起）
+export async function deleteRemoteTaskChain(id: string): Promise<{ deleted: number; fromDate: string } | null> {
+  if (isLocalId(id)) return null;
+  try {
+    const res = await authFetch(`${API_BASE}/events/${id}?chain=true`, { method: 'DELETE' });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 // ===== 迁移访客数据 =====
 
 export async function migrateGuestData(): Promise<void> {

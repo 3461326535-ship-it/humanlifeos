@@ -102,6 +102,7 @@ function App() {
     updateCategory,
     deleteCategory,
     deleteTask,
+    deleteTaskChain,
     getCategoryColor,
     getCategoryName,
     getCategoryStats,
@@ -324,7 +325,13 @@ function App() {
             onUpdateTask={updateTask}
             onToggleTask={toggleTask}
             onToggleSubtask={toggleSubtask}
-            onDeleteTask={deleteTask}
+            onDeleteTask={(id, deleteChain) => {
+              if (deleteChain) {
+                deleteTaskChain(id);
+              } else {
+                deleteTask(id);
+              }
+            }}
             getCategoryColor={getCategoryColor}
             getCategoryName={getCategoryName}
           />
@@ -345,7 +352,13 @@ function App() {
             tasks={tasks}
             categoryStats={getCategoryStats}
             onToggleTask={toggleTask}
-            onDeleteTask={deleteTask}
+            onDeleteTask={(id, deleteChain) => {
+              if (deleteChain) {
+                deleteTaskChain(id);
+              } else {
+                deleteTask(id);
+              }
+            }}
             getCategoryColor={getCategoryColor}
             getCategoryName={getCategoryName}
           />
