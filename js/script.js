@@ -74,6 +74,10 @@ function getCatIndex(name) {
 function getCatLight(name) { return 'cat-light-' + getCatIndex(name); }
 function getCatText(name) { return 'cat-text-' + getCatIndex(name); }
 
+// 日历小圆点用实色（非透明），6 种轮转
+const DOT_COLORS = ['#007AFF', '#AF52DE', '#FF2D55', '#FF9500', '#34C759', '#5AC8FA', '#FF3B30', '#5856D6'];
+function getCatSolid(name) { return DOT_COLORS[getCatIndex(name)]; }
+
 // 兼容旧代码的映射（动态生成）
 const lightCategoryColors = new Proxy({}, {
   get: (_, name) => getCatLight(String(name))
@@ -396,7 +400,9 @@ function createCalendarDay(day, date, isOtherMonth) {
         const categories = [...new Set(dayEvents.map(event => event.category))];
         categories.forEach(category => {
             const dot = document.createElement('div');
-            dot.className = `${lightCategoryColors[category]} w-1.5 h-1.5 rounded-full`;
+            dot.className = 'w-1.5 h-1.5 rounded-full';
+            dot.style.backgroundColor = getCatSolid(category);
+            dot.style.opacity = '0.45';
             eventIndicator.appendChild(dot);
         });
         
