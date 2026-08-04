@@ -7,26 +7,32 @@
 <ul>
     <li>
         <a href="/home.html">
-            <span class="icon">🏠</span>
+            <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg></span>
             <span class="nav-text">总览</span>
         </a>
     </li>
     <li>
         <a href="/todo.html">
-            <span class="icon">🧪</span>
+            <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-5"/></svg></span>
             <span class="nav-text">实验排期</span>
             <span class="nav-badge" id="nav-todo-badge" style="display:none">0</span>
         </a>
     </li>
     <li>
+        <a href="/yuexin.html">
+            <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.5A8.5 8.5 0 1 1 10.5 4 6.8 6.8 0 0 0 20 13.5z"/></svg></span>
+            <span class="nav-text">月信</span>
+        </a>
+    </li>
+    <li>
         <a href="/finance.html">
-            <span class="icon">💎</span>
+            <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="17" y="4" width="4" height="16" rx="1"/></svg></span>
             <span class="nav-text">资产管理</span>
         </a>
     </li>
     <li class="has-submenu">
         <a href="#">
-            <span class="icon">🔌</span>
+            <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M2 12h20"/></svg></span>
             <span class="nav-text">外部接口</span>
         </a>
         <ul class="submenu">
@@ -47,7 +53,7 @@
     </li>
     <li class="has-submenu">
         <a href="#">
-            <span class="icon">🔬</span>
+            <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v5l4 8v3a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-3l4-8V3z"/><path d="M9 8h6"/></svg></span>
             <span class="nav-text">实验室</span>
         </a>
         <ul class="submenu">
@@ -61,7 +67,7 @@
     </li>
     <li>
         <a href="/common-sites.html">
-            <span class="icon">⚡</span>
+            <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
             <span class="nav-text">快捷入口</span>
         </a>
     </li>
@@ -71,7 +77,9 @@
 <div class="sidebar-footer">
     <!-- 用户信息（点击编辑） -->
     <div class="sidebar-user" id="sidebarUser" title="点击登录">
-        <div class="user-avatar" id="userAvatar">🧑</div>
+        <div class="user-avatar" id="userAvatar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 22c2-4 4-6 8-6s6 2 8 6"/></svg>
+        </div>
         <div class="user-info">
             <span class="user-name" id="userName">未登录</span>
             <span class="user-label" id="userLabel">点击登录</span>
@@ -93,24 +101,24 @@
 <!-- 用户编辑弹窗（由 nav-loader.js 控制） -->
 <div class="profile-modal-overlay" id="profileModal" style="display:none;">
     <div class="profile-modal">
-        <h3>✏️ 编辑个人信息</h3>
+        <h3>编辑个人信息</h3>
         <div class="profile-avatar-picker" id="avatarPicker">
-            <button data-emoji="🧑">🧑</button>
-            <button data-emoji="👨">👨</button>
-            <button data-emoji="👩">👩</button>
-            <button data-emoji="🧔">🧔</button>
-            <button data-emoji="👩‍💻">👩‍💻</button>
-            <button data-emoji="👨‍💻">👨‍💻</button>
-            <button data-emoji="🦊">🦊</button>
-            <button data-emoji="🐱">🐱</button>
-            <button data-emoji="🐼">🐼</button>
-            <button data-emoji="🐶">🐶</button>
-            <button data-emoji="🦁">🦁</button>
-            <button data-emoji="🐰">🐰</button>
-            <button data-emoji="🌞">🌞</button>
-            <button data-emoji="⭐">⭐</button>
-            <button data-emoji="🎯">🎯</button>
-            <button data-emoji="🔥">🔥</button>
+            <button data-color="#5B9BD5" style="background:#5B9BD5" title="天蓝"></button>
+            <button data-color="#E57373" style="background:#E57373" title="珊瑚红"></button>
+            <button data-color="#81C784" style="background:#81C784" title="草绿"></button>
+            <button data-color="#FFB74D" style="background:#FFB74D" title="暖橙"></button>
+            <button data-color="#BA68C8" style="background:#BA68C8" title="紫罗兰"></button>
+            <button data-color="#4DD0E1" style="background:#4DD0E1" title="青蓝"></button>
+            <button data-color="#F06292" style="background:#F06292" title="粉红"></button>
+            <button data-color="#AED581" style="background:#AED581" title="浅绿"></button>
+            <button data-color="#7986CB" style="background:#7986CB" title="靛蓝"></button>
+            <button data-color="#FF8A65" style="background:#FF8A65" title="鲑鱼橙"></button>
+            <button data-color="#4DB6AC" style="background:#4DB6AC" title="青绿"></button>
+            <button data-color="#FFF176" style="background:#FFF176" title="明黄"></button>
+            <button data-color="#A1887F" style="background:#A1887F" title="棕灰"></button>
+            <button data-color="#90A4AE" style="background:#90A4AE" title="蓝灰"></button>
+            <button data-color="#9575CD" style="background:#9575CD" title="深紫"></button>
+            <button data-color="#E0A85C" style="background:#E0A85C" title="琥珀金"></button>
         </div>
         <div class="form-group" style="margin-top:16px;">
             <label>你的名字</label>
@@ -126,7 +134,7 @@
 <!-- 登录弹窗 -->
 <div class="profile-modal-overlay" id="loginModal" style="display:none;">
     <div class="profile-modal" style="max-width:340px;">
-        <h3>🔐 登录</h3>
+        <h3>登录</h3>
         <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">登录后数据将同步到云端</p>
         <div style="margin-top:16px;">
             <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);">用户名</label>
@@ -150,7 +158,7 @@
 <!-- 注册弹窗 -->
 <div class="profile-modal-overlay" id="registerModal" style="display:none;">
     <div class="profile-modal" style="max-width:340px;">
-        <h3>📝 注册</h3>
+        <h3>注册</h3>
         <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">创建账号后数据将同步到云端</p>
         <div style="margin-top:16px;">
             <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);">用户名</label>
@@ -171,7 +179,7 @@
 <!-- 数据迁移弹窗 -->
 <div class="profile-modal-overlay" id="migrateModal" style="display:none;">
     <div class="profile-modal" style="max-width:360px;">
-        <h3>☁️ 数据迁移</h3>
+        <h3>数据迁移</h3>
         <p style="font-size:13px;color:var(--text-secondary);margin-top:4px;" id="migrateMsg">发现您之前有未关联的数据，是否合并到当前账号？</p>
         <div class="profile-modal-actions">
             <button class="btn btn-ghost" id="migrateSkip">跳过</button>
@@ -183,7 +191,7 @@
 <!-- 修改密码弹窗 -->
 <div class="profile-modal-overlay" id="changePwModal" style="display:none;">
     <div class="profile-modal" style="max-width:340px;">
-        <h3>🔑 修改默认密码</h3>
+        <h3>修改默认密码</h3>
         <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">首次登录请修改默认密码以确保安全</p>
         <div style="margin-top:12px;">
             <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--text-secondary);">当前密码</label>
@@ -200,4 +208,3 @@
         </div>
     </div>
 </div>
-

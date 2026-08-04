@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>月信 · 周期追踪</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+
+<!-- 网站导航样式 -->
+<link rel="stylesheet" href="/css/nav.css">
+
+<style>
+/* ===== CSS 变量：夜空暗色（固定，不跟随网站主题） ===== */
+:root {
+  --bg: #0c141f;
+  --bg2: #101a28;
+  --card: #151f2e;
+  --card2: #192435;
+  --line: #243040;
+  --text: #ece5d3;
+  --text2: #9ba3a8;
+  --text3: #5d6770;
+  --gold: #ddc391;
+  --gold-dim: #b3a078;
+  --rose: #a83a31;
+  --rose-hi: #c05a4d;
+  --rose-dim: #6e2f2a;
+  --accent: #ddc391;
+  --body-bg: #060a10;
+  --shadow-soft: 0 2px 12px rgba(0,0,0,0.3);
+  --welcome-overlay: linear-gradient(180deg,
+    rgba(13,21,32,.72) 0%,rgba(13,21,32,.28) 22%,
+    rgba(13,21,32,0) 45%,rgba(13,21,32,.12) 68%,
+    rgba(13,21,32,.82) 90%,#0d1520 100%);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background: var(--body-bg);
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* ===== 主布局：适配网站侧边栏 ===== */
+.main-content {
+  margin-left: 70px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.35s cubic-bezier(0.25,0.10,0.25,1.0);
+  position: relative;
+  overflow: hidden;
+}
+@media (min-width: 1025px) {
+  .sidebar:hover ~ .main-content { margin-left: 220px; }
+}
+@media (max-width: 1024px) {
+  .main-content { margin-left: 0 !important; }
+}
+
+/* ===== App 容器 ===== */
+#yuexin-app {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 古画绢本暗角（仅暗色模式生效） */
+#yuexin-app::after {
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:60;
+  background:radial-gradient(125% 95% at 50% 42%,transparent 52%,rgba(4,7,11,.32) 100%);
+}
+
+/* ===== 顶部导航栏 ===== */
+.yx-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 16px;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  z-index: 30;
+  flex-shrink: 0;
+}
+.yx-nav-title {
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 17px;
+  letter-spacing: 6px;
+  font-weight: 600;
+  color: var(--gold);
+}
+.yx-nav-actions {
+  display: flex;
+  gap: 8px;
+}
+.yx-nav-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--card2);
+  color: var(--text2); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.yx-nav-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+.yx-nav-btn svg { width: 16px; height: 16px; }
+
+/* ===== pages ===== */
+.page{
+  position: absolute; inset: 0; top: 0;
+  background: var(--bg);
+  display: none; flex-direction: column;
+  overflow-y: auto;
+  padding-bottom: 30px;
+  scrollbar-width: none;
+}
+.page::-webkit-scrollbar{display:none}
+.page.active{display:flex;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ===== header ===== */
+.hdr{
+  text-align:center;padding:28px 20px 18px;
+}
+.hdr h1{
+  font-family:"Songti SC","STSong","SimSun",serif;
+  font-size:22px;font-weight:600;letter-spacing:10px;text-indent:10px;
+}
+.hdr .sub{
+  margin-top:8px;font-size:11px;color:var(--text3);letter-spacing:3px;
+}
+.hdr-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 16px 12px;
+}
+.hdr-bar h2{font-family:"Songti SC",serif;font-size:18px;letter-spacing:6px;font-weight:600;flex:1;text-align:center}
+.hdr-bar .back{
+  width:32px;height:32px;border-radius:50%;
+  border:1px solid var(--line);background:none;color:var(--text2);
+  font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.hdr-bar .spacer{width:32px}
+
+/* ===== welcome page (first visit / no data) ===== */
+#page-welcome{
+  justify-content: space-between; padding-bottom: 40px;
+  background: center/cover no-repeat;
+}
+#page-welcome::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background: var(--welcome-overlay);
+  z-index: 0;
+}
+#page-welcome > * { position: relative; z-index: 1; }
+.welcome-top{padding-top:32px;text-align:center;text-shadow:0 2px 14px rgba(0,0,0,.15)}
+.welcome-top h1{
+  font-family:"Songti SC",serif;font-size:34px;letter-spacing:22px;text-indent:22px;font-weight:600;
+}
+.welcome-top .en{margin-top:14px;font-size:12px;color:var(--text2);letter-spacing:6px}
+.welcome-top .poem{margin-top:12px;font-size:11px;color:var(--text3);letter-spacing:4px}
+.welcome-bottom{text-align:center;padding:0 40px}
+.link-more{display:inline-block;margin-top:20px;font-size:12px;color:var(--text3);letter-spacing:3px;cursor:pointer}
+
+/* ===== buttons ===== */
+.btn-gold{
+  display:block;width:100%;
+  padding:15px 0;border:none;border-radius:14px;cursor:pointer;
+  background:linear-gradient(135deg,#ecdcae,#c3a97b);
+  color:#3a2c14;font-size:15px;letter-spacing:4px;font-weight:600;
+  box-shadow:0 6px 20px rgba(221,195,145,.14),inset 0 1px 0 rgba(255,246,220,.5);
+  transition: transform 0.15s;
+}
+.btn-gold:active{transform:scale(.98)}
+
+/* ===== home ===== */
+.ring-card{
+  margin:6px 20px 0;background:var(--card);border:1px solid var(--line);
+  border-radius:20px;padding:30px 20px 24px;text-align:center;
+  box-shadow: var(--shadow-soft);
+}
+.ring-wrap{position:relative;width:190px;height:190px;margin:0 auto}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-center .day{font-family:"Songti SC",serif;font-size:30px;letter-spacing:2px}
+.ring-center .tag{
+  margin-top:8px;font-size:11px;color:var(--rose);letter-spacing:2px;
+  border:1px solid rgba(168,58,49,.45);border-radius:20px;padding:2px 10px;
+}
+.ring-info{margin-top:18px;font-size:12px;color:var(--text2);letter-spacing:1px;line-height:1.9}
+.ring-info em{font-style:normal;color:var(--gold)}
+.card{
+  margin:14px 20px 0;background:var(--card);border:1px solid var(--line);
+  border-radius:18px;padding:18px;
+  box-shadow: var(--shadow-soft);
+}
+.card h3{font-size:14px;letter-spacing:3px;font-weight:600}
+.card .note{font-size:11px;color:var(--text3);margin-top:4px;letter-spacing:1px}
+.moon-strip{display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px;padding:0 6px}
+.moon-item{text-align:center;cursor:pointer;transition: transform 0.2s}
+.moon-item:hover { transform: scale(1.08); }
+.moon-item .m{width:30px;height:30px;margin:0 auto}
+.moon-item.cur .m{transform:scale(1.35)}
+.moon-item .lb{font-size:9px;color:var(--text3);margin-top:6px}
+.moon-item.cur .lb{color:var(--gold);font-weight:600}
+.home-btn{margin:16px 20px 0}
+
+/* ===== calendar ===== */
+.cal-card{margin:6px 20px 0;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px 14px}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:0 6px 12px}
+.cal-nav button{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:none;color:var(--text2);cursor:pointer;font-size:13px}
+.cal-nav button:hover{border-color:var(--gold-dim);color:var(--gold)}
+.cal-nav span{font-size:14px;letter-spacing:2px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-grid .wh{text-align:center;font-size:11px;color:var(--text3);padding:6px 0}
+.cal-cell{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  font-size:13px;border-radius:50%;cursor:pointer;position:relative;color:var(--text2);
+  transition: all 0.15s;
+}
+.cal-cell:hover { background: var(--bg2); }
+.cal-cell.dim{color:var(--text3);opacity:.45}
+.cal-cell.period{
+  background:radial-gradient(circle at 36% 30%,var(--rose-hi),var(--rose) 58%,#8a2b23);
+  color:#f3e9d6;font-weight:600;
+  box-shadow:0 2px 8px rgba(90,20,15,.4),inset 0 1px 2px rgba(255,230,214,.22);
+}
+.cal-cell.predict{border:1px dashed var(--rose-dim);color:var(--rose)}
+.cal-cell.ovul{border:1px solid rgba(230,217,184,.45);color:var(--gold)}
+.cal-cell.today::after{
+  content:"";position:absolute;inset:2px;border:1.5px solid var(--gold);border-radius:50%;
+}
+.cal-legend{
+  display:flex;gap:16px;justify-content:center;margin-top:16px;
+  font-size:10px;color:var(--text3);letter-spacing:1px;flex-wrap:wrap;
+}
+.cal-legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.lg-period{background:var(--rose)}
+.lg-predict{border:1px dashed var(--rose-dim)}
+.lg-ovul{border:1px solid rgba(230,217,184,.5)}
+.lg-today{border:1.5px solid var(--gold)}
+
+/* ===== record ===== */
+.form-card{margin:6px 20px 0;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 18px}
+.f-label{font-size:12px;color:var(--text2);letter-spacing:2px;margin:18px 0 8px}
+.f-label:first-child{margin-top:0}
+.f-input{
+  width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:10px;
+  color:var(--text);padding:12px 14px;font-size:14px;outline:none;
+  font-family:inherit;
+}
+.f-input { color-scheme: dark; }
+.f-input:focus{border-color:var(--gold-dim)}
+textarea.f-input{resize:none;height:76px;font-size:13px}
+.flow-row{display:flex;gap:14px}
+.drop{
+  width:30px;height:30px;cursor:pointer;transition:.15s;
+  display:flex;align-items:center;justify-content:center;
+}
+.drop svg{width:22px;height:22px}
+.drop .d-off{fill:none;stroke:#3a4a5c;stroke-width:1.5}
+.drop .d-on{fill:var(--rose)}
+.drop.on{transform:scale(1.15)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  padding:7px 14px;border-radius:20px;border:1px solid var(--line);
+  font-size:12px;color:var(--text2);cursor:pointer;background:var(--bg2);
+  transition: all 0.15s;
+}
+.chip.on{border-color:var(--gold-dim);color:var(--gold);background:rgba(230,217,184,.08)}
+.rec-btn{margin:20px 20px 0}
+.hint-tap{text-align:center;font-size:11px;color:var(--text3);margin-top:14px;letter-spacing:1px}
+
+/* ===== mine / list ===== */
+.list{margin:8px 20px 0}
+.li{
+  display:flex;align-items:center;gap:14px;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:16px;margin-bottom:10px;cursor:pointer;
+  transition: all 0.15s;
+}
+.li:hover { border-color: var(--gold-dim); }
+.li .ic{width:22px;text-align:center;font-size:16px}
+.li .tx{flex:1}
+.li .tx b{display:block;font-size:14px;font-weight:500;letter-spacing:1px}
+.li .tx small{display:block;font-size:10px;color:var(--text3);margin-top:3px;letter-spacing:1px}
+.li .arr{color:var(--text3);font-size:14px}
+.li.danger b{color:var(--rose)}
+.foot-note{margin:26px 30px 0;text-align:center;font-size:10px;color:var(--text3);line-height:2;letter-spacing:1px}
+
+/* ===== overview ===== */
+.tabs{display:flex;justify-content:center;gap:40px;margin:4px 0 6px}
+.tab{
+  font-size:14px;letter-spacing:3px;color:var(--text3);cursor:pointer;
+  padding:6px 2px;border-bottom:2px solid transparent;
+  transition: all 0.2s;
+}
+.tab.on{color:var(--text);border-color:var(--gold)}
+.bars{display:flex;align-items:flex-end;justify-content:space-around;height:110px;margin-top:16px;padding:0 10px}
+.bar-col{text-align:center}
+.bar-col .v{
+  width:18px;border-radius:9px 9px 4px 4px;margin:0 auto;
+  background:linear-gradient(180deg,var(--gold),rgba(230,217,184,.15));
+}
+.bar-col .n{font-size:10px;color:var(--text3);margin-top:8px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.stat-cell{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+.stat-cell b{font-family:"Songti SC",serif;font-size:22px;color:var(--gold)}
+.stat-cell small{display:block;font-size:10px;color:var(--text3);margin-top:6px;letter-spacing:1px}
+
+/* ===== moon detail ===== */
+.moon-big{width:170px;height:170px;margin:14px auto 0}
+.moon-name{text-align:center;font-family:"Songti SC",serif;font-size:20px;letter-spacing:8px;margin-top:18px}
+.moon-key{text-align:center;font-size:11px;color:var(--text3);letter-spacing:3px;margin-top:8px}
+.md-block{margin:16px 20px 0}
+.md-block h4{font-size:13px;letter-spacing:3px;color:var(--gold);margin-bottom:10px}
+.md-block p{font-size:13px;color:var(--text2);line-height:2;letter-spacing:1px}
+.md-block ul{list-style:none}
+.md-block li{font-size:12px;color:var(--text2);line-height:2.1;letter-spacing:1px;padding-left:16px;position:relative}
+.md-block li::before{content:"·";position:absolute;left:2px;color:var(--gold)}
+
+/* ===== settings ===== */
+.swatches{display:flex;gap:14px;margin-top:6px}
+.sw{width:34px;height:34px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition: all 0.15s}
+.sw:hover { transform: scale(1.1); }
+.sw.on{border-color:var(--text);box-shadow:0 0 0 2px var(--bg)}
+.set-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:16px;margin-bottom:10px;font-size:14px;letter-spacing:1px;cursor:pointer;
+  transition: all 0.15s;
+}
+.set-row:hover { border-color: var(--gold-dim); }
+.set-row small{font-size:10px;color:var(--text3)}
+.switch{
+  width:42px;height:24px;border-radius:12px;background:var(--line);
+  position:relative;transition:.2s;flex-shrink:0;
+}
+.switch::after{
+  content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
+  background:#8b95a0;transition:.2s;
+}
+.switch.on{background:var(--gold)}
+.switch.on::after{left:21px;background:#2a2415}
+
+/* ================= PC 宽屏适配 ================= */
+@media (min-width:820px){
+  .cal-card,.form-card,.card{max-width:640px;width:100%;margin-left:auto;margin-right:auto}
+  .cal-cell{font-size:15px}
+  .rec-btn{max-width:640px;margin-left:auto;margin-right:auto}
+  #page-mine .list,#page-settings .list,#page-settings .card{
+    max-width:640px;width:100%;margin-left:auto;margin-right:auto;
+  }
+  #page-mine .foot-note,#page-settings .foot-note{margin-left:auto;margin-right:auto}
+  #panelStat .card{max-width:900px;margin-left:auto;margin-right:auto}
+  .moon-big{width:210px;height:210px}
+  .md-block{max-width:640px;width:100%;margin-left:auto;margin-right:auto}
+}
+
+/* ================= PC 大宽屏：仪表盘模式 ================= */
+@media (min-width:1200px){
+  #yuexin-app{
+    display:grid;
+    grid-template-columns:330px minmax(0,1fr) 360px;
+    grid-template-rows:auto minmax(0,1fr);
+    gap:18px;
+    padding:18px 26px 26px;
+    align-content:stretch;
+    overflow-y:auto;
+  }
+  /* 仪表盘各面板：常驻可见，脱离绝对定位 */
+  #page-home,#page-calendar,#page-record,#page-overview{
+    position:static;display:flex !important;overflow:visible;
+    padding:0;background:transparent;animation:none;
+  }
+  #page-home{grid-column:1;grid-row:1 / span 2}
+  #page-home .ring-card{flex:1;display:flex;flex-direction:column;justify-content:center}
+  #page-calendar{grid-column:2;grid-row:1 / span 2}
+  #page-calendar .cal-card{flex:1;display:flex;flex-direction:column;justify-content:center}
+  #page-calendar .cal-grid{row-gap:16px}
+  #page-calendar .cal-cell{
+    aspect-ratio:1;height:auto;width:min(100%,110px);
+    justify-self:center;font-size:16px;
+  }
+  #page-home .home-btn{display:none}
+  #page-overview{min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+  #page-overview #panelTrend .ring-card{display:none}
+  #panelTrend{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0;padding:0}
+  #panelTrend .card{flex:1;display:flex;flex-direction:column;margin:0}
+  #panelTrend .bars{flex:1;min-height:80px}
+  #page-record{grid-column:3;grid-row:1}
+  #page-overview{grid-column:3;grid-row:2}
+  #page-home .hdr{display:none}
+  #page-calendar .hdr,#page-record .hdr{
+    padding:6px 10px 12px;
+  }
+  #page-calendar .hdr h1,#page-record .hdr h1{font-size:17px;letter-spacing:6px}
+  #page-home .ring-card,#page-home .card,#page-home .home-btn,
+  #page-calendar .cal-card,#page-record .form-card,#page-record .rec-btn{
+    margin-left:0;margin-right:0;width:100%;max-width:none;
+  }
+  #page-record .rec-btn{margin-top:14px}
+  #page-record .hint-tap{margin-bottom:8px}
+  #page-overview .hdr-bar{display:none}
+  #page-overview .tabs{margin-top:2px}
+  #panelTrend{grid-template-columns:1fr;padding:0;gap:14px;display:grid}
+  #panelTrend .ring-card,#panelTrend .card{margin:0}
+  #panelStat .card{margin:0}
+  /* 浮层页：我的 / 设置 / 月相详情 */
+  #page-mine,#page-settings,#page-moondetail{
+    position:absolute;inset:0;z-index:25;
+    background:var(--bg);padding-top:0;display:none;
+  }
+  #page-mine.active,#page-settings.active,#page-moondetail.active{display:flex}
+  #page-moondetail.active{justify-content:center;align-items:center;padding-bottom:60px}
+  #page-moondetail .hdr-bar{position:absolute;top:14px;left:0;right:0}
+  #page-moondetail .md-block{width:640px;max-width:calc(100% - 40px)}
+  #page-welcome{position:absolute;inset:0;z-index:40}
+  .yx-nav{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- 网站导航侧边栏（由 nav-loader.js 动态注入） -->
+<div class="sidebar" id="sidebar"></div>
+
+<!-- 主内容区 -->
+<div class="main-content">
+
+  <!-- 顶部导航栏 -->
+  <nav class="yx-nav" id="yxNav">
+    <span class="yx-nav-title">月 信</span>
+    <div class="yx-nav-actions">
+      <button class="yx-nav-btn" id="btnHome" title="首页" onclick="showPage('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 13.5A8.5 8.5 0 1 1 10.5 4 6.8 6.8 0 0 0 20 13.5z"/></svg>
+      </button>
+      <button class="yx-nav-btn" id="btnCalendar" title="日历" onclick="showPage('calendar')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>
+      </button>
+      <button class="yx-nav-btn" id="btnMenu" title="更多" onclick="showPage('mine')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- App 内容区 -->
+  <div id="yuexin-app">
+
+    <!-- 欢迎页（首次访问时显示） -->
+    <div class="page active" id="page-welcome">
+      <div class="welcome-top">
+        <h1>月 信</h1>
+        <div class="en">月 水</div>
+        <div class="poem">新月始 · 满月盈 · 残月信至</div>
+      </div>
+      <div class="welcome-bottom">
+        <button class="btn-gold" onclick="enterApp()">开 始 记 录</button>
+        <span class="link-more" onclick="showPage('settings')">了解更多</span>
+      </div>
+    </div>
+
+    <!-- 首页 -->
+    <div class="page" id="page-home">
+      <div class="hdr"><h1>月 信</h1><div class="sub">新月始 · 满月盈 · 残月信至</div></div>
+      <div class="ring-card">
+        <div class="ring-wrap">
+          <svg width="190" height="190">
+            <circle cx="95" cy="95" r="80" fill="none" stroke="#22303f" stroke-width="9"/>
+            <circle id="ringProg" cx="95" cy="95" r="80" fill="none" stroke="url(#gg)" stroke-width="9"
+              stroke-linecap="round" stroke-dasharray="502.6" stroke-dashoffset="502.6"/>
+            <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ecdcae"/><stop offset="100%" stop-color="#b99b6e"/>
+            </linearGradient></defs>
+          </svg>
+          <div class="ring-center">
+            <div class="day" id="cycleDay">第 – 天</div>
+            <div class="tag" id="cyclePhase">未记录</div>
+          </div>
+        </div>
+        <div class="ring-info" id="cycleInfo">记录第一次月经，开始你的周期追踪</div>
+      </div>
+      <div class="card">
+        <h3>月相概览</h3>
+        <div class="note">本周期月相</div>
+        <div class="moon-strip" id="moonStrip"></div>
+      </div>
+      <div class="home-btn"><button class="btn-gold" onclick="quickToday()">记 录 今 日</button></div>
+    </div>
+
+    <!-- 日历 -->
+    <div class="page" id="page-calendar">
+      <div class="hdr"><h1>日 历</h1><div class="sub">点击日期可快速记录</div></div>
+      <div class="cal-card">
+        <div class="cal-nav">
+          <button onclick="shiftMonth(-1)">‹</button>
+          <span id="calTitle"></span>
+          <button onclick="shiftMonth(1)">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div class="cal-legend">
+        <span><i class="lg-period"></i>经期</span>
+        <span><i class="lg-predict"></i>预测经期</span>
+        <span><i class="lg-ovul"></i>排卵期</span>
+        <span><i class="lg-today"></i>今天</span>
+      </div>
+    </div>
+
+    <!-- 记录 -->
+    <div class="page" id="page-record">
+      <div class="hdr"><h1>记 录</h1><div class="sub">每一次月信都值得被记录</div></div>
+      <div class="form-card">
+        <div class="f-label" style="color:var(--gold)">☾ 添加记录</div>
+        <div class="f-label">开始日期</div>
+        <input type="date" class="f-input" id="fStart">
+        <div class="f-label">结束日期</div>
+        <input type="date" class="f-input" id="fEnd">
+        <div class="f-label">经血量</div>
+        <div class="flow-row" id="flowRow"></div>
+        <div class="f-label">身体感受</div>
+        <div class="chips" id="symChips"></div>
+        <div class="f-label">备注</div>
+        <textarea class="f-input" id="fNote" placeholder="可在此记录你的感受…"></textarea>
+      </div>
+      <div class="rec-btn"><button class="btn-gold" onclick="saveRecord()">保 存 记 录</button></div>
+      <div class="hint-tap">数据仅保存在本设备浏览器中</div>
+    </div>
+
+    <!-- 我的 -->
+    <div class="page" id="page-mine">
+      <div class="hdr"><h1>我 的</h1><div class="sub">数据只存在这台设备上</div></div>
+      <div class="list">
+        <div class="li" onclick="exportData()"><div class="ic">📤</div><div class="tx"><b>导出数据</b><small>保存为 JSON 文件备份</small></div><div class="arr">›</div></div>
+        <div class="li" onclick="document.getElementById('importFile').click()"><div class="ic">📥</div><div class="tx"><b>导入数据</b><small>从 JSON 备份恢复</small></div><div class="arr">›</div></div>
+        <div class="li" onclick="loadSample()"><div class="ic">☾</div><div class="tx"><b>加载示例数据</b><small>体验功能 · 预览效果</small></div><div class="arr">›</div></div>
+        <div class="li danger" onclick="clearAll()"><div class="ic">🗑</div><div class="tx"><b>清空所有记录</b><small>不可恢复，请谨慎操作</small></div><div class="arr">›</div></div>
+        <div class="li" onclick="showPage('overview')"><div class="ic">◔</div><div class="tx"><b>周期概览</b><small>趋势与统计</small></div><div class="arr">›</div></div>
+        <div class="li" onclick="showPage('settings')"><div class="ic">⚙</div><div class="tx"><b>设置</b><small>主题 · 提醒</small></div><div class="arr">›</div></div>
+      </div>
+      <div class="foot-note">月信 · 周期追踪<br>所有数据仅存储于本机浏览器<br>清除浏览器数据前请先导出备份</div>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+
+    <!-- 周期概览 -->
+    <div class="page" id="page-overview">
+      <div class="hdr-bar"><button class="back" onclick="goBack()">‹</button><h2>周期概览</h2><div class="spacer"></div></div>
+      <div class="tabs">
+        <div class="tab on" id="tabTrend" onclick="switchTab('trend')">趋 势</div>
+        <div class="tab" id="tabStat" onclick="switchTab('stat')">统 计</div>
+      </div>
+      <div id="panelTrend">
+        <div class="ring-card">
+          <div class="ring-wrap" style="width:150px;height:150px">
+            <svg width="150" height="150">
+              <circle cx="75" cy="75" r="62" fill="none" stroke="#22303f" stroke-width="8"/>
+              <circle id="avgRing" cx="75" cy="75" r="62" fill="none" stroke="url(#gg)" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="389.6" stroke-dashoffset="97"/>
+            </svg>
+            <div class="ring-center">
+              <div style="font-size:11px;color:var(--text3);letter-spacing:2px">平均周期</div>
+              <div class="day" style="font-size:26px" id="avgCycle">– 天</div>
+            </div>
+          </div>
+          <div class="ring-info" id="avgInfo">近 6 个周期</div>
+        </div>
+        <div class="card">
+          <h3>周期时长趋势</h3>
+          <div class="bars" id="trendBars"></div>
+        </div>
+      </div>
+      <div id="panelStat" style="display:none">
+        <div class="card">
+          <h3>统计</h3>
+          <div class="stat-grid" id="statGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 月相详情 -->
+    <div class="page" id="page-moondetail">
+      <div class="hdr-bar"><button class="back" onclick="goBack()">‹</button><h2>月相详情</h2><div class="spacer"></div></div>
+      <div class="moon-big" id="moonBig"></div>
+      <div class="moon-key" id="mdDate" style="margin-top:14px"></div>
+      <div class="moon-name" id="mdName" style="margin-top:6px">残月期</div>
+      <div class="moon-key" id="mdKey">释放 · 整理 · 休息</div>
+      <div class="md-block">
+        <h4>月相解读</h4>
+        <p id="mdDesc"></p>
+      </div>
+      <div class="md-block">
+        <h4>建议</h4>
+        <ul id="mdTips"></ul>
+      </div>
+    </div>
+
+    <!-- 设置 -->
+    <div class="page" id="page-settings">
+      <div class="hdr-bar"><button class="back" onclick="goBack()">‹</button><h2>设 置</h2><div class="spacer"></div></div>
+      <div class="card">
+        <h3>主题</h3>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <div class="list" style="margin-top:14px">
+        <div class="set-row" onclick="toggleSet('showMoon')">月相展示<div class="switch on" id="sw-showMoon"></div></div>
+        <div class="set-row" onclick="toggleSet('notify')">通知提醒<div class="switch" id="sw-notify"></div></div>
+        <div class="set-row" onclick="cycleRemind()">经期预测提醒<small id="remindTxt">提前 1 天 ›</small></div>
+        <div class="set-row" onclick="showAbout()">关于月信<div class="arr" style="color:var(--text3)">›</div></div>
+      </div>
+      <div class="foot-note">月信 v1.0.0<br>愿你在每一个周期里<br>都被温柔以待</div>
+    </div>
+
+  </div><!-- /#yuexin-app -->
+</div><!-- /.main-content -->
+
+<script src="/js/nav-loader.js"></script>
+
+<script>
+/* ================= 数据层 ================= */
+var LS_KEY = 'yuexin_data_v1', LS_SET = 'yuexin_set_v1';
+var records = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+var settings = Object.assign({showMoon:true,notify:false,remind:1,theme:'gold'},
+  JSON.parse(localStorage.getItem(LS_SET) || '{}'));
+function persist(){ localStorage.setItem(LS_KEY,JSON.stringify(records)); }
+function persistSet(){ localStorage.setItem(LS_SET,JSON.stringify(settings)); }
+records.sort(function(a,b){ return a.start.localeCompare(b.start); });
+
+var d2s = function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+var s2d = function(s){ var p = s.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); };
+var addDays = function(s,n){ var d = s2d(s); d.setDate(d.getDate()+n); return d2s(d); };
+var todayS = function(){ return d2s(new Date()); };
+
+/* ================= 周期计算 ================= */
+function cycleLengths(){
+  var arr = [];
+  for(var i = 1; i < records.length; i++){
+    var len = Math.round((s2d(records[i].start) - s2d(records[i-1].start)) / 864e5);
+    if(len >= 15 && len <= 60) arr.push(len);
+  }
+  return arr;
+}
+function weightedAvg(arr){
+  if(!arr.length) return null;
+  var sw = 0, sv = 0;
+  arr.forEach(function(v, i){ var w = i + 1; sw += w; sv += v * w; });
+  return Math.round(sv / sw);
+}
+function avgCycle(){ return weightedAvg(cycleLengths().slice(-6)) || 28; }
+function periodLen(){
+  var ls = records.slice(-6).map(function(r){ return r.end ? Math.round((s2d(r.end) - s2d(r.start)) / 864e5) + 1 : 5; });
+  return weightedAvg(ls) || 5;
+}
+function lastRecord(){ return records.length ? records[records.length - 1] : null; }
+function currentState(){
+  var t = todayS(), lr = lastRecord();
+  if(!lr) return null;
+  var cyc = avgCycle(), pl = periodLen();
+  var day = Math.round((s2d(t) - s2d(lr.start)) / 864e5) + 1;
+  var nextStart = addDays(lr.start, cyc);
+  return {day: day, cyc: cyc, pl: pl, nextStart: nextStart, lr: lr};
+}
+
+/* ================= 月相 ================= */
+function moonAge(dateS){
+  var d = s2d(dateS), known = Date.UTC(2000,0,6,18,14) / 864e5;
+  var age = ((d.getTime() / 864e5) - known) % 29.53058867;
+  return age < 0 ? age + 29.53058867 : age;
+}
+var CYCLE_PHASES = [
+  {moon:'new', age:0.7, name:'新月', stage:'经期', key:'开始 · 内省 · 休养',
+    desc:'子宫内膜脱落，身体翻开一个新的周期。这是最需要温柔对待自己的几天，允许自己慢下来。',
+    tips:['注意保暖，少碰生冷','热敷腹部，缓解不适','早点休息，别硬撑']},
+  {moon:'half', age:7.4, name:'上弦月', stage:'卵泡期', key:'生长 · 蓄力 · 行动',
+    desc:'经期结束，雌激素回升，精力、情绪和状态都在向上走，是一个月里最有干劲的阶段。',
+    tips:['适合安排运动和重要事项','开始新的挑战与学习','饮食清淡，补充蛋白']},
+  {moon:'full', age:14.8, name:'满月', stage:'排卵期', key:'丰盈 · 巅峰 · 绽放',
+    desc:'卵子成熟排出，能量与状态达到顶峰。适合表达、社交，也适合做一些重要的决定。',
+    tips:['把握状态好的这几天','注意补水，规律作息','若有轻微腹痛，属正常现象']},
+  {moon:'half', age:22.1, name:'下弦月', stage:'黄体期', key:'回落 · 沉淀 · 整理',
+    desc:'排卵之后，体温略升，精力开始回落。适合收尾与整理，把节奏一点点放慢。',
+    tips:['逐渐减少高强度安排','保证睡眠时长','适量补充镁与B族维生素']},
+  {moon:'crescent', age:27.3, name:'残月', stage:'经前期', key:'释放 · 舒缓 · 待至',
+    desc:'下一次月信将至，可能出现腹胀、疲惫或情绪波动。顺应身体，静待新的周期。',
+    tips:['少盐少咖啡因，减轻水肿','温和拉伸，缓解腰酸','情绪起伏时，对自己宽容一点']}
+];
+function stageRanges(cyc, pl){
+  var ov = cyc - 14;
+  return [[1, pl], [pl+1, Math.max(ov-2, pl+1)], [Math.max(ov-1, pl+2), ov+2], [ov+3, cyc-3], [cyc-2, cyc]];
+}
+function cycleStage(){
+  var st = currentState();
+  if(!st) return null;
+  var day = Math.max(st.day, 1), cyc = st.cyc, pl = st.pl;
+  var R = stageRanges(cyc, pl);
+  var idx = R.length - 1;
+  for(var i = 0; i < R.length; i++){ if(day <= R[i][1]){ idx = i; break; } }
+  return {idx: idx, day: day, range: R[idx], phase: CYCLE_PHASES[idx]};
+}
+
+/* SVG 月相图标 */
+var moonUID = 0;
+function moonSVG(age, size){
+  var phase = age / 29.53058867;
+  var waxing = phase < 0.5;
+  var r = size / 2;
+  var k = Math.cos(2 * Math.PI * phase);
+  var rx = Math.max(Math.abs(k) * r, 0.01);
+  var half = waxing ? 'M0 '+(-r)+' A '+r+' '+r+' 0 0 1 0 '+r : 'M0 '+(-r)+' A '+r+' '+r+' 0 0 0 0 '+r;
+  var sweepInner = (k > 0) === waxing ? 0 : 1;
+  var inner = ' A '+rx+' '+r+' 0 0 '+sweepInner+' 0 '+(-r);
+  var uid = 'm' + (++moonUID);
+  var blur = Math.max(size / 38, .6).toFixed(1);
+  var gx = waxing ? 0.72 : 0.28;
+  return '<svg width="'+size+'" height="'+size+'" viewBox="'+(-r-1)+' '+(-r-1)+' '+(size+2)+' '+(size+2)+'">'+
+    '<defs>'+
+      '<radialGradient id="'+uid+'d" cx="0.5" cy="0.45" r="0.75">'+
+        '<stop offset="0%" stop-color="#1a2534"/><stop offset="100%" stop-color="#0b1119"/></radialGradient>'+
+      '<radialGradient id="'+uid+'l" cx="'+gx+'" cy="0.4" r="0.9">'+
+        '<stop offset="0%" stop-color="#f4ead0"/><stop offset="60%" stop-color="#e6d9b8"/><stop offset="100%" stop-color="#c9bb95"/></radialGradient>'+
+      '<filter id="'+uid+'b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="'+blur+'"/></filter>'+
+      '<clipPath id="'+uid+'c"><circle r="'+r+'"/></clipPath>'+
+    '</defs>'+
+    '<circle r="'+r+'" fill="url(#'+uid+'d)" stroke="#2a3948" stroke-width="1"/>'+
+    '<g clip-path="url(#'+uid+'c)"><g filter="url(#'+uid+'b)"><path d="'+half+inner+' Z" fill="url(#'+uid+'l)"/></g></g>'+
+  '</svg>';
+}
+
+/* ================= 页面路由 ================= */
+var stack = [];
+function showPage(name){
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  var pageEl = document.getElementById('page-' + name);
+  if (pageEl) pageEl.classList.add('active');
+  var mainPages = ['home', 'calendar', 'record', 'mine'];
+  // 更新导航栏按钮状态
+  document.querySelectorAll('.yx-nav-btn').forEach(function(b){ b.style.borderColor = ''; b.style.color = ''; });
+  var navBtnMap = { home: 'btnHome', calendar: 'btnCalendar', mine: 'btnMenu' };
+  var activeBtn = document.getElementById(navBtnMap[name]);
+  if (activeBtn) { activeBtn.style.borderColor = 'var(--gold-dim)'; activeBtn.style.color = 'var(--gold)'; }
+  if (mainPages.indexOf(name) !== -1) stack.length = 0;
+  stack.push(name);
+  if (name === 'home') renderHome();
+  if (name === 'calendar') renderCalendar();
+  if (name === 'overview') renderOverview();
+  if (name === 'moondetail') renderMoonDetail();
+}
+function goBack(){
+  stack.pop();
+  var prev = stack.pop() || 'home';
+  showPage(prev);
+}
+function enterApp(){ showPage('home'); }
+
+/* ================= 首页 ================= */
+function updateWelcomeBg(){
+  var cs = cycleStage();
+  var img = cs ? cs.phase.moon : 'new';
+  var welEl = document.getElementById('page-welcome');
+  if (welEl) welEl.style.backgroundImage = "url('月信/app/assets/phase-"+img+".jpg')";
+}
+function renderHome(){
+  updateWelcomeBg();
+  renderCalendar();
+  renderOverview();
+  var st = currentState();
+  var ring = document.getElementById('ringProg');
+  var C = 502.6;
+  if(!st){
+    document.getElementById('cycleDay').textContent = '第 – 天';
+    document.getElementById('cyclePhase').textContent = '未记录';
+    document.getElementById('cycleInfo').innerHTML = '记录第一次月经，开始你的周期追踪';
+    ring.style.strokeDashoffset = C;
+  } else {
+    document.getElementById('cycleDay').textContent = '第 ' + Math.max(st.day, 1) + ' 天';
+    var ph = document.getElementById('cyclePhase');
+    var inP = st.lr.end ? (todayS() >= st.lr.start && todayS() <= st.lr.end) : (st.day <= st.pl && st.day >= 1);
+    var cs = cycleStage();
+    if(inP){ ph.textContent = '经期'; ph.style.color = 'var(--rose)'; ph.style.borderColor = 'rgba(168,58,49,.45)'; }
+    else if(st.day > st.cyc){ ph.textContent = '可能推迟'; ph.style.color = 'var(--rose)'; }
+    else { ph.textContent = cs ? cs.phase.stage : '周期中'; ph.style.color = 'var(--gold)'; ph.style.borderColor = 'rgba(230,217,184,.35)'; }
+    var left = Math.max(st.cyc - st.day + 1, 0);
+    document.getElementById('cycleInfo').innerHTML =
+      '周期第 ' + Math.max(st.day, 1) + ' 天<br>预计 ' + left + ' 天后下次月信 <em>（周期 ' + st.cyc + ' 天）</em>';
+    var prog = Math.min(Math.max(st.day / st.cyc, 0), 1);
+    ring.style.strokeDashoffset = C * (1 - prog);
+  }
+  var strip = document.getElementById('moonStrip');
+  strip.innerHTML = '';
+  if(!settings.showMoon){ strip.innerHTML = '<div class="note">已在设置中关闭月相展示</div>'; return; }
+  var cur = cycleStage();
+  CYCLE_PHASES.forEach(function(p, i){
+    var it = document.createElement('div');
+    it.className = 'moon-item' + (cur && cur.idx === i ? ' cur' : '');
+    it.innerHTML = '<div class="m">' + moonSVG(p.age, 30) + '</div><div class="lb">' + p.name + '</div>';
+    it.onclick = function(){ showMoonDetail(i); };
+    strip.appendChild(it);
+  });
+}
+function quickToday(){
+  document.getElementById('fStart').value = todayS();
+  showPage('record');
+}
+
+/* ================= 日历 ================= */
+var calCursor = new Date();
+function shiftMonth(n){ calCursor.setMonth(calCursor.getMonth() + n); renderCalendar(); }
+function inRange(t, s, e){ return t >= s && t <= (e || s); }
+function renderCalendar(){
+  var y = calCursor.getFullYear(), m = calCursor.getMonth();
+  var titleEl = document.getElementById('calTitle');
+  if (titleEl) titleEl.textContent = y + ' 年 ' + (m + 1) + ' 月';
+  var g = document.getElementById('calGrid');
+  if (!g) return;
+  g.innerHTML = '';
+  ['日','一','二','三','四','五','六'].forEach(function(w){ g.innerHTML += '<div class="wh">' + w + '</div>'; });
+  var first = new Date(y, m, 1), startDay = first.getDay();
+  var dim = new Date(y, m, 0).getDate(), dim2 = new Date(y, m + 1, 0).getDate();
+  var cyc = avgCycle(), pl = periodLen(), lr = lastRecord();
+  var t = todayS();
+  for(var i = 0; i < 42; i++){
+    var cell = document.createElement('div'); cell.className = 'cal-cell';
+    var ds, dimmed = false;
+    if(i < startDay){ ds = d2s(new Date(y, m - 1, dim - startDay + 1 + i)); dimmed = true; }
+    else if(i - startDay < dim2){ ds = d2s(new Date(y, m, i - startDay + 1)); }
+    else { ds = d2s(new Date(y, m + 1, i - startDay - dim2 + 1)); dimmed = true; }
+    cell.textContent = s2d(ds).getDate();
+    if(dimmed) cell.classList.add('dim');
+    for(var ri = 0; ri < records.length; ri++){
+      var r = records[ri];
+      var end = r.end || addDays(r.start, pl - 1);
+      if(inRange(ds, r.start, end)){ cell.classList.add('period'); break; }
+    }
+    if(lr){
+      var ns = addDays(lr.start, cyc), ne = addDays(ns, pl - 1);
+      if(ds > t && inRange(ds, ns, ne)) cell.classList.add('predict');
+      var ov = addDays(ns, -14);
+      if(ds > t && inRange(ds, addDays(ov, -2), addDays(ov, 2)) && !cell.classList.contains('predict'))
+        cell.classList.add('ovul');
+    }
+    if(ds === t) cell.classList.add('today');
+    cell.onclick = (function(d){ return function(){ document.getElementById('fStart').value = d; showPage('record'); }; })(ds);
+    g.appendChild(cell);
+  }
+}
+
+/* ================= 记录 ================= */
+var SYMS = ['腹痛','疲惫','情绪波动','头痛','腰酸','乳房胀痛','失眠','食欲变化'];
+var flowVal = 0;
+function buildForm(){
+  var fr = document.getElementById('flowRow');
+  fr.innerHTML = '';
+  var dropPath = 'M11 2.5 C11 2.5 4.5 10 4.5 14.5 a6.5 6.5 0 0 0 13 0 C17.5 10 11 2.5 11 2.5 Z';
+  for(var i = 1; i <= 5; i++){
+    var d = document.createElement('div');
+    d.className = 'drop'; d.dataset.v = i;
+    d.innerHTML = '<svg viewBox="0 0 22 22"><path class="d-off" d="' + dropPath + '"/><path class="d-on" d="' + dropPath + '" style="display:none"/></svg>';
+    d.onclick = (function(v){ return function(){ flowVal = v; renderDrops(); }; })(i);
+    fr.appendChild(d);
+  }
+  renderDrops();
+  var ch = document.getElementById('symChips');
+  ch.innerHTML = '';
+  SYMS.forEach(function(s){
+    var c = document.createElement('div'); c.className = 'chip'; c.textContent = s;
+    c.onclick = function(){ c.classList.toggle('on'); };
+    ch.appendChild(c);
+  });
+  if(!document.getElementById('fStart').value) document.getElementById('fStart').value = todayS();
+}
+function renderDrops(){
+  document.querySelectorAll('#flowRow .drop').forEach(function(d){
+    var on = +d.dataset.v <= flowVal;
+    d.classList.toggle('on', on);
+    d.querySelector('.d-on').style.display = on ? '' : 'none';
+    d.querySelector('.d-off').style.display = on ? 'none' : '';
+  });
+}
+function saveRecord(){
+  var start = document.getElementById('fStart').value;
+  if(!start){ alert('请选择开始日期'); return; }
+  var end = document.getElementById('fEnd').value || null;
+  if(end && end < start){ alert('结束日期不能早于开始日期'); return; }
+  var sym = [].slice.call(document.querySelectorAll('#symChips .chip.on')).map(function(c){ return c.textContent; });
+  var note = document.getElementById('fNote').value.trim();
+  records = records.filter(function(r){ return r.start !== start; });
+  records.push({start: start, end: end, flow: flowVal, sym: sym, note: note});
+  records.sort(function(a, b){ return a.start.localeCompare(b.start); });
+  persist();
+  document.getElementById('fEnd').value = ''; document.getElementById('fNote').value = '';
+  flowVal = 0; buildForm();
+  showPage('home');
+}
+
+/* ================= 我的 ================= */
+function exportData(){
+  var blob = new Blob([JSON.stringify({records: records, settings: settings}, null, 2)], {type: 'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '月信备份_' + todayS() + '.json';
+  a.click();
+}
+function importData(e){
+  var f = e.target.files[0]; if(!f) return;
+  var rd = new FileReader();
+  rd.onload = function(){
+    try{
+      var j = JSON.parse(rd.result);
+      if(Array.isArray(j.records)){ records = j.records; records.sort(function(a, b){ return a.start.localeCompare(b.start); }); persist(); alert('导入成功，共 ' + records.length + ' 条记录'); renderHome(); }
+      else alert('文件格式不正确');
+    } catch(err){ alert('无法解析文件'); }
+  };
+  rd.readAsText(f);
+  e.target.value = '';
+}
+function loadSample(){
+  if(records.length && !confirm('加载示例数据将覆盖现有记录，继续？')) return;
+  var t = s2d(todayS());
+  records = [];
+  var starts = [142, 114, 86, 57, 28];
+  starts.forEach(function(back){
+    var s = new Date(t); s.setDate(s.getDate() - back);
+    var e = new Date(s); e.setDate(e.getDate() + 4);
+    records.push({start: d2s(s), end: d2s(e), flow: 3, sym: [], note: ''});
+  });
+  var s0 = new Date(t); s0.setDate(s0.getDate() - 3);
+  records.push({start: d2s(s0), end: null, flow: 3, sym: ['疲惫'], note: ''});
+  records.sort(function(a, b){ return a.start.localeCompare(b.start); });
+  persist(); renderHome();
+  alert('已加载示例数据');
+}
+function clearAll(){
+  if(!confirm('确定清空所有记录？此操作不可恢复。')) return;
+  records = []; persist(); renderHome();
+}
+
+/* ================= 周期概览 ================= */
+function switchTab(t){
+  document.getElementById('tabTrend').classList.toggle('on', t === 'trend');
+  document.getElementById('tabStat').classList.toggle('on', t === 'stat');
+  document.getElementById('panelTrend').style.display = t === 'trend' ? '' : 'none';
+  document.getElementById('panelStat').style.display = t === 'stat' ? '' : 'none';
+}
+function renderOverview(){
+  var lens = cycleLengths().slice(-6);
+  var avgCycleEl = document.getElementById('avgCycle');
+  if (avgCycleEl) avgCycleEl.textContent = (lens.length ? avgCycle() : '–') + ' 天';
+  var avgInfoEl = document.getElementById('avgInfo');
+  if (avgInfoEl) avgInfoEl.textContent = lens.length ? '近 ' + lens.length + ' 个周期' : '数据不足，记录 2 次以上后生成';
+  var bars = document.getElementById('trendBars');
+  if (!bars) return;
+  bars.innerHTML = '';
+  if(!lens.length){ bars.innerHTML = '<div class="note" style="align-self:center">暂无数据</div>'; }
+  else{
+    var mx = Math.max.apply(null, lens.concat([30]));
+    lens.forEach(function(v){
+      var c = document.createElement('div'); c.className = 'bar-col';
+      c.innerHTML = '<div class="v" style="height:' + Math.round(v / mx * 88) + 'px"></div><div class="n">' + v + '</div>';
+      bars.appendChild(c);
+    });
+  }
+  var total = records.length;
+  var avgP = periodLen();
+  var symCnt = {};
+  records.forEach(function(r){ (r.sym || []).forEach(function(s){ symCnt[s] = (symCnt[s] || 0) + 1; }); });
+  var topSym = Object.entries(symCnt).sort(function(a, b){ return b[1] - a[1]; })[0];
+  var statGrid = document.getElementById('statGrid');
+  if (statGrid) {
+    statGrid.innerHTML =
+      '<div class="stat-cell"><b>' + total + '</b><small>累计记录</small></div>' +
+      '<div class="stat-cell"><b>' + (lens.length ? avgCycle() : '–') + '</b><small>平均周期（天）</small></div>' +
+      '<div class="stat-cell"><b>' + (total ? avgP : '–') + '</b><small>平均经期（天）</small></div>' +
+      '<div class="stat-cell"><b>' + (topSym ? topSym[0] : '–') + '</b><small>最常见感受</small></div>';
+  }
+}
+
+/* ================= 月相详情 ================= */
+var moonDetailStage = null;
+function showMoonDetail(i){
+  moonDetailStage = (typeof i === 'number') ? i : null;
+  showPage('moondetail');
+}
+function renderMoonDetail(){
+  var cur = cycleStage();
+  var i = moonDetailStage != null ? moonDetailStage : (cur ? cur.idx : 0);
+  var p = CYCLE_PHASES[i];
+  var rangeTxt = '记录月经后，这里会显示阶段天数';
+  var st = currentState();
+  if(st){
+    var R = stageRanges(st.cyc, st.pl)[i];
+    rangeTxt = '周期第 ' + R[0] + ' – ' + R[1] + ' 天' + (cur && cur.idx === i ? ' · 当前阶段' : '');
+  }
+  document.getElementById('mdDate').textContent = rangeTxt;
+  document.getElementById('moonBig').innerHTML = moonSVG(p.age, 170);
+  document.getElementById('mdName').textContent = p.name + ' · ' + p.stage;
+  document.getElementById('mdKey').textContent = p.key;
+  document.getElementById('mdDesc').textContent = p.desc;
+  document.getElementById('mdTips').innerHTML = p.tips.map(function(x){ return '<li>' + x + '</li>'; }).join('');
+}
+
+/* ================= 设置 ================= */
+var THEMES = {gold: '#ddc391', rose: '#a83a31', mist: '#aebfd0', sage: '#a8c4b2', lav: '#b8b0d8'};
+function buildSettings(){
+  var sw = document.getElementById('swatches');
+  sw.innerHTML = '';
+  Object.entries(THEMES).forEach(function(entry){
+    var k = entry[0], c = entry[1];
+    var d = document.createElement('div');
+    d.className = 'sw' + (settings.theme === k ? ' on' : '');
+    d.style.background = c;
+    d.onclick = function(){ settings.theme = k; persistSet(); applyTheme(); buildSettings(); };
+    sw.appendChild(d);
+  });
+  document.getElementById('sw-showMoon').classList.toggle('on', settings.showMoon);
+  document.getElementById('sw-notify').classList.toggle('on', settings.notify);
+  document.getElementById('remindTxt').textContent = '提前 ' + settings.remind + ' 天 ›';
+}
+function applyTheme(){
+  var c = THEMES[settings.theme] || THEMES.gold;
+  document.documentElement.style.setProperty('--gold', c);
+  document.documentElement.style.setProperty('--accent', c);
+}
+function toggleSet(k){
+  settings[k] = !settings[k]; persistSet();
+  document.getElementById('sw-' + k).classList.toggle('on', settings[k]);
+}
+function cycleRemind(){
+  settings.remind = settings.remind % 3 + 1; persistSet();
+  document.getElementById('remindTxt').textContent = '提前 ' + settings.remind + ' 天 ›';
+}
+function showAbout(){
+  alert('月信 v1.0.0\n\n一款只属于你的周期记录小工具。\n所有数据仅保存在本机浏览器，不上传任何服务器。\n\n愿你在每一个周期里，都被温柔以待。');
+}
+
+/* ================= init ================= */
+(function init(){
+  var hasData = records.length > 0;
+  buildForm();
+  buildSettings();
+  applyTheme();
+  renderHome();
+  updateWelcomeBg();
+
+  // 已有数据 → 直接进首页；无数据 → 显示欢迎页
+  if (hasData) {
+    showPage('home');
+  } else {
+    // 欢迎页为默认展示（HTML 中已是 active）
+  }
+})();
+</script>
+</body>
+</html>

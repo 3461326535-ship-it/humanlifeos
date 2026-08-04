@@ -309,15 +309,25 @@
     var badgeEl = document.getElementById('syncBadge');
     var userArea = document.getElementById('sidebarUser');
 
+    var personSVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 22c2-4 4-6 8-6s6 2 8 6"/></svg>';
+
     if (AUTH.loggedIn) {
       var profile = loadProfile();
-      if (avatarEl) avatarEl.textContent = profile.avatar;
-      if (nameEl) nameEl.textContent = profile.name + ' ☁️';
+      if (avatarEl) {
+        avatarEl.style.background = profile.avatar;
+        avatarEl.style.color = '#fff';
+        avatarEl.innerHTML = personSVG;
+      }
+      if (nameEl) nameEl.textContent = profile.name;
       if (labelEl) labelEl.textContent = '已同步';
       if (badgeEl) badgeEl.style.display = 'flex';
       if (userArea) userArea.title = '点击编辑个人信息';
     } else {
-      if (avatarEl) avatarEl.textContent = '🧑';
+      if (avatarEl) {
+        avatarEl.style.background = 'var(--fill-tertiary)';
+        avatarEl.style.color = 'var(--text-tertiary)';
+        avatarEl.innerHTML = personSVG;
+      }
       if (nameEl) nameEl.textContent = '未登录';
       if (labelEl) labelEl.textContent = '点击登录';
       if (badgeEl) badgeEl.style.display = 'none';
@@ -357,12 +367,18 @@
   // ═══════════════════════════════════════════════════════════
   // 8. 用户头像和名称
   // ═══════════════════════════════════════════════════════════
-  var USER_DEFAULTS = { name: '用户', avatar: '🧑' };
+  var USER_DEFAULTS = { name: '用户', avatar: '#5B9BD5' };
 
   function loadProfile() {
     try {
       var raw = localStorage.getItem('nav-user-profile');
-      return raw ? JSON.parse(raw) : USER_DEFAULTS;
+      if (!raw) return USER_DEFAULTS;
+      var profile = JSON.parse(raw);
+      // 兼容旧版 emoji 头像：迁移为颜色
+      if (!profile.avatar || profile.avatar.length <= 4) {
+        profile.avatar = USER_DEFAULTS.avatar;
+      }
+      return profile;
     } catch (e) {
       return USER_DEFAULTS;
     }
@@ -376,7 +392,11 @@
     var profile = loadProfile();
     var avatarEl = document.getElementById('userAvatar');
     var nameEl = document.getElementById('userName');
-    if (avatarEl) avatarEl.textContent = profile.avatar;
+    if (avatarEl) {
+      avatarEl.style.background = profile.avatar;
+      avatarEl.style.color = '#fff';
+      avatarEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 22c2-4 4-6 8-6s6 2 8 6"/></svg>';
+    }
     if (nameEl) nameEl.textContent = profile.name;
   }
 
@@ -398,21 +418,21 @@
       document.getElementById('profileNameInput').value = profile.name;
       modal.style.display = 'flex';
 
-      // 高亮当前头像
+      // 高亮当前头像颜色
       var picker = document.getElementById('avatarPicker');
       if (picker) {
         picker.querySelectorAll('button').forEach(function (btn) {
-          btn.classList.toggle('selected', btn.dataset.emoji === profile.avatar);
+          btn.classList.toggle('selected', btn.dataset.color === profile.avatar);
         });
       }
     });
 
-    // 头像选择
+    // 头像颜色选择
     var picker = document.getElementById('avatarPicker');
     if (picker) {
       picker.addEventListener('click', function (e) {
         var btn = e.target.closest('button');
-        if (!btn || !btn.dataset.emoji) return;
+        if (!btn || !btn.dataset.color) return;
         picker.querySelectorAll('button').forEach(function (b) { b.classList.remove('selected'); });
         btn.classList.add('selected');
       });
@@ -429,7 +449,7 @@
       var name = nameInput.value.trim() || USER_DEFAULTS.name;
 
       var selectedBtn = picker ? picker.querySelector('button.selected') : null;
-      var avatar = selectedBtn ? selectedBtn.dataset.emoji : USER_DEFAULTS.avatar;
+      var avatar = selectedBtn ? selectedBtn.dataset.color : USER_DEFAULTS.avatar;
 
       saveProfile({ name: name, avatar: avatar });
       applyProfile();

@@ -461,9 +461,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   flex-shrink: 0;
   transition: transform 0.2s;
+  color: var(--text-tertiary);
 }
 .sidebar-user:hover .user-avatar {
   transform: scale(1.08);
@@ -664,29 +664,27 @@
 .profile-avatar-picker {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   justify-content: center;
 }
 .profile-avatar-picker button {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 2px solid transparent;
-  background: var(--fill-quaternary);
-  font-size: 22px;
   cursor: pointer;
   transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 0;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
 }
 .profile-avatar-picker button:hover {
   border-color: var(--blue);
-  transform: scale(1.1);
+  transform: scale(1.12);
 }
 .profile-avatar-picker button.selected {
   border-color: var(--blue);
-  background: var(--blue-light);
+  box-shadow: 0 0 0 3px var(--blue-light), inset 0 0 0 1px rgba(0,0,0,0.08);
 }
 .profile-modal-actions {
   display: flex;
