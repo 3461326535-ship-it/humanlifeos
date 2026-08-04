@@ -233,6 +233,10 @@ body{
 .cal-cell.today::after{
   content:"";position:absolute;inset:2px;border:1.5px solid var(--gold);border-radius:50%;
 }
+.cal-cell.pending-start{
+  box-shadow: inset 0 0 0 2px var(--gold);
+  color: var(--gold); font-weight:600;
+}
 .cal-legend{
   display:flex;gap:16px;justify-content:center;margin-top:16px;
   font-size:10px;color:var(--text3);letter-spacing:1px;flex-wrap:wrap;
@@ -242,6 +246,15 @@ body{
 .lg-predict{border:1px dashed var(--rose-dim)}
 .lg-ovul{border:1px solid rgba(230,217,184,.5)}
 .lg-today{border:1.5px solid var(--gold)}
+.pending-hint{
+  text-align:center;margin-top:12px;font-size:12px;color:var(--gold);
+  letter-spacing:1px;padding:8px 14px;background:var(--card);
+  border:1px solid var(--gold-dim);border-radius:20px;
+}
+.pending-hint button{
+  background:none;border:none;color:var(--text3);cursor:pointer;
+  font-size:12px;margin-left:8px;text-decoration:underline;
+}
 
 /* ===== record ===== */
 .form-card{margin:6px 20px 0;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 18px}
@@ -271,7 +284,7 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
   transition: all 0.15s;
 }
 .chip.on{border-color:var(--gold-dim);color:var(--gold);background:rgba(230,217,184,.08)}
-.rec-btn{margin:20px 20px 0}
+.rec-btn,.rec-actions{margin:20px 20px 0}
 .hint-tap{text-align:center;font-size:11px;color:var(--text3);margin-top:14px;letter-spacing:1px}
 
 /* ===== mine / list ===== */
@@ -399,10 +412,10 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
   }
   #page-calendar .hdr h1,#page-record .hdr h1{font-size:17px;letter-spacing:6px}
   #page-home .ring-card,#page-home .card,#page-home .home-btn,
-  #page-calendar .cal-card,#page-record .form-card,#page-record .rec-btn{
+  #page-calendar .cal-card,#page-record .form-card,#page-record .rec-actions{
     margin-left:0;margin-right:0;width:100%;max-width:none;
   }
-  #page-record .rec-btn{margin-top:14px}
+  #page-record .rec-actions{margin-top:14px}
   #page-record .hint-tap{margin-bottom:8px}
   #page-overview .hdr-bar{display:none}
   #page-overview .tabs{margin-top:2px}
@@ -410,19 +423,59 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
   #panelTrend .ring-card,#panelTrend .card{margin:0}
   #panelStat .card{margin:0}
   /* 浮层页：我的 / 设置 / 月相详情 */
-  #page-mine,#page-settings,#page-moondetail{
+  #page-mine,#page-history,#page-settings,#page-moondetail{
     position:absolute;inset:0;z-index:25;
     background:var(--bg);padding-top:0;display:none;
   }
-  #page-mine.active,#page-settings.active,#page-moondetail.active{display:flex}
+  #page-mine.active,#page-history.active,#page-settings.active,#page-moondetail.active{display:flex}
   #page-moondetail.active{justify-content:center;align-items:center;padding-bottom:60px}
   #page-moondetail .hdr-bar{position:absolute;top:14px;left:0;right:0}
   #page-moondetail .md-block{width:640px;max-width:calc(100% - 40px)}
   #page-welcome{position:absolute;inset:0;z-index:40}
   .yx-nav{display:none}
 }
+/* ===== 编辑/删除按钮 ===== */
+.rec-actions{display:flex;gap:12px;margin:20px 20px 0}
+.rec-actions .btn-gold{flex:1}
+.btn-danger{
+  display:block;padding:15px 0;border:none;border-radius:14px;cursor:pointer;
+  background:transparent;border:1px solid var(--rose-dim);
+  color:var(--rose);font-size:14px;letter-spacing:2px;font-weight:500;
+  transition: all 0.15s;
+}
+.btn-danger:hover{background:rgba(168,58,49,.1);border-color:var(--rose)}
+.btn-danger:active{transform:scale(.98)}
+.btn-sm{padding:10px 0;font-size:13px;letter-spacing:1px}
+.rec-edit-hint{text-align:center;font-size:11px;color:var(--text3);margin-top:12px;letter-spacing:1px}
+
+/* ===== 历史记录列表 ===== */
+.history-list{margin:8px 20px 0}
+.hist-item{
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px;margin-bottom:10px;position:relative;
+}
+.hist-item .hist-date{
+  font-size:14px;font-weight:600;letter-spacing:1px;color:var(--text);
+  margin-bottom:6px;
+}
+.hist-item .hist-meta{
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  font-size:11px;color:var(--text2);letter-spacing:1px;
+}
+.hist-item .hist-flow{color:var(--rose);font-weight:500}
+.hist-item .hist-sym{color:var(--gold);font-size:10px}
+.hist-item .hist-note{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6}
+.hist-actions{display:flex;gap:8px;position:absolute;top:12px;right:14px}
+.hist-btn{
+  width:30px;height:30px;border-radius:50%;border:1px solid var(--line);
+  background:var(--bg2);color:var(--text2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;transition: all 0.15s;
+}
+.hist-btn:hover{border-color:var(--gold-dim);color:var(--gold)}
+.hist-btn.del:hover{border-color:var(--rose);color:var(--rose)}
+.hist-empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px;letter-spacing:1px}
 </style>
-</head>
 <body>
 
 <!-- 网站导航侧边栏（由 nav-loader.js 动态注入） -->
@@ -508,6 +561,7 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
         <span><i class="lg-ovul"></i>排卵期</span>
         <span><i class="lg-today"></i>今天</span>
       </div>
+      <div class="pending-hint" id="pendingHint" style="display:none"></div>
     </div>
 
     <!-- 记录 -->
@@ -526,8 +580,12 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
         <div class="f-label">备注</div>
         <textarea class="f-input" id="fNote" placeholder="可在此记录你的感受…"></textarea>
       </div>
-      <div class="rec-btn"><button class="btn-gold" onclick="saveRecord()">保 存 记 录</button></div>
-      <div class="hint-tap">数据仅保存在本设备浏览器中</div>
+      <div class="rec-actions" id="recActions">
+        <button class="btn-gold" id="btnSave" onclick="saveRecord()">保 存 记 录</button>
+        <button class="btn-danger btn-sm" id="btnDelete" onclick="deleteRecord()" style="display:none">删 除</button>
+      </div>
+      <div class="rec-edit-hint" id="recEditHint" style="display:none"></div>
+      <div class="hint-tap" id="recNewHint">数据仅保存在本设备浏览器中</div>
     </div>
 
     <!-- 我的 -->
@@ -538,6 +596,7 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
         <div class="li" onclick="document.getElementById('importFile').click()"><div class="ic">📥</div><div class="tx"><b>导入数据</b><small>从 JSON 备份恢复</small></div><div class="arr">›</div></div>
         <div class="li" onclick="loadSample()"><div class="ic">☾</div><div class="tx"><b>加载示例数据</b><small>体验功能 · 预览效果</small></div><div class="arr">›</div></div>
         <div class="li danger" onclick="clearAll()"><div class="ic">🗑</div><div class="tx"><b>清空所有记录</b><small>不可恢复，请谨慎操作</small></div><div class="arr">›</div></div>
+        <div class="li" onclick="showPage('history')"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg></div><div class="tx"><b>历史记录</b><small>查看 · 编辑 · 删除</small></div><div class="arr">›</div></div>
         <div class="li" onclick="showPage('overview')"><div class="ic">◔</div><div class="tx"><b>周期概览</b><small>趋势与统计</small></div><div class="arr">›</div></div>
         <div class="li" onclick="showPage('settings')"><div class="ic">⚙</div><div class="tx"><b>设置</b><small>主题 · 提醒</small></div><div class="arr">›</div></div>
       </div>
@@ -595,6 +654,13 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
         <h4>建议</h4>
         <ul id="mdTips"></ul>
       </div>
+    </div>
+
+    <!-- 历史记录 -->
+    <div class="page" id="page-history">
+      <div class="hdr"><h1>历史记录</h1><div class="sub">点击编辑 · 右滑或点 ✕ 删除</div></div>
+      <div class="history-list" id="historyList"></div>
+      <div class="hist-empty" id="histEmpty" style="display:none">暂无记录<br><br>在日历中点击日期添加你的第一条记录</div>
     </div>
 
     <!-- 设置 -->
@@ -746,6 +812,7 @@ function showPage(name){
   if (name === 'calendar') renderCalendar();
   if (name === 'overview') renderOverview();
   if (name === 'moondetail') renderMoonDetail();
+  if (name === 'history') renderHistory();
 }
 function goBack(){
   stack.pop();
@@ -801,11 +868,13 @@ function renderHome(){
 }
 function quickToday(){
   document.getElementById('fStart').value = todayS();
+  buildForm();
   showPage('record');
 }
 
 /* ================= 日历 ================= */
 var calCursor = new Date();
+var pendingStart = null; // 待选开始日期
 function shiftMonth(n){ calCursor.setMonth(calCursor.getMonth() + n); renderCalendar(); }
 function inRange(t, s, e){ return t >= s && t <= (e || s); }
 function renderCalendar(){
@@ -841,15 +910,83 @@ function renderCalendar(){
         cell.classList.add('ovul');
     }
     if(ds === t) cell.classList.add('today');
-    cell.onclick = (function(d){ return function(){ document.getElementById('fStart').value = d; showPage('record'); }; })(ds);
+    // 检查该日期所属的记录
+    var existing = null;
+    for(var ri2 = 0; ri2 < records.length; ri2++){
+      var r2 = records[ri2];
+      var e2 = r2.end || addDays(r2.start, pl - 1);
+      if(inRange(ds, r2.start, e2)){ existing = r2; break; }
+    }
+    // 标记待选开始日
+    if (ds === pendingStart) cell.classList.add('pending-start');
+    if (existing && existing.end) {
+      cell.title = '点击编辑 ' + existing.start + ' — ' + existing.end;
+    } else if (existing) {
+      cell.title = '经期中 · 点击编辑';
+    }
+    cell.onclick = (function(d, ex){
+      return function(){
+        // 点击已有记录 → 编辑
+        if (ex) { editRecord(ex.start); return; }
+        // 没有待选开始 → 设为开始
+        if (!pendingStart) {
+          pendingStart = d;
+          renderCalendarOnly();
+          updatePendingHint();
+          return;
+        }
+        // 点了同一个日期 → 取消选择
+        if (d === pendingStart) {
+          pendingStart = null;
+          renderCalendarOnly();
+          updatePendingHint();
+          return;
+        }
+        // 已有开始，点另一个日期 → 创建记录
+        var s = pendingStart, e = d;
+        if (e < s) { var tmp = s; s = e; e = tmp; } // 自动交换
+        // 检查与已有记录重叠
+        var overlap = false;
+        for(var ri3 = 0; ri3 < records.length; ri3++){
+          var r3 = records[ri3], rEnd = r3.end || addDays(r3.start, periodLen() - 1);
+          if(inRange(s, r3.start, rEnd) || inRange(e, r3.start, rEnd) || (s <= r3.start && e >= rEnd)){
+            overlap = true; break;
+          }
+        }
+        if (overlap) { showToast('该范围与已有记录重叠，请重新选择'); pendingStart = null; renderCalendarOnly(); updatePendingHint(); return; }
+        records.push({start: s, end: e, flow: 3, sym: [], note: ''});
+        records.sort(function(a, b){ return a.start.localeCompare(b.start); });
+        persist();
+        pendingStart = null;
+        renderHome();
+        updatePendingHint();
+        showToast('已标记经期 ' + s + ' — ' + e);
+      };
+    })(ds, existing);
     g.appendChild(cell);
+  }
+}
+function renderCalendarOnly(){
+  // 仅重绘日历，不触发 home/overview
+  var prev = pendingStart; renderCalendar(); pendingStart = prev;
+}
+function updatePendingHint(){
+  var hint = document.getElementById('pendingHint');
+  if (!hint) return;
+  if (pendingStart) {
+    hint.style.display = '';
+    hint.innerHTML = '开始日：<b>' + pendingStart + '</b> — 请点击结束日期 <button onclick="pendingStart=null;renderCalendarOnly();updatePendingHint()">取消</button>';
+  } else {
+    hint.style.display = 'none';
   }
 }
 
 /* ================= 记录 ================= */
 var SYMS = ['腹痛','疲惫','情绪波动','头痛','腰酸','乳房胀痛','失眠','食欲变化'];
 var flowVal = 0;
-function buildForm(){
+var editingStart = null; // 正在编辑的记录 start 日期，null = 新建模式
+
+function buildForm(editData){
   var fr = document.getElementById('flowRow');
   fr.innerHTML = '';
   var dropPath = 'M11 2.5 C11 2.5 4.5 10 4.5 14.5 a6.5 6.5 0 0 0 13 0 C17.5 10 11 2.5 11 2.5 Z';
@@ -860,7 +997,6 @@ function buildForm(){
     d.onclick = (function(v){ return function(){ flowVal = v; renderDrops(); }; })(i);
     fr.appendChild(d);
   }
-  renderDrops();
   var ch = document.getElementById('symChips');
   ch.innerHTML = '';
   SYMS.forEach(function(s){
@@ -868,7 +1004,29 @@ function buildForm(){
     c.onclick = function(){ c.classList.toggle('on'); };
     ch.appendChild(c);
   });
-  if(!document.getElementById('fStart').value) document.getElementById('fStart').value = todayS();
+
+  // 预填编辑数据
+  if (editData) {
+    flowVal = editData.flow || 0;
+    document.getElementById('fStart').value = editData.start;
+    document.getElementById('fEnd').value = editData.end || '';
+    document.getElementById('fNote').value = editData.note || '';
+    if (editData.sym) {
+      editData.sym.forEach(function(s){
+        var chips = document.querySelectorAll('#symChips .chip');
+        chips.forEach(function(c){ if (c.textContent === s) c.classList.add('on'); });
+      });
+    }
+    editingStart = editData.start;
+  } else {
+    flowVal = 0;
+    editingStart = null;
+    if(!document.getElementById('fStart').value) document.getElementById('fStart').value = todayS();
+    document.getElementById('fEnd').value = '';
+    document.getElementById('fNote').value = '';
+  }
+  renderDrops();
+  updateFormMode();
 }
 function renderDrops(){
   document.querySelectorAll('#flowRow .drop').forEach(function(d){
@@ -878,6 +1036,16 @@ function renderDrops(){
     d.querySelector('.d-off').style.display = on ? 'none' : '';
   });
 }
+function updateFormMode(){
+  var isEdit = !!editingStart;
+  document.getElementById('btnSave').textContent = isEdit ? '更 新 记 录' : '保 存 记 录';
+  document.getElementById('btnDelete').style.display = isEdit ? '' : 'none';
+  document.getElementById('recEditHint').style.display = isEdit ? '' : 'none';
+  document.getElementById('recNewHint').style.display = isEdit ? 'none' : '';
+  if (isEdit) {
+    document.getElementById('recEditHint').textContent = '正在编辑 ' + editingStart + ' 的记录';
+  }
+}
 function saveRecord(){
   var start = document.getElementById('fStart').value;
   if(!start){ alert('请选择开始日期'); return; }
@@ -885,13 +1053,35 @@ function saveRecord(){
   if(end && end < start){ alert('结束日期不能早于开始日期'); return; }
   var sym = [].slice.call(document.querySelectorAll('#symChips .chip.on')).map(function(c){ return c.textContent; });
   var note = document.getElementById('fNote').value.trim();
+  // 如果是编辑模式且改了日期，先删旧的
+  if (editingStart && editingStart !== start) {
+    records = records.filter(function(r){ return r.start !== editingStart; });
+  }
   records = records.filter(function(r){ return r.start !== start; });
   records.push({start: start, end: end, flow: flowVal, sym: sym, note: note});
   records.sort(function(a, b){ return a.start.localeCompare(b.start); });
   persist();
+  editingStart = null;
   document.getElementById('fEnd').value = ''; document.getElementById('fNote').value = '';
   flowVal = 0; buildForm();
   showPage('home');
+}
+function deleteRecord(){
+  if (!editingStart) return;
+  if (!confirm('确定删除 ' + editingStart + ' 的记录？')) return;
+  records = records.filter(function(r){ return r.start !== editingStart; });
+  persist();
+  editingStart = null;
+  document.getElementById('fEnd').value = ''; document.getElementById('fNote').value = '';
+  flowVal = 0; buildForm();
+  showPage('home');
+}
+function editRecord(start){
+  var rec = records.find(function(r){ return r.start === start; });
+  if (!rec) return;
+  document.getElementById('fStart').value = '';
+  buildForm(rec);
+  showPage('record');
 }
 
 /* ================= 我的 ================= */
@@ -936,7 +1126,61 @@ function clearAll(){
   records = []; persist(); renderHome();
 }
 
-/* ================= 周期概览 ================= */
+/* ================= Toast ================= */
+function showToast(msg){
+  var t = document.getElementById('yx-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'yx-toast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a2534;color:#ece5d3;padding:10px 22px;border-radius:40px;font-size:13px;z-index:9999;pointer-events:none;opacity:0;transition:opacity 0.25s;font-weight:500;letter-spacing:1px;border:1px solid #243040;white-space:nowrap;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.style.opacity = '0'; }, 2500);
+}
+/* ================= 历史记录 ================= */
+function renderHistory(){
+  var list = document.getElementById('historyList');
+  var empty = document.getElementById('histEmpty');
+  if (!list) return;
+  var sorted = records.slice().sort(function(a, b){ return b.start.localeCompare(a.start); });
+  if (!sorted.length) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  var FLOW_LABELS = ['','少量','较少','适中','较多','大量'];
+  list.innerHTML = sorted.map(function(r){
+    var flowTxt = r.flow ? FLOW_LABELS[r.flow] || '量' + r.flow : '';
+    var symTxt = (r.sym || []).join(' · ');
+    var noteTxt = r.note ? '<div class="hist-note">' + r.note.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : '';
+    var rangeTxt = r.end ? r.start + ' — ' + r.end : r.start + '（进行中）';
+    var editSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+    var delSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+    return '<div class="hist-item">' +
+      '<div class="hist-date">' + rangeTxt + '</div>' +
+      '<div class="hist-meta">' +
+        (flowTxt ? '<span class="hist-flow">' + flowTxt + '</span>' : '') +
+        (symTxt ? '<span class="hist-sym">' + symTxt + '</span>' : '') +
+      '</div>' +
+      noteTxt +
+      '<div class="hist-actions">' +
+        '<button class="hist-btn" onclick="event.stopPropagation();editRecord(\'' + r.start + '\')" title="编辑">' + editSVG + '</button>' +
+        '<button class="hist-btn del" onclick="event.stopPropagation();deleteFromHistory(\'' + r.start + '\')" title="删除">' + delSVG + '</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+function deleteFromHistory(start){
+  if (!confirm('确定删除 ' + start + ' 的记录？')) return;
+  records = records.filter(function(r){ return r.start !== start; });
+  persist();
+  renderHistory();
+  renderHome();
+}
 function switchTab(t){
   document.getElementById('tabTrend').classList.toggle('on', t === 'trend');
   document.getElementById('tabStat').classList.toggle('on', t === 'stat');
