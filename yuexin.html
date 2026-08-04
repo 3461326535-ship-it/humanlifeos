@@ -759,7 +759,7 @@ function cloudPull(){
 }
 
 var d2s = function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-var s2d = function(s){ var p = s.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); };
+var s2d = function(s){ var d = s.slice(0,10); var p = d.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); };
 var addDays = function(s,n){ var d = s2d(s); d.setDate(d.getDate()+n); return d2s(d); };
 var todayS = function(){ return d2s(new Date()); };
 

@@ -12,7 +12,8 @@ const pool = mysql.createPool({
   connectionLimit: 5,
   queueLimit: 0,
   enableKeepAlive: true,
-  keepAliveInitialDelay: 0
+  keepAliveInitialDelay: 0,
+  dateStrings: true
 });
 
 // 初始化表结构
