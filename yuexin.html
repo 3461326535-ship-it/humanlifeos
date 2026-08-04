@@ -712,34 +712,47 @@ function cloudSave(){
     }).then(function(r){ return r.json(); })
       .then(function(d){ if (d && d.success) console.log('☁️ 月信已同步 ' + d.count + ' 条'); })
       .catch(function(){});
-  }, 800);
+  }, 200);
 }
 function cloudPull(){
   fetch('/api/yuexin/records')
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (d && d.success && d.records && d.records.length) {
-        var cloudMap = {};
-        d.records.forEach(function(r){ cloudMap[r.start] = r; });
-        var localMap = {};
-        records.forEach(function(r){ localMap[r.start] = r; });
-        d.records.forEach(function(r){
-          if (!localMap[r.start]) records.push(r);
+      if (!d || !d.success) return;
+      var cloudRecs = d.records || [];
+      var cloudMap = {};
+      cloudRecs.forEach(function(r){ cloudMap[r.start] = r; });
+      var localMap = {};
+      records.forEach(function(r){ localMap[r.start] = r; });
+      // 云端有本地没有的 → 加入本地
+      cloudRecs.forEach(function(r){
+        if (!localMap[r.start]) records.push(r);
+      });
+      // 云端本地都有的 → 云端覆盖本地（云端更新）
+      records.forEach(function(r){
+        if (cloudMap[r.start]) {
+          r.end = cloudMap[r.start].end;
+          r.flow = cloudMap[r.start].flow;
+          r.sym = cloudMap[r.start].sym;
+          r.note = cloudMap[r.start].note;
+        }
+      });
+      // 本地有云端没有的 → 推送到云端
+      var localOnly = records.filter(function(r){ return !cloudMap[r.start]; });
+      if (localOnly.length) {
+        localOnly.forEach(function(r){
+          fetch('/api/yuexin/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ start: r.start, end: r.end, flow: r.flow, sym: r.sym, note: r.note })
+          }).catch(function(){});
         });
-        records.forEach(function(r){
-          if (cloudMap[r.start]) {
-            r.end = cloudMap[r.start].end;
-            r.flow = cloudMap[r.start].flow;
-            r.sym = cloudMap[r.start].sym;
-            r.note = cloudMap[r.start].note;
-          }
-        });
-        records.sort(function(a,b){ return a.start.localeCompare(b.start); });
-        persist(false);
-        renderHome();
-        showPage('home');
-        showToast('☁️ 已同步 ' + d.records.length + ' 条云端记录');
       }
+      records.sort(function(a,b){ return a.start.localeCompare(b.start); });
+      persist(false);
+      if (records.length) { renderHome(); showPage('home'); }
+      var total = cloudRecs.length + localOnly.length;
+      if (total) showToast('☁️ 已同步 ' + records.length + ' 条记录');
     })
     .catch(function(){});
 }
