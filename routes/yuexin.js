@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/yuexin-db');
-const { requireAuth } = require('../middleware/auth');
+const UID = 1;
 
-// 获取用户所有记录
-router.get('/records', requireAuth, async (req, res) => {
+// 获取所有记录
+router.get('/records', async (req, res) => {
   try {
     const [rows] = await pool.query(
       'SELECT start_date, end_date, flow, symptoms, note FROM yuexin_records WHERE user_id = ? ORDER BY start_date ASC',
-      [req.user.userId]
+      [UID]
     );
     const records = rows.map(r => ({
       start: r.start_date,
@@ -25,7 +25,7 @@ router.get('/records', requireAuth, async (req, res) => {
 });
 
 // 全量同步：替换用户所有记录
-router.post('/sync', requireAuth, async (req, res) => {
+router.post('/sync', async (req, res) => {
   const { records } = req.body;
   if (!Array.isArray(records)) {
     return res.status(400).json({ success: false, message: 'records 必须是数组' });
@@ -35,12 +35,12 @@ router.post('/sync', requireAuth, async (req, res) => {
   try {
     await conn.beginTransaction();
     // 删除旧数据
-    await conn.query('DELETE FROM yuexin_records WHERE user_id = ?', [req.user.userId]);
+    await conn.query('DELETE FROM yuexin_records WHERE user_id = ?', [UID]);
     // 批量插入
     for (const r of records) {
       await conn.query(
         'INSERT INTO yuexin_records (user_id, start_date, end_date, flow, symptoms, note) VALUES (?, ?, ?, ?, ?, ?)',
-        [req.user.userId, r.start, r.end || null, r.flow || 0, JSON.stringify(r.sym || []), r.note || '']
+        [UID, r.start, r.end || null, r.flow || 0, JSON.stringify(r.sym || []), r.note || '']
       );
     }
     await conn.commit();
@@ -55,7 +55,7 @@ router.post('/sync', requireAuth, async (req, res) => {
 });
 
 // 单条更新/插入
-router.post('/save', requireAuth, async (req, res) => {
+router.post('/save', async (req, res) => {
   const { start, end, flow, sym, note } = req.body;
   if (!start) return res.status(400).json({ success: false, message: '缺少开始日期' });
 
@@ -64,7 +64,7 @@ router.post('/save', requireAuth, async (req, res) => {
       `INSERT INTO yuexin_records (user_id, start_date, end_date, flow, symptoms, note)
        VALUES (?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE end_date=VALUES(end_date), flow=VALUES(flow), symptoms=VALUES(symptoms), note=VALUES(note)`,
-      [req.user.userId, start, end || null, flow || 0, JSON.stringify(sym || []), note || '']
+      [UID, start, end || null, flow || 0, JSON.stringify(sym || []), note || '']
     );
     res.json({ success: true });
   } catch (err) {
@@ -74,12 +74,12 @@ router.post('/save', requireAuth, async (req, res) => {
 });
 
 // 删除单条记录
-router.delete('/record', requireAuth, async (req, res) => {
+router.delete('/record', async (req, res) => {
   const { start } = req.body;
   if (!start) return res.status(400).json({ success: false, message: '缺少开始日期' });
 
   try {
-    await pool.query('DELETE FROM yuexin_records WHERE user_id = ? AND start_date = ?', [req.user.userId, start]);
+    await pool.query('DELETE FROM yuexin_records WHERE user_id = ? AND start_date = ?', [UID, start]);
     res.json({ success: true });
   } catch (err) {
     console.error('月信删除失败:', err);

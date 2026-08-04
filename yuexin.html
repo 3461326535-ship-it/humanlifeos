@@ -687,37 +687,23 @@ function persistSet(){ localStorage.setItem(LS_SET,JSON.stringify(settings)); }
 records.sort(function(a,b){ return a.start.localeCompare(b.start); });
 
 /* ================= 云同步 ================= */
-function getToken(){ return localStorage.getItem('auth_token'); }
-function isLoggedIn(){ return !!getToken(); }
-function authFetch(url, options){
-  options = options || {};
-  var headers = options.headers || {};
-  var token = getToken();
-  if (token) headers['Authorization'] = 'Bearer ' + token;
-  headers['Content-Type'] = 'application/json';
-  options.headers = headers;
-  return fetch(url, options);
-}
 function cloudSaveOne(r){
-  if (!isLoggedIn()) return;
-  authFetch('/api/yuexin/save', {
+  fetch('/api/yuexin/save', {
     method: 'POST',
     body: JSON.stringify({ start: r.start, end: r.end, flow: r.flow, sym: r.sym, note: r.note })
   }).catch(function(){});
 }
 function cloudDeleteOne(start){
-  if (!isLoggedIn()) return;
-  authFetch('/api/yuexin/record', {
+  fetch('/api/yuexin/record', {
     method: 'DELETE',
     body: JSON.stringify({ start: start })
   }).catch(function(){});
 }
 var _syncTimer = null;
 function cloudSave(){
-  if (!isLoggedIn()) return;
   clearTimeout(_syncTimer);
   _syncTimer = setTimeout(function(){
-    authFetch('/api/yuexin/sync', {
+    fetch('/api/yuexin/sync', {
       method: 'POST',
       body: JSON.stringify({ records: records })
     }).then(function(r){ return r.json(); })
@@ -725,9 +711,7 @@ function cloudSave(){
       .catch(function(){});
   }, 800);
 }
-function cloudPull(){
-  if (!isLoggedIn()) return;
-  authFetch('/api/yuexin/records')
+  fetch('/api/yuexin/records')
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d && d.success && d.records && d.records.length) {
@@ -1352,7 +1336,7 @@ function showAbout(){
     // 欢迎页为默认展示（HTML 中已是 active）
   }
   // 登录用户自动从云端拉取
-  if (isLoggedIn()) { setTimeout(function(){ cloudPull(); }, 1500); }
+  setTimeout(function(){ cloudPull(); }, 500);
 })();
 </script>
 </body>
