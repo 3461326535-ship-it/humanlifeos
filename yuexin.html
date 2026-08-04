@@ -557,12 +557,12 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
         <button class="btn-danger btn-sm" id="btnDelete" onclick="deleteRecord()" style="display:none">删 除</button>
       </div>
       <div class="rec-edit-hint" id="recEditHint" style="display:none"></div>
-      <div class="hint-tap" id="recNewHint">数据仅保存在本设备浏览器中</div>
+      <div class="hint-tap" id="recNewHint"></div>
     </div>
 
     <!-- 我的 -->
     <div class="page" id="page-mine">
-      <div class="hdr"><h1>我 的</h1><div class="sub">数据只存在这台设备上</div></div>
+      <div class="hdr"><h1>我 的</h1><div class="sub">数据自动云端同步</div></div>
       <div class="list">
         <div class="li" onclick="exportData()"><div class="ic">📤</div><div class="tx"><b>导出数据</b><small>保存为 JSON 文件备份</small></div><div class="arr">›</div></div>
         <div class="li" onclick="document.getElementById('importFile').click()"><div class="ic">📥</div><div class="tx"><b>导入数据</b><small>从 JSON 备份恢复</small></div><div class="arr">›</div></div>
