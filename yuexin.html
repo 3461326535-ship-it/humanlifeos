@@ -690,12 +690,14 @@ records.sort(function(a,b){ return a.start.localeCompare(b.start); });
 function cloudSaveOne(r){
   fetch('/api/yuexin/save', {
     method: 'POST',
+    headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ start: r.start, end: r.end, flow: r.flow, sym: r.sym, note: r.note })
   }).catch(function(){});
 }
 function cloudDeleteOne(start){
   fetch('/api/yuexin/record', {
     method: 'DELETE',
+    headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ start: start })
   }).catch(function(){});
 }
@@ -705,6 +707,7 @@ function cloudSave(){
   _syncTimer = setTimeout(function(){
     fetch('/api/yuexin/sync', {
       method: 'POST',
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ records: records })
     }).then(function(r){ return r.json(); })
       .then(function(d){ if (d && d.success) console.log('☁️ 月信已同步 ' + d.count + ' 条'); })
