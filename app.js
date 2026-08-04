@@ -15,6 +15,7 @@ const notesRouter = require('./routes/notes');
 const eventsRouter = require('./backend/routes/events');
 const aiRouter = require('./backend/routes/ai');
 const authRouter = require('./routes/auth');
+const yuexinRouter = require('./routes/yuexin');
 const { optionalAuth } = require('./middleware/auth');
 
 // ===== 启动前校验 =====
@@ -106,6 +107,7 @@ app.use(express.static(__dirname));     // 桌面端资源 + 公共文件
 
 // ===== Auth 路由（不需要鉴权）=====
 app.use('/api/auth', authRouter);     // 登录: /api/auth/login 等
+app.use('/api/yuexin', yuexinRouter); // 月信: /api/yuexin/records, /api/yuexin/sync
 
 // ===== API 路由（可选鉴权 → 设置 req.user）=====
 app.use('/api', optionalAuth, notesRouter);         // 便签: /api/notes

@@ -57,8 +57,29 @@ body{
 @media (min-width: 1025px) {
   .sidebar:hover ~ .main-content { margin-left: 220px; }
 }
+/* ===== 移动端底部 Tab ===== */
+.tabbar{
+  position:absolute;left:0;right:0;bottom:0;height:68px;z-index:20;
+  background:rgba(13,21,32,.92);backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);
+  display:flex;
+}
+.tabbar .tb{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;color:var(--text3);-webkit-tap-highlight-color:transparent;
+}
+.tabbar .tb svg{width:20px;height:20px}
+.tabbar .tb span{font-size:10px;letter-spacing:1px}
+.tabbar .tb.on{color:var(--gold)}
+
+@media (min-width: 820px) {
+  .tabbar{display:none}
+}
+
 @media (max-width: 1024px) {
   .main-content { margin-left: 0 !important; }
+  .mobile-menu-btn { display: none !important; }
+  .page { padding-bottom: 86px; }
 }
 
 /* ===== App 容器 ===== */
@@ -75,39 +96,6 @@ body{
   content:"";position:absolute;inset:0;pointer-events:none;z-index:60;
   background:radial-gradient(125% 95% at 50% 42%,transparent 52%,rgba(4,7,11,.32) 100%);
 }
-
-/* ===== 顶部导航栏 ===== */
-.yx-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 52px;
-  padding: 0 16px;
-  background: var(--card);
-  border-bottom: 1px solid var(--line);
-  z-index: 30;
-  flex-shrink: 0;
-}
-.yx-nav-title {
-  font-family: "Songti SC", "STSong", "SimSun", serif;
-  font-size: 17px;
-  letter-spacing: 6px;
-  font-weight: 600;
-  color: var(--gold);
-}
-.yx-nav-actions {
-  display: flex;
-  gap: 8px;
-}
-.yx-nav-btn {
-  width: 34px; height: 34px; border-radius: 50%;
-  border: 1px solid var(--line); background: var(--card2);
-  color: var(--text2); font-size: 14px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
-}
-.yx-nav-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
-.yx-nav-btn svg { width: 16px; height: 16px; }
 
 /* ===== pages ===== */
 .page{
@@ -432,8 +420,8 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
   #page-moondetail .hdr-bar{position:absolute;top:14px;left:0;right:0}
   #page-moondetail .md-block{width:640px;max-width:calc(100% - 40px)}
   #page-welcome{position:absolute;inset:0;z-index:40}
-  .yx-nav{display:none}
 }
+
 /* ===== 编辑/删除按钮 ===== */
 .rec-actions{display:flex;gap:12px;margin:20px 20px 0}
 .rec-actions .btn-gold{flex:1}
@@ -483,22 +471,6 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
 
 <!-- 主内容区 -->
 <div class="main-content">
-
-  <!-- 顶部导航栏 -->
-  <nav class="yx-nav" id="yxNav">
-    <span class="yx-nav-title">月 信</span>
-    <div class="yx-nav-actions">
-      <button class="yx-nav-btn" id="btnHome" title="首页" onclick="showPage('home')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 13.5A8.5 8.5 0 1 1 10.5 4 6.8 6.8 0 0 0 20 13.5z"/></svg>
-      </button>
-      <button class="yx-nav-btn" id="btnCalendar" title="日历" onclick="showPage('calendar')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>
-      </button>
-      <button class="yx-nav-btn" id="btnMenu" title="更多" onclick="showPage('mine')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
-      </button>
-    </div>
-  </nav>
 
   <!-- App 内容区 -->
   <div id="yuexin-app">
@@ -679,6 +651,26 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
       <div class="foot-note">月信 v1.0.0<br>愿你在每一个周期里<br>都被温柔以待</div>
     </div>
 
+    <!-- 移动端底部 Tab -->
+    <div class="tabbar" id="tabbar">
+      <div class="tb on" data-p="home" onclick="showPage('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 13.5A8.5 8.5 0 1 1 10.5 4 6.8 6.8 0 0 0 20 13.5z"/></svg>
+        <span>首页</span>
+      </div>
+      <div class="tb" data-p="calendar" onclick="showPage('calendar')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>
+        <span>日历</span>
+      </div>
+      <div class="tb" data-p="record" onclick="showPage('record')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20l1.2-4.2L15.5 5.5a2.1 2.1 0 0 1 3 3L8.2 18.8 4 20z"/></svg>
+        <span>记录</span>
+      </div>
+      <div class="tb" data-p="mine" onclick="showPage('mine')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8.2" r="3.4"/><path d="M4.8 20c1.3-3.4 4-5 7.2-5s5.9 1.6 7.2 5"/></svg>
+        <span>我的</span>
+      </div>
+    </div>
+
   </div><!-- /#yuexin-app -->
 </div><!-- /.main-content -->
 
@@ -690,9 +682,78 @@ var LS_KEY = 'yuexin_data_v1', LS_SET = 'yuexin_set_v1';
 var records = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
 var settings = Object.assign({showMoon:true,notify:false,remind:1,theme:'gold'},
   JSON.parse(localStorage.getItem(LS_SET) || '{}'));
-function persist(){ localStorage.setItem(LS_KEY,JSON.stringify(records)); }
+function persist(skipCloud){ localStorage.setItem(LS_KEY,JSON.stringify(records)); if (!skipCloud) cloudSave(); }
 function persistSet(){ localStorage.setItem(LS_SET,JSON.stringify(settings)); }
 records.sort(function(a,b){ return a.start.localeCompare(b.start); });
+
+/* ================= 云同步 ================= */
+function getToken(){ return localStorage.getItem('auth_token'); }
+function isLoggedIn(){ return !!getToken(); }
+function authFetch(url, options){
+  options = options || {};
+  var headers = options.headers || {};
+  var token = getToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  headers['Content-Type'] = 'application/json';
+  options.headers = headers;
+  return fetch(url, options);
+}
+function cloudSaveOne(r){
+  if (!isLoggedIn()) return;
+  authFetch('/api/yuexin/save', {
+    method: 'POST',
+    body: JSON.stringify({ start: r.start, end: r.end, flow: r.flow, sym: r.sym, note: r.note })
+  }).catch(function(){});
+}
+function cloudDeleteOne(start){
+  if (!isLoggedIn()) return;
+  authFetch('/api/yuexin/record', {
+    method: 'DELETE',
+    body: JSON.stringify({ start: start })
+  }).catch(function(){});
+}
+var _syncTimer = null;
+function cloudSave(){
+  if (!isLoggedIn()) return;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(function(){
+    authFetch('/api/yuexin/sync', {
+      method: 'POST',
+      body: JSON.stringify({ records: records })
+    }).then(function(r){ return r.json(); })
+      .then(function(d){ if (d && d.success) console.log('☁️ 月信已同步 ' + d.count + ' 条'); })
+      .catch(function(){});
+  }, 800);
+}
+function cloudPull(){
+  if (!isLoggedIn()) return;
+  authFetch('/api/yuexin/records')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d.success && d.records && d.records.length) {
+        var cloudMap = {};
+        d.records.forEach(function(r){ cloudMap[r.start] = r; });
+        var localMap = {};
+        records.forEach(function(r){ localMap[r.start] = r; });
+        d.records.forEach(function(r){
+          if (!localMap[r.start]) records.push(r);
+        });
+        records.forEach(function(r){
+          if (cloudMap[r.start]) {
+            r.end = cloudMap[r.start].end;
+            r.flow = cloudMap[r.start].flow;
+            r.sym = cloudMap[r.start].sym;
+            r.note = cloudMap[r.start].note;
+          }
+        });
+        records.sort(function(a,b){ return a.start.localeCompare(b.start); });
+        persist(false);
+        renderHome();
+        showToast('☁️ 已同步 ' + d.records.length + ' 条云端记录');
+      }
+    })
+    .catch(function(){});
+}
 
 var d2s = function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 var s2d = function(s){ var p = s.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); };
@@ -801,11 +862,8 @@ function showPage(name){
   var pageEl = document.getElementById('page-' + name);
   if (pageEl) pageEl.classList.add('active');
   var mainPages = ['home', 'calendar', 'record', 'mine'];
-  // 更新导航栏按钮状态
-  document.querySelectorAll('.yx-nav-btn').forEach(function(b){ b.style.borderColor = ''; b.style.color = ''; });
-  var navBtnMap = { home: 'btnHome', calendar: 'btnCalendar', mine: 'btnMenu' };
-  var activeBtn = document.getElementById(navBtnMap[name]);
-  if (activeBtn) { activeBtn.style.borderColor = 'var(--gold-dim)'; activeBtn.style.color = 'var(--gold)'; }
+  // 同步底部 tab 高亮
+  document.querySelectorAll('#tabbar .tb').forEach(function(t){ t.classList.toggle('on', t.dataset.p === name); });
   if (mainPages.indexOf(name) !== -1) stack.length = 0;
   stack.push(name);
   if (name === 'home') renderHome();
@@ -1275,7 +1333,7 @@ function cycleRemind(){
   document.getElementById('remindTxt').textContent = '提前 ' + settings.remind + ' 天 ›';
 }
 function showAbout(){
-  alert('月信 v1.0.0\n\n一款只属于你的周期记录小工具。\n所有数据仅保存在本机浏览器，不上传任何服务器。\n\n愿你在每一个周期里，都被温柔以待。');
+  alert('月信 v1.1.0\n\n一款只属于你的周期记录小工具。\n登录后数据自动同步到云端，换设备也不丢失。\n未登录时数据保存在本机浏览器。\n\n愿你在每一个周期里，都被温柔以待。');
 }
 
 /* ================= init ================= */
@@ -1293,6 +1351,8 @@ function showAbout(){
   } else {
     // 欢迎页为默认展示（HTML 中已是 active）
   }
+  // 登录用户自动从云端拉取
+  if (isLoggedIn()) { setTimeout(function(){ cloudPull(); }, 1500); }
 })();
 </script>
 </body>
