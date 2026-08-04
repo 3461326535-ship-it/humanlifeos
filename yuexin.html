@@ -711,6 +711,7 @@ function cloudSave(){
       .catch(function(){});
   }, 800);
 }
+function cloudPull(){
   fetch('/api/yuexin/records')
     .then(function(r){ return r.json(); })
     .then(function(d){
@@ -733,6 +734,7 @@ function cloudSave(){
         records.sort(function(a,b){ return a.start.localeCompare(b.start); });
         persist(false);
         renderHome();
+        showPage('home');
         showToast('☁️ 已同步 ' + d.records.length + ' 条云端记录');
       }
     })
