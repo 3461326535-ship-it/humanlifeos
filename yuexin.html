@@ -684,6 +684,7 @@ var settings = Object.assign({showMoon:true,notify:false,remind:1,theme:'gold'},
   JSON.parse(localStorage.getItem(LS_SET) || '{}'));
 function persist(skipCloud){ localStorage.setItem(LS_KEY,JSON.stringify(records)); if (!skipCloud) cloudSave(); }
 function persistSet(){ localStorage.setItem(LS_SET,JSON.stringify(settings)); }
+records = records.filter(function(r){ return r && r.start && /^\d{4}-\d{2}-\d{2}$/.test(r.start); });
 records.sort(function(a,b){ return a.start.localeCompare(b.start); });
 
 /* ================= 云同步 ================= */
@@ -788,6 +789,7 @@ function currentState(){
   if(!lr) return null;
   var cyc = avgCycle(), pl = periodLen();
   var day = Math.round((s2d(t) - s2d(lr.start)) / 864e5) + 1;
+  if (isNaN(day)) return null;
   var nextStart = addDays(lr.start, cyc);
   return {day: day, cyc: cyc, pl: pl, nextStart: nextStart, lr: lr};
 }
