@@ -59,7 +59,7 @@ body{
 }
 /* ===== 移动端底部 Tab ===== */
 .tabbar{
-  position:absolute;left:0;right:0;bottom:0;height:68px;z-index:20;
+  position:absolute;left:0;right:0;bottom:max(16px, env(safe-area-inset-bottom));height:68px;z-index:20;
   background:rgba(13,21,32,.92);backdrop-filter:blur(12px);
   border-top:1px solid var(--line);
   display:flex;
@@ -79,7 +79,7 @@ body{
 @media (max-width: 1024px) {
   .main-content { margin-left: 0 !important; }
   .mobile-menu-btn { display: none !important; }
-  .page { padding-bottom: 86px; }
+  .page { padding-bottom: calc(68px + max(30px, env(safe-area-inset-bottom))); }
 }
 
 /* ===== App 容器 ===== */
@@ -103,7 +103,6 @@ body{
   background: var(--bg);
   display: none; flex-direction: column;
   overflow-y: auto;
-  padding-bottom: 30px;
   scrollbar-width: none;
 }
 .page::-webkit-scrollbar{display:none}
@@ -135,7 +134,7 @@ body{
 
 /* ===== welcome page (first visit / no data) ===== */
 #page-welcome{
-  justify-content: space-between; padding-bottom: 40px;
+  justify-content: space-between; padding-bottom: 60px;
   background: center/cover no-repeat;
 }
 #page-welcome::before{
