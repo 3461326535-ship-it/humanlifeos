@@ -480,7 +480,7 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
       <div class="welcome-top">
         <h1>月 信</h1>
         <div class="en">月 水</div>
-        <div class="poem">新月始 · 满月盈 · 残月信至</div>
+        <div class="poem" id="welcomePoem">静水无辉 · 沧波敛月色，静养周身和</div>
       </div>
       <div class="welcome-bottom">
         <button class="btn-gold" onclick="enterApp()">开 始 记 录</button>
@@ -490,7 +490,7 @@ textarea.f-input{resize:none;height:76px;font-size:13px}
 
     <!-- 首页 -->
     <div class="page" id="page-home">
-      <div class="hdr"><h1>月 信</h1><div class="sub">新月始 · 满月盈 · 残月信至</div></div>
+      <div class="hdr"><h1>月 信</h1><div class="sub" id="homePoem">静水无辉 · 沧波敛月色，静养周身和</div></div>
       <div class="ring-card">
         <div class="ring-wrap">
           <svg width="190" height="190">
@@ -737,7 +737,7 @@ function cloudPull(){
       }
       records.sort(function(a,b){ return a.start.localeCompare(b.start); });
       persist(false);
-      if (records.length) { renderHome(); showPage('home'); }
+      if (records.length) { renderHome(); }
       var total = cloudRecs.length + localOnly.length;
       if (total) showToast('☁️ 已同步 ' + records.length + ' 条记录');
     })
@@ -793,18 +793,23 @@ function moonAge(dateS){
 }
 var CYCLE_PHASES = [
   {moon:'new', age:0.7, name:'新月', stage:'经期', key:'开始 · 内省 · 休养',
+    poem:'静水无辉 · 沧波敛月色，静养周身和',
     desc:'子宫内膜脱落，身体翻开一个新的周期。这是最需要温柔对待自己的几天，允许自己慢下来。',
     tips:['注意保暖，少碰生冷','热敷腹部，缓解不适','早点休息，别硬撑']},
   {moon:'half', age:7.4, name:'上弦月', stage:'卵泡期', key:'生长 · 蓄力 · 行动',
+    poem:'一钩初升 · 新月浮轻浪，生机徐徐滋',
     desc:'经期结束，雌激素回升，精力、情绪和状态都在向上走，是一个月里最有干劲的阶段。',
     tips:['适合安排运动和重要事项','开始新的挑战与学习','饮食清淡，补充蛋白']},
   {moon:'full', age:14.8, name:'满月', stage:'排卵期', key:'丰盈 · 巅峰 · 绽放',
+    poem:'皓月澄海 · 圆光照秋水，气脉尽舒展',
     desc:'卵子成熟排出，能量与状态达到顶峰。适合表达、社交，也适合做一些重要的决定。',
     tips:['把握状态好的这几天','注意补水，规律作息','若有轻微腹痛，属正常现象']},
   {moon:'half', age:22.1, name:'下弦月', stage:'黄体期', key:'回落 · 沉淀 · 整理',
+    poem:'半轮垂澜 · 缺月垂远浪，心气渐收藏',
     desc:'排卵之后，体温略升，精力开始回落。适合收尾与整理，把节奏一点点放慢。',
     tips:['逐渐减少高强度安排','保证睡眠时长','适量补充镁与B族维生素']},
   {moon:'crescent', age:27.3, name:'残月', stage:'经前期', key:'释放 · 舒缓 · 待至',
+    poem:'微痕临水 · 淡痕临水畔，静待一轮新',
     desc:'下一次月信将至，可能出现腹胀、疲惫或情绪波动。顺应身体，静待新的周期。',
     tips:['少盐少咖啡因，减轻水肿','温和拉伸，缓解腰酸','情绪起伏时，对自己宽容一点']}
 ];
@@ -878,8 +883,13 @@ function enterApp(){ showPage('home'); }
 function updateWelcomeBg(){
   var cs = cycleStage();
   var img = cs ? cs.phase.moon : 'new';
+  var poem = cs ? cs.phase.poem : CYCLE_PHASES[0].poem;
   var welEl = document.getElementById('page-welcome');
   if (welEl) welEl.style.backgroundImage = "url('月信/app/assets/phase-"+img+".jpg')";
+  var poemEl = document.getElementById('welcomePoem');
+  if (poemEl) poemEl.textContent = poem;
+  var homePoemEl = document.getElementById('homePoem');
+  if (homePoemEl) homePoemEl.textContent = poem;
 }
 function renderHome(){
   updateWelcomeBg();
@@ -1339,9 +1349,6 @@ function showAbout(){
   applyTheme();
   updateWelcomeBg();
 
-  if (hasData) {
-    showPage('home');
-  }
   // 启动云同步
   setTimeout(function(){ cloudPull(); }, 500);
 })();
