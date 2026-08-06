@@ -1652,6 +1652,10 @@
       }
       preview.innerHTML = html;
 
+      // 启用预览区任务复选框交互
+      var cbs = preview.querySelectorAll('.task-list-item input[type="checkbox"]');
+      for (var ci = 0; ci < cbs.length; ci++) { cbs[ci].removeAttribute('disabled'); }
+
       if (window.renderMathInElement) {
         try {
           renderMathInElement(preview, {
@@ -2253,6 +2257,31 @@
         overlay.addEventListener('click', function(e) {
           if (e.target === overlay) overlay.classList.remove('active');
         });
+      });
+
+      // 预览区任务列表勾选：同步回 Markdown 源
+      preview.addEventListener('change', function(e) {
+        var cb = e.target.closest('.task-list-item input[type="checkbox"]');
+        if (!cb) return;
+        var allCbs = preview.querySelectorAll('.task-list-item input[type="checkbox"]');
+        var idx = Array.prototype.indexOf.call(allCbs, cb);
+        if (idx < 0) return;
+        var lines = editor.value.split('\n');
+        var taskRe = /^(\s*)([-*+])\s+\[([ x])\]\s+/;
+        var n = -1;
+        for (var i = 0; i < lines.length; i++) {
+          if (taskRe.test(lines[i])) {
+            n++;
+            if (n === idx) {
+              lines[i] = lines[i].replace(/\[([ x])\]/, cb.checked ? '[x]' : '[ ]');
+              break;
+            }
+          }
+        }
+        var scrollTop = preview.scrollTop;
+        editor.value = lines.join('\n');
+        onContentChange();
+        preview.scrollTop = scrollTop;
       });
 
       // 预览区点击：代码复制 / 图片放大
