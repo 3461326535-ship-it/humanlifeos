@@ -41,8 +41,8 @@ function initDatabase() {
   });
 
   // AI 聊天记录表（PC/移动端自动同步，保留7天，单用户全局共享）
+  // 注意：只能 CREATE IF NOT EXISTS，切勿 DROP —— 否则每次进程重启都会清空聊天记录。
   db.serialize(() => {
-    db.run(`DROP TABLE IF EXISTS chat_history`);
     db.run(`CREATE TABLE IF NOT EXISTS chat_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
