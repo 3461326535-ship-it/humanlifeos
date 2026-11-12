@@ -52,6 +52,20 @@ export interface AuthUser {
   isDefaultPassword: boolean;
 }
 
+export type HabitStatus = 'done' | 'skipped' | 'excused' | 'pending';
+
+export interface HabitOccurrence {
+  habit_id: number;
+  title: string;
+  date: string;
+  time: string;
+  category: string;
+  rrule: string;
+  status: HabitStatus;
+  reason: string | null;
+  completed_at: string | null;
+}
+
 export interface StatsOverview {
   range: number;
   totals: {

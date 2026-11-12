@@ -1,4 +1,4 @@
-import type { AuthUser, EventInput, TodoEvent, StatsOverview, DailyReport } from './types';
+import type { AuthUser, EventInput, TodoEvent, StatsOverview, DailyReport, HabitOccurrence } from './types';
 
 // 同源部署（/app），Cookie 自动携带；token 不落 localStorage（XSS 防护决策见方案 §6.1）
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -91,6 +91,13 @@ export const api = {
       started_at?: string;
       elapsed?: number;
     }>('/timers/active');
+  },
+
+  // ── 习惯打卡（零物化：只读 occurrences，不写 events）──
+  getHabitOccurrences(from: string, to: string) {
+    return request<{ from: string; to: string; items: HabitOccurrence[] }>(
+      `/habits/occurrences?from=${from}&to=${to}`
+    );
   },
 
   // ── 统计 / 战报 ──

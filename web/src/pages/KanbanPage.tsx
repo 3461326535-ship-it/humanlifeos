@@ -28,9 +28,9 @@ import EventDialog from '../components/EventDialog';
 const COLUMNS: TaskStatus[] = ['todo', 'in_progress', 'review', 'done'];
 
 const STATUS_ACCENT: Record<TaskStatus, string> = {
-  todo: 'bg-ink-soft',
-  in_progress: 'bg-lagoon',
-  review: 'bg-clay',
+  todo: 'bg-ink-faint',
+  in_progress: 'bg-clay',
+  review: 'bg-lagoon',
   done: 'bg-moss',
 };
 
@@ -39,6 +39,23 @@ const PRIORITY_DOT: Record<string, string> = {
   medium: 'bg-clay',
   low: 'bg-lagoon',
 };
+
+// 卡片右上角的优先级小牌：浅底 + 描边（与今天页一致）
+const PRIORITY_CHIP: Record<string, string> = {
+  high: 'border-coral/40 bg-coral-soft/70 text-coral',
+  medium: 'border-clay/40 bg-clay-soft/70 text-clay',
+  low: 'border-line bg-paper-deep text-ink-soft',
+};
+
+const PRIORITY_TEXT: Record<string, string> = { high: '高', medium: '中', low: '低' };
+
+// 「今天 / 11/14」这种短日期，卡片上比完整 YYYY-MM-DD 好读
+function dayLabel(date: string) {
+  if (!date) return '';
+  if (date === todayStr()) return '今天';
+  const [, m, d] = date.split('-');
+  return `${Number(m)}/${Number(d)}`;
+}
 
 type Scope = 'today' | 'week' | 'all';
 type Columns = Record<TaskStatus, TodoEvent[]>;
@@ -126,7 +143,6 @@ function KanbanCard({
   };
   const { done: doneSub, total: totalSub } = subProgress(event);
   const pct = totalSub > 0 ? Math.round((doneSub / totalSub) * 100) : 0;
-  const hasMeta = !!(event.time || (event.category && event.category !== '其他') || event.recurrence);
 
   return (
     <div
@@ -135,50 +151,63 @@ function KanbanCard({
       {...attributes}
       {...listeners}
       onClick={() => onOpen(event)}
-      className="card cursor-grab space-y-1.5 p-3 active:cursor-grabbing"
+      className="card cursor-grab p-3 active:cursor-grabbing"
     >
       <div className="flex items-start gap-2">
-        {event.priority && (
-          <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${PRIORITY_DOT[event.priority]}`} />
+        {event.status === 'done' && (
+          <span className="mt-[1px] flex h-[15px] w-[15px] flex-none items-center justify-center rounded-full bg-moss-deep">
+            <svg viewBox="0 0 12 12" className="h-2 w-2 fill-none stroke-white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2.5 6.2 4.8 8.5 9.5 3.6" />
+            </svg>
+          </span>
         )}
-        <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{event.title}</p>
+        <p
+          className={`min-w-0 flex-1 text-[13.5px] leading-[1.45] ${
+            event.status === 'done' ? 'text-ink-soft line-through' : 'text-ink'
+          }`}
+        >
+          {event.title}
+        </p>
+        {event.priority && event.status !== 'done' && (
+          <span className={`chip flex-none border ${PRIORITY_CHIP[event.priority]}`}>{PRIORITY_TEXT[event.priority]}</span>
+        )}
       </div>
 
-      {hasMeta && (
-        <div className="flex flex-wrap items-center gap-1.5 pl-4 text-[11px]">
-          {event.time && (
-            <span className="rounded bg-moss-soft px-1.5 py-0.5 font-medium text-moss">{event.time}</span>
-          )}
-          {event.category && event.category !== '其他' && (
-            <span className="rounded bg-line-soft px-1.5 py-0.5 text-ink-soft">{event.category}</span>
-          )}
-          {event.recurrence && <span className="rounded bg-line-soft px-1.5 py-0.5 text-ink-soft">↻</span>}
-        </div>
-      )}
-
-      {/* 子任务：进度条常驻，点开在卡内展开清单（不跳页、不开弹窗） */}
-      {totalSub > 0 && (
-        <div className="pl-4" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+      <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
+        <span className="min-w-0 truncate">
+          {[event.category && event.category !== '其他' ? event.category : '', dayLabel(event.date)]
+            .filter(Boolean)
+            .join(' · ')}
+        </span>
+        {totalSub > 0 && (
           <button
             type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="flex w-full items-center gap-2 rounded py-0.5 text-[11px] text-ink-soft hover:text-ink-mid"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded((v) => !v);
+            }}
             aria-expanded={expanded}
+            title="展开子任务"
+            className="ml-auto flex flex-none items-center gap-1.5 rounded text-ink-soft transition-colors hover:text-ink-mid"
           >
-            <span className="h-1 w-14 flex-none overflow-hidden rounded-full bg-line">
-              <span
-                className={`block h-full rounded-full ${pct === 100 ? 'bg-moss' : 'bg-moss'}`}
-                style={{ width: `${pct}%` }}
-              />
+            <span className="h-1 w-8 overflow-hidden rounded-full bg-line">
+              <span className="block h-full rounded-full bg-moss" style={{ width: `${pct}%` }} />
             </span>
-            <span className="font-medium tabular-nums">
+            <span className="tabular-nums">
               {doneSub}/{totalSub}
             </span>
-            <span className="ml-auto text-ink-soft">{expanded ? '收起' : '展开'}</span>
           </button>
+        )}
+      </div>
 
-          {expanded && (
-            <ul className="mt-1 space-y-0.5">
+      {/* 子任务清单：点右上角进度展开，卡内勾选（不跳页、不开弹窗） */}
+      {expanded && totalSub > 0 && (
+        <ul
+          className="mt-2 space-y-0.5 border-t border-line-soft pt-1.5"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
               {(event.subtasks || []).map((st) => (
                 <li key={st.id}>
                   <label className="flex cursor-pointer items-start gap-1.5 rounded px-1 py-0.5 hover:bg-paper-deep">
@@ -198,9 +227,7 @@ function KanbanCard({
                   </label>
                 </li>
               ))}
-            </ul>
-          )}
-        </div>
+      </ul>
       )}
     </div>
   );
@@ -210,20 +237,25 @@ function KanbanCard({
 function CardPreview({ event }: { event: TodoEvent }) {
   const { done: doneSub, total: totalSub } = subProgress(event);
   return (
-    <div className="card cursor-grabbing space-y-1.5 p-3 shadow-pop">
+    <div className="card cursor-grabbing p-3 shadow-pop">
       <div className="flex items-start gap-2">
+        <p className="min-w-0 flex-1 text-[13.5px] leading-[1.45] text-ink">{event.title}</p>
         {event.priority && (
-          <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${PRIORITY_DOT[event.priority]}`} />
+          <span className={`chip flex-none border ${PRIORITY_CHIP[event.priority]}`}>{PRIORITY_TEXT[event.priority]}</span>
         )}
-        <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{event.title}</p>
       </div>
-      <div className="flex items-center gap-1.5 pl-4 text-[11px]">
-        {event.time && (
-          <span className="rounded bg-moss-soft px-1.5 py-0.5 font-medium text-moss">{event.time}</span>
-        )}
+      <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
+        <span className="truncate">
+          {[event.category && event.category !== '其他' ? event.category : '', dayLabel(event.date)]
+            .filter(Boolean)
+            .join(' · ')}
+        </span>
         {totalSub > 0 && (
-          <span className="rounded bg-line-soft px-1.5 py-0.5 text-ink-soft">
-            {doneSub}/{totalSub}
+          <span className="ml-auto flex flex-none items-center gap-1.5">
+            <span className="h-1 w-8 rounded-full bg-line" />
+            <span className="tabular-nums">
+              {doneSub}/{totalSub}
+            </span>
           </span>
         )}
       </div>
@@ -247,35 +279,28 @@ function Column({
 }) {
   const { setNodeRef } = useDroppable({ id: status });
   return (
-    <div className="flex min-w-[260px] flex-1 flex-col rounded-xl bg-paper-deep/70 ring-1 ring-line/60">
-      {/* 列头 */}
-      <div className="flex items-center gap-2 px-3 pb-2 pt-3">
-        <span className={`h-2 w-2 rounded-full ${STATUS_ACCENT[status]}`} />
+    <div className="flex min-w-[248px] flex-1 flex-col rounded-xl border border-line bg-line-soft/70">
+      {/* 列头：色点 + 名称 + 计数 */}
+      <div className="flex items-center gap-2 px-3 pb-2.5 pt-3">
+        <span className={`h-[7px] w-[7px] rounded-full ${STATUS_ACCENT[status]}`} />
         <span className="text-[13px] font-semibold text-ink-mid">{STATUS_LABELS[status]}</span>
-        <span className="rounded-full bg-line/70 px-1.5 text-[11px] font-medium text-ink-soft">
-          {events.length}
-        </span>
-        <button
-          className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-ink-soft hover:bg-line/70 hover:text-ink-mid"
-          onClick={() => onAdd(status)}
-          aria-label={`在「${STATUS_LABELS[status]}」新建`}
-        >
-          +
-        </button>
+        <span className="text-[12px] tabular-nums text-ink-soft">({events.length})</span>
       </div>
       {/* 卡片区（放置目标） */}
-      <div ref={setNodeRef} className="flex-1 space-y-2 px-2 pb-3">
+      <div ref={setNodeRef} className="flex-1 space-y-2 px-2">
         <SortableContext items={events.map((e) => e.id)} strategy={verticalListSortingStrategy}>
           {events.map((e) => (
             <KanbanCard key={e.id} event={e} onOpen={onOpen} onToggleSubtask={onToggleSubtask} />
           ))}
         </SortableContext>
-        {events.length === 0 && (
-          <div className="rounded-lg border border-dashed border-line py-6 text-center text-[11px] text-ink-soft">
-            拖拽任务到此处
-          </div>
-        )}
       </div>
+      {/* 列底：添加任务 */}
+      <button
+        className="mt-1 flex items-center justify-center gap-1 py-2.5 text-[12px] text-ink-soft transition-colors hover:text-ink-mid"
+        onClick={() => onAdd(status)}
+      >
+        <span className="text-[13px] leading-none">+</span> 添加任务
+      </button>
     </div>
   );
 }
