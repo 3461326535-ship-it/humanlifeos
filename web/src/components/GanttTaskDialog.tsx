@@ -24,12 +24,14 @@ export default function GanttTaskDialog({
   onClose,
   onChanged,
   onEditFull,
+  onAddMilestone,
 }: {
   task: GanttTask;
   tasks: GanttTask[];
   onClose: () => void;
   onChanged: (msg?: string) => void;
   onEditFull: () => void;
+  onAddMilestone: () => void;
 }) {
   const [start, setStart] = useState(task.start);
   const [end, setEnd] = useState(task.end);
@@ -134,7 +136,7 @@ export default function GanttTaskDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/25 p-4 backdrop-blur-[2px]" onClick={onClose}>
+    <div className="fixed inset-0 z-[55] flex items-center justify-center bg-ink/25 p-4 backdrop-blur-[2px]" onClick={onClose}>
       <div
         className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-line/60 bg-white p-6 shadow-pop"
         onClick={(e) => e.stopPropagation()}
@@ -360,6 +362,14 @@ export default function GanttTaskDialog({
           <div className="-mx-6 flex items-center gap-2 border-t border-line-soft px-6 pt-4">
             <button type="button" className="btn-ghost text-xs" onClick={onEditFull}>
               编辑完整信息
+            </button>
+            <button
+              type="button"
+              className="btn-ghost text-xs"
+              onClick={onAddMilestone}
+              title="在这条任务结束后一天建一个里程碑，并自动连成「完成后才达成」"
+            >
+              ◆ 加后续里程碑
             </button>
             <div className="ml-auto flex gap-2">
               <button type="button" className="btn-ghost" onClick={onClose}>取消</button>

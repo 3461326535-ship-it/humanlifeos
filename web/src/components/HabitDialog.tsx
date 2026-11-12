@@ -141,7 +141,7 @@ export default function HabitDialog({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-ink/25 p-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[55] flex items-center justify-center bg-ink/25 p-4 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div

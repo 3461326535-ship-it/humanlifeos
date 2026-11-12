@@ -96,7 +96,8 @@ export default function EventDialog({
   defaultEndDate?: string;
   defaultMilestone?: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  /** 保存成功回调；新建时带回刚创建的任务，编辑时为 undefined */
+  onSaved?: (created?: TodoEvent) => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() =>
     toDraft(event, defaultDate, defaultStatus, defaultRecurrence, defaultEndDate, defaultMilestone)
@@ -111,13 +112,13 @@ export default function EventDialog({
   const saveMutation = useMutation({
     mutationFn: () =>
       isEdit ? api.updateEvent(event.id, toInput(draft)) : api.createEvent(toInput(draft)),
-    onSuccess: onSaved,
+    onSuccess: (data) => onSaved?.(isEdit ? undefined : (data as TodoEvent)),
     onError: (e: Error) => setError(e.message),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (chain: boolean) => api.deleteEvent(event!.id, chain),
-    onSuccess: onSaved,
+    onSuccess: () => onSaved?.(),
     onError: (e: Error) => setError(e.message),
   });
 
@@ -137,7 +138,7 @@ export default function EventDialog({
 
   return (
     <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-ink/25 p-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/25 p-4 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div
@@ -145,7 +146,9 @@ export default function EventDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-ink">{isEdit ? '编辑任务' : '新任务'}</h2>
+          <h2 className="text-base font-semibold text-ink">
+            {isEdit ? (draft.milestone ? '编辑里程碑' : '编辑任务') : draft.milestone ? '新建里程碑' : '新任务'}
+          </h2>
           <button className="btn-ghost -mr-2" onClick={onClose} aria-label="关闭">✕</button>
         </div>
 

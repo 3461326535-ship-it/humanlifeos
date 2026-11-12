@@ -72,7 +72,16 @@ export default function GanttPage() {
 
   // 交互
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [dialog, setDialog] = useState<{ open: boolean; event: TodoEvent | null; milestone?: boolean }>({ open: false, event: null });
+  const [dialog, setDialog] = useState<{
+    open: boolean;
+    event: TodoEvent | null;
+    milestone?: boolean;
+    date?: string;
+    endDate?: string;
+    projectId?: number | null;
+  }>({ open: false, event: null });
+  /** 新建里程碑时自动挂到哪个前置任务之后（跟着选中走） */
+  const [afterId, setAfterId] = useState<number | null>(null);
   const [linkFrom, setLinkFrom] = useState<number | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -126,6 +135,38 @@ export default function GanttPage() {
     });
     return [...map.entries()];
   }, [tasks]);
+
+  // ── 新建 ──
+  // 默认落点跟着「视野」走，而不是死落在今天：
+  //   ① 点时间轴空白 → 就落在点到的那一天（Smartsheet 的做法）
+  //   ② 工具栏新建 → 落在视野内离今天最近的那天（今天不在视野里时不把视野拽回今天）
+  //   ③ 详情里「◆ 加后续里程碑」→ 落在该任务结束后一天，并自动挂成它的后继
+  //      （没挂依赖的里程碑只是个「会静静待在原地、看着产出它的活滑过去」的日期）
+  function openCreate(opts: { milestone?: boolean; date?: string; projectId?: number | null; after?: number } = {}) {
+    const { milestone = false } = opts;
+    const first = iso(startIdx);
+    const last = iso(startIdx + totalDays - 1);
+
+    let date = opts.date;
+    if (!date) {
+      date = todayI < startIdx ? first : todayI > startIdx + totalDays - 1 ? last : todayStr();
+    }
+
+    const after = opts.after ?? null;
+    if (after != null && !opts.date) {
+      const prev = taskMap.get(after);
+      if (prev) date = addDays(prev.end, 1);
+    }
+
+    // 落点在视野外（如后续里程碑排到很后面）时，把视野移过去，否则建完看不见
+    if (date < first || date > last) setAnchor(mondayOf(date));
+
+    const plus3 = addDays(date, 3);
+    const end = milestone ? '' : plus3 <= last ? plus3 : last;
+    setAfterId(after);
+    setSelectedId(null);
+    setDialog({ open: true, event: null, milestone, date, endDate: end, projectId: opts.projectId ?? null });
+  }
 
   // 可见任务 → 按项目分组 → 展开成行（含分组头）
   const { rows, rowTop, contentH, visibleCount, offscreen } = useMemo(() => {
@@ -448,22 +489,15 @@ export default function GanttPage() {
           <button className="btn-ghost text-[12.5px]" onClick={() => setConfirmAuto(true)}>自动排程</button>
           <button
             className="btn-ghost text-[12.5px]"
-            onClick={() => {
-              setSelectedId(null);
-              setAnchor(mondayOf(todayStr()));
-              setDialog({ open: true, event: null, milestone: true });
-            }}
+            onClick={() => openCreate({ milestone: true })}
             title="里程碑：时间轴上的一个点（如「上线」「验收通过」），不占工期，也能被依赖"
           >
             ◆ 里程碑
           </button>
           <button
             className="btn-primary"
-            onClick={() => {
-              setSelectedId(null);
-              setAnchor(mondayOf(todayStr()));
-              setDialog({ open: true, event: null });
-            }}
+            onClick={() => openCreate()}
+            title="新建任务；也可以直接点时间轴空白处，落在那一天"
           >
             + 新任务
           </button>
@@ -604,6 +638,11 @@ export default function GanttPage() {
                     }}
                     onStartDrag={(e, mode) => startDrag(e, row.task, mode)}
                     onStartLink={() => setLinkFrom(row.task.id)}
+                    onBlankClick={(offsetX) => {
+                      if (suppressClick.current) return;
+                      const i = Math.max(0, Math.min(totalDays - 1, Math.floor(offsetX / dayWidth)));
+                      openCreate({ date: iso(startIdx + i), projectId: row.task.project_id });
+                    }}
                   />
                 )
               )}
@@ -669,7 +708,7 @@ export default function GanttPage() {
 
       {/* 自动排程确认 */}
       {confirmAuto && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/25 p-4" onClick={() => setConfirmAuto(false)}>
+        <div className="fixed inset-0 z-[56] flex items-center justify-center bg-ink/25 p-4" onClick={() => setConfirmAuto(false)}>
           <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-pop" onClick={(e) => e.stopPropagation()}>
             <p className="text-sm font-semibold text-ink">按依赖重新排程？</p>
             <p className="mt-1.5 text-[12px] leading-5 text-ink-soft">
@@ -702,6 +741,9 @@ export default function GanttPage() {
               setError('这条任务暂时读不到详情，请刷新后再试');
             }
           }}
+          onAddMilestone={() =>
+            openCreate({ milestone: true, after: selectedTask.id, projectId: selectedTask.project_id })
+          }
         />
       )}
 
@@ -709,12 +751,32 @@ export default function GanttPage() {
       {dialog.open && (
         <EventDialog
           event={dialog.event}
-          defaultDate={todayStr()}
-          defaultEndDate={addDays(todayStr(), 3)}
+          defaultDate={dialog.date ?? todayStr()}
+          defaultEndDate={dialog.endDate ?? addDays(todayStr(), 3)}
           defaultMilestone={!!dialog.milestone}
-          onClose={() => setDialog({ open: false, event: null })}
-          onSaved={() => {
+          onClose={() => {
             setDialog({ open: false, event: null });
+            setAfterId(null);
+          }}
+          onSaved={async (created) => {
+            const projectId = dialog.projectId ?? null;
+            const after = afterId;
+            const afterTitle = after != null ? taskMap.get(after)?.title : null;
+            setDialog({ open: false, event: null });
+            setAfterId(null);
+            if (created) {
+              try {
+                if (projectId != null && created.project_id == null) {
+                  await api.updateEvent(created.id, { project_id: projectId } as never);
+                }
+                if (after != null && created.id !== after) {
+                  await api.addGanttDependency({ event_id: created.id, depends_on: after, type: 'FS' });
+                  setToast(`已排在「${afterTitle ?? '前置任务'}」之后，拖动前面那条会带着它一起顺延`);
+                }
+              } catch (e) {
+                setError(`任务已建好，但自动关联失败：${(e as Error).message}`);
+              }
+            }
             invalidate();
           }}
         />
@@ -735,6 +797,7 @@ function TaskRow({
   onOpen,
   onStartDrag,
   onStartLink,
+  onBlankClick,
 }: {
   task: GanttTask;
   selected: boolean;
@@ -746,6 +809,8 @@ function TaskRow({
   onOpen: () => void;
   onStartDrag: (e: React.PointerEvent, mode: DragMode) => void;
   onStartLink: () => void;
+  /** 点时间轴空白处，回调横向偏移像素（调用方换算成日期） */
+  onBlankClick?: (offsetX: number) => void;
 }) {
   const style = BAR_STYLE[task.status];
   const isLinkTarget = linkFrom != null && linkFrom !== task.id;
@@ -781,7 +846,17 @@ function TaskRow({
         )}
       </button>
 
-      <div className="relative flex-none" style={{ width: totalWidth }}>
+      <div
+        className="relative flex-none"
+        style={{ width: totalWidth }}
+        title="点空白处，在这一天新建任务"
+        onClick={(e) => {
+          // 点空白 → 在这一天新建（任务条自己会 stopPropagation，不会误触）
+          if (!onBlankClick) return;
+          const rect = e.currentTarget.getBoundingClientRect();
+          onBlankClick(e.clientX - rect.left);
+        }}
+      >
         {task.milestone ? (
           <>
             {/* 菱形：中心落在当天正中，拖它就是改达成日 */}
