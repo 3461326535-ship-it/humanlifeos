@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目进度管理 — 甘特图 · 看板 · 日历</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+/* ===== CSS Variables & Reset ===== */
+:root {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text2: #475569;
+  --text3: #94a3b8;
+  --primary: #6366f1;
+  --primary-light: #eef2ff;
+  --success: #10b981;
+  --success-light: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-light: #fffbeb;
+  --danger: #ef4444;
+  --danger-light: #fef2f2;
+  --info: #3b82f6;
+  --info-light: #eff6ff;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,.1);
+  --radius: 8px;
+  --radius-sm: 4px;
+  --radius-lg: 12px;
+  --transition: .18s ease;
+  --today: #ef4444;
+}
+.dark {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface2: #172033;
+  --border: #334155;
+  --text: #f1f5f9;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --primary-light: #1e1b4b;
+  --success-light: #022c22;
+  --warning-light: #451a03;
+  --danger-light: #450a0a;
+  --info-light: #172554;
+  --shadow: 0 1px 3px rgba(0,0,0,.3);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,.4);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+  background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5;
+  overflow: hidden; height: 100vh;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; font-size: 13px; }
+input, select, textarea { font-family: inherit; font-size: 13px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text3); border-radius: 3px; }
+
+/* ===== Layout ===== */
+.app { display: flex; height: 100vh; }
+.pm-sidebar {
+  width: 260px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; transition: var(--transition);
+}
+.pm-sidebar.collapsed { width: 0; min-width: 0; overflow: hidden; border-right: none; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ===== Sidebar ===== */
+.pm-sidebar-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.pm-sidebar-header h2 { font-size: 16px; font-weight: 700; color: var(--primary); }
+.pm-sidebar-header .logo { display: flex; align-items: center; gap: 8px; }
+.pm-sidebar-header .logo svg { width: 24px; height: 24px; }
+.projects-section { padding: 12px; flex: 1; overflow-y: auto; }
+.projects-section h3 {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  color: var(--text3); letter-spacing: .5px; margin-bottom: 8px; padding: 0 8px;
+}
+.project-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition);
+  margin-bottom: 2px; font-size: 13px;
+}
+.project-item:hover { background: var(--surface2); }
+.project-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+.project-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.project-count { margin-left: auto; font-size: 11px; color: var(--text3); }
+.project-delete {
+  display: none; margin-left: 4px; padding: 2px 6px; border-radius: 3px;
+  font-size: 14px; color: var(--text3); line-height: 1; cursor: pointer;
+  transition: var(--transition);
+}
+.project-item:hover .project-delete { display: inline; }
+.project-delete:hover { color: var(--danger); background: var(--danger-light); }
+.add-project-btn {
+  width: 100%; padding: 8px; margin-top: 8px; border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); color: var(--text3); transition: var(--transition);
+}
+.add-project-btn:hover { border-color: var(--primary); color: var(--primary); }
+.pm-sidebar-footer { padding: 12px; border-top: 1px solid var(--border); }
+.theme-toggle {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-radius: var(--radius-sm); width: 100%; color: var(--text2);
+}
+.theme-toggle:hover { background: var(--surface2); }
+
+/* ===== Top Bar ===== */
+.topbar {
+  padding: 12px 24px; border-bottom: 1px solid var(--border);
+  background: var(--surface); display: flex; align-items: center; gap: 16px;
+}
+.tab-group { display: flex; gap: 4px; background: var(--surface2); padding: 3px; border-radius: var(--radius); }
+.tab-btn {
+  padding: 7px 18px; border-radius: 6px; font-weight: 500; color: var(--text2);
+  transition: var(--transition); display: flex; align-items: center; gap: 6px;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { background: var(--surface); color: var(--primary); box-shadow: var(--shadow); }
+.topbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.btn {
+  padding: 7px 16px; border-radius: var(--radius-sm); font-weight: 500;
+  transition: var(--transition); display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-outline { border: 1px solid var(--border); color: var(--text2); }
+.btn-outline:hover { background: var(--surface2); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-icon { padding: 6px; border-radius: var(--radius-sm); color: var(--text2); }
+.btn-icon:hover { background: var(--surface2); color: var(--text); }
+.btn-danger { color: var(--danger); }
+.btn-danger:hover { background: var(--danger-light); }
+
+/* ===== Content Area ===== */
+.content { flex: 1; overflow: hidden; position: relative; }
+.view { display: none; height: 100%; overflow: auto; }
+.view.active { display: flex; flex-direction: column; }
+.view-header {
+  padding: 16px 24px; display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.view-header h3 { font-size: 15px; font-weight: 600; }
+
+/* ===== Gantt View ===== */
+.gantt-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.gantt-toolbar {
+  padding: 10px 16px; display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+.gantt-toolbar .zoom-group { display: flex; gap: 2px; background: var(--surface); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.gantt-toolbar .zoom-btn { padding: 4px 10px; font-size: 12px; color: var(--text2); }
+.gantt-toolbar .zoom-btn.active { background: var(--primary); color: #fff; }
+.gantt-body { flex: 1; display: flex; overflow: hidden; }
+.gantt-left {
+  min-width: 260px; max-width: 260px; border-right: 1px solid var(--border);
+  background: var(--surface); overflow-y: auto; overflow-x: hidden;
+}
+.gantt-left-header {
+  padding: 0 12px; height: 52px; display: flex; align-items: center;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text3);
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface);
+}
+.gantt-left-row {
+  padding: 0 12px; height: 40px; display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--border); cursor: pointer; font-size: 13px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gantt-left-row:hover { background: var(--surface2); }
+.gantt-left-row .task-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.gantt-right { flex: 1; overflow: auto; position: relative; /* anchor for SVG overlay */ }
+.gantt-timeline-header { display: flex; height: 52px; position: sticky; top: 0; z-index: 2; background: var(--surface); }
+.gantt-timeline-header .month-col {
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 600; color: var(--text2);
+}
+.gantt-timeline-header .day-col {
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  font-size: 10px; color: var(--text3); min-width: 30px;
+}
+.gantt-timeline-header .day-col.weekend { background: var(--surface2); }
+.gantt-timeline-header .day-col.today { background: var(--danger-light); color: var(--danger); font-weight: 700; }
+.gantt-rows { position: relative; }
+.gantt-row {
+  height: 40px; position: relative; border-bottom: 1px solid var(--border);
+}
+.gantt-row:nth-child(even) { background: rgba(0,0,0,.01); }
+.gantt-row .grid-line {
+  position: absolute; top: 0; bottom: 0; border-right: 1px solid var(--border);
+}
+.gantt-row .grid-line.weekend { background: var(--surface2); border-right-color: var(--border); }
+.gantt-bar {
+  position: absolute; top: 8px; height: 24px; border-radius: 4px;
+  cursor: pointer; display: flex; align-items: center; padding: 0 8px;
+  font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; transition: box-shadow .15s; z-index: 1;
+  color: #fff; min-width: 4px;
+  text-shadow: 0 0 4px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.4);
+}
+.gantt-bar:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.15); z-index: 3; }
+.gantt-bar .bar-progress {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 0;
+  border-radius: 4px 0 0 4px;
+}
+.gantt-bar .bar-progress.full { border-radius: 4px; }
+.gantt-bar .bar-label {
+  position: relative; z-index: 1;
+}
+.gantt-today-line {
+  position: absolute; top: 0; bottom: 0; width: 2px; background: var(--today);
+  z-index: 4; pointer-events: none;
+}
+.gantt-today-label {
+  position: sticky; top: 0; background: var(--today); color: #fff; font-size: 10px;
+  padding: 1px 4px; border-radius: 2px; margin-top: 52px; z-index: 5;
+}
+.gantt-svg {
+  position: absolute; top: 52px; left: 0; pointer-events: none; z-index: 0;
+  overflow: visible;
+}
+.gantt-svg .dep-arrow {
+  fill: none; stroke: #94a3b8; stroke-width: 1.5;
+  marker-end: url(#arrowhead);
+}
+.dark .gantt-svg .dep-arrow { stroke: #64748b; }
+
+/* ===== Kanban View ===== */
+.kanban-container {
+  flex: 1; display: flex; gap: 16px; padding: 20px 24px; overflow-x: auto; overflow-y: hidden;
+}
+.kanban-col {
+  min-width: 280px; max-width: 320px; flex: 1; background: var(--surface2);
+  border-radius: var(--radius-lg); display: flex; flex-direction: column;
+  border-top: 3px solid var(--border);
+}
+.kanban-col-header {
+  padding: 14px 16px 10px; display: flex; align-items: center; justify-content: space-between;
+  font-weight: 600; font-size: 13px;
+}
+.kanban-col-count { font-size: 11px; color: var(--text3); background: var(--surface); padding: 2px 8px; border-radius: 10px; }
+.kanban-cards { flex: 1; overflow-y: auto; padding: 0 12px 12px; min-height: 60px; }
+.kanban-card {
+  background: var(--surface); border-radius: var(--radius); padding: 12px;
+  margin-bottom: 8px; box-shadow: var(--shadow); cursor: grab; transition: var(--transition);
+  border-left: 3px solid var(--primary);
+}
+.kanban-card:hover { box-shadow: var(--shadow-lg); }
+.kanban-card.dragging { opacity: .5; transform: rotate(2deg); }
+.kanban-card .card-title { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+.kanban-card .card-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text3); }
+.kanban-card .card-priority { padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+.priority-high { background: var(--danger-light); color: var(--danger); }
+.priority-medium { background: var(--warning-light); color: var(--warning); }
+.priority-low { background: var(--success-light); color: var(--success); }
+.kanban-col.drop-target { background: var(--primary-light); }
+.kanban-add-card {
+  width: 100%; padding: 8px; border: 1px dashed var(--border); border-radius: var(--radius-sm);
+  color: var(--text3); margin-top: 4px;
+}
+.kanban-add-card:hover { border-color: var(--primary); color: var(--primary); }
+
+/* ===== Calendar View ===== */
+.calendar-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.calendar-nav {
+  padding: 12px 24px; display: flex; align-items: center; gap: 16px;
+  border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+.calendar-nav h3 { font-size: 16px; font-weight: 700; min-width: 160px; }
+.calendar-grid { flex: 1; display: flex; flex-direction: column; }
+.calendar-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr); text-align: center;
+  padding: 8px 0; font-size: 11px; font-weight: 600; color: var(--text3);
+  border-bottom: 1px solid var(--border); background: var(--surface);
+}
+.calendar-weekdays .weekend { color: var(--danger); }
+.calendar-weekdays .day-header.today { background: var(--primary-light); color: var(--primary); border-radius: 4px; }
+.calendar-days {
+  flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr;
+}
+.calendar-day {
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 6px; cursor: pointer; transition: var(--transition);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.calendar-day:hover { background: var(--surface2); }
+.calendar-day.other-month { opacity: .35; }
+.calendar-day.today { background: var(--primary-light); }
+.calendar-day.today .day-num {
+  background: var(--primary); color: #fff; border-radius: 50%; width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+}
+.calendar-day .day-num { font-size: 12px; font-weight: 500; margin-bottom: 2px; }
+.calendar-day .day-events { overflow-y: auto; flex: 1; }
+.calendar-event {
+  font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-bottom: 2px;
+  color: #fff; cursor: pointer; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; line-height: 1.6;
+}
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100;
+  display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  width: 520px; max-width: 95vw; max-height: 85vh; overflow-y: auto;
+}
+.modal-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-header h3 { font-size: 16px; font-weight: 700; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text); transition: var(--transition);
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+}
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+
+/* ===== Toast ===== */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 200;
+  background: var(--text); color: var(--bg); padding: 10px 20px;
+  border-radius: var(--radius); font-weight: 500; box-shadow: var(--shadow-lg);
+  transform: translateY(100px); opacity: 0; transition: .3s ease;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ===== Empty state ===== */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; color: var(--text3); gap: 12px;
+}
+.empty-state svg { width: 64px; height: 64px; opacity: .4; }
+.empty-state p { font-size: 14px; }
+
+/* ===== Quick action buttons ===== */
+.quick-filters { display: flex; gap: 6px; }
+.quick-filters .filter-chip {
+  padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 500;
+  border: 1px solid var(--border); color: var(--text2); transition: var(--transition);
+}
+.quick-filters .filter-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ===== Sync to schedule ===== */
+.form-group.checkbox-group label { display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500; }
+.form-group.checkbox-group input[type="checkbox"] { width:auto; margin:0; }
+.sync-badge { font-size:11px; margin-left:4px; display:inline-flex; align-items:center; }
+</style>
+</head>
+<body>
+
+<!-- 全局导航栏 -->
+<div class="sidebar" id="sidebar"></div>
+
+<!-- 主内容区 -->
+<div class="main-content">
+
+<div class="app">
+  <!-- ===== Sidebar ===== -->
+  <aside class="pm-sidebar" id="pmSidebar">
+    <div class="pm-sidebar-header">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <h2>项目总览</h2>
+      </div>
+    </div>
+    <div class="projects-section" id="projectList">
+      <h3>项目</h3>
+      <div id="projectItems"></div>
+      <button class="add-project-btn" onclick="addProject()">+ 新建项目</button>
+    </div>
+    <div class="pm-sidebar-footer">
+      <div style="display:flex;gap:4px;margin-bottom:8px;">
+        <button class="btn btn-outline btn-sm" onclick="exportData()" title="导出数据" style="flex:1;">📥 导出</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()" title="导入数据" style="flex:1;">📤 导入</button>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+        <span>🌙</span> 深色模式
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <div class="main">
+    <!-- Top Bar -->
+    <div class="topbar">
+      <button class="btn-icon" onclick="toggleSidebar()" title="折叠侧边栏">☰</button>
+      <div class="tab-group">
+        <button class="tab-btn active" data-view="gantt" onclick="switchView('gantt')">📊 甘特图</button>
+        <button class="tab-btn" data-view="kanban" onclick="switchView('kanban')">📋 看板</button>
+        <button class="tab-btn" data-view="calendar" onclick="switchView('calendar')">📅 日历</button>
+      </div>
+      <div class="topbar-actions">
+        <input type="text" id="searchInput" placeholder="🔍 搜索任务..." style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);width:180px;transition:var(--transition);" oninput="onSearch(this.value)">
+        <div class="quick-filters" id="quickFilters">
+          <button class="filter-chip active" data-filter="all" onclick="setQuickFilter('all')">全部</button>
+          <button class="filter-chip" data-filter="active" onclick="setQuickFilter('active')">进行中</button>
+          <button class="filter-chip" data-filter="overdue" onclick="setQuickFilter('overdue')">已逾期</button>
+        </div>
+        <button class="btn btn-primary" onclick="openTaskModal()">+ 新建任务</button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Gantt View -->
+      <div class="view active" id="viewGantt">
+        <div class="gantt-toolbar">
+          <span style="font-size:12px;color:var(--text3);margin-right:8px;">时间刻度:</span>
+          <div class="zoom-group">
+            <button class="zoom-btn" data-zoom="day" onclick="setGanttZoom('day')">日</button>
+            <button class="zoom-btn active" data-zoom="week" onclick="setGanttZoom('week')">周</button>
+            <button class="zoom-btn" data-zoom="month" onclick="setGanttZoom('month')">月</button>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="ganttGoToday()" style="margin-left:8px;">📍 回到今天</button>
+          <span id="ganttRange" style="margin-left:12px;font-size:12px;color:var(--text3);"></span>
+        </div>
+        <div class="gantt-body">
+          <div class="gantt-left" id="ganttLeft" onscroll="syncGanttScrollLeft()">
+            <div class="gantt-left-header">任务名称</div>
+            <div id="ganttLeftRows"></div>
+          </div>
+          <div class="gantt-right" id="ganttRight" onscroll="syncGanttScroll()">
+            <div class="gantt-timeline-header" id="ganttTimelineHeader"></div>
+            <div class="gantt-rows" id="ganttRows"></div>
+            <svg class="gantt-svg" id="ganttSvg"></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kanban View -->
+      <div class="view" id="viewKanban">
+        <div class="kanban-container" id="kanbanColumns"></div>
+      </div>
+
+      <!-- Calendar View -->
+      <div class="view" id="viewCalendar">
+        <div class="calendar-nav">
+          <button class="btn btn-outline btn-sm" onclick="calPrev()">◀</button>
+          <h3 id="calTitle"></h3>
+          <button class="btn btn-outline btn-sm" onclick="calNext()">▶</button>
+          <button class="btn btn-outline btn-sm" onclick="calToday()" style="margin-left:8px;">今天</button>
+          <div class="zoom-group" style="margin-left:16px;">
+            <button class="zoom-btn active" data-calview="month" onclick="setCalView('month')">月</button>
+            <button class="zoom-btn" data-calview="week" onclick="setCalView('week')">周</button>
+            <button class="zoom-btn" data-calview="day" onclick="setCalView('day')">日</button>
+          </div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Task Modal -->
+<div class="modal-overlay" id="taskModalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="taskModalTitle">新建任务</h3>
+      <button class="btn-icon" onclick="closeTaskModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>任务标题 *</label><input id="tfTitle" placeholder="输入任务标题"></div>
+      <div class="form-group"><label>描述</label><textarea id="tfDesc" rows="2" placeholder="任务描述（可选）"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>所属项目</label><select id="tfProject"></select></div>
+        <div class="form-group"><label>状态</label><select id="tfStatus"><option value="todo">待办</option><option value="in-progress">进行中</option><option value="review">审核中</option><option value="done">已完成</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>优先级</label><select id="tfPriority"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option></select></div>
+        <div class="form-group"><label>负责人</label><input id="tfAssignee" placeholder="负责人姓名"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>开始日期</label><input type="date" id="tfStart"></div>
+        <div class="form-group"><label>截止日期</label><input type="date" id="tfEnd"></div>
+      </div>
+      <div class="form-group"><label>进度 (%)</label><input type="range" id="tfProgress" min="0" max="100" value="0" style="width:100%"><span id="tfProgressLabel" style="font-size:12px;color:var(--text3);">0%</span></div>
+      <div class="form-group"><label>依赖任务 (ID, 逗号分隔)</label><input id="tfDeps" placeholder="例如: task_1, task_2"></div>
+      <div class="form-group checkbox-group">
+        <label>
+          <input type="checkbox" id="tfSync">
+          <span>同步到日程（在 Todo 日历中创建/更新日程事件）</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeTaskModal()">取消</button>
+      <button class="btn btn-danger btn-sm" id="btnDeleteTask" style="display:none;margin-right:auto;" onclick="deleteTask()">🗑 删除</button>
+      <button class="btn btn-primary" onclick="saveTask()">保存</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.main-content -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// DATA LAYER
+// ============================================================
+const STORAGE_KEY = 'pm_data_v2';
+const COLORS = ['#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#84cc16'];
+const STATUS_MAP = { 'todo': '待办', 'in-progress': '进行中', 'review': '审核中', 'done': '已完成' };
+const STATUS_ORDER = ['todo','in-progress','review','done'];
+const KANBAN_COLORS = { 'todo': '#64748b', 'in-progress': '#3b82f6', 'review': '#f59e0b', 'done': '#10b981' };
+
+let appData = { projects: [], tasks: [], nextId: 1 };
+let editingTaskId = null;
+let currentView = 'gantt';
+let activeProject = 'all';
+let quickFilter = 'all';
+let ganttZoom = 'week';  // day | week | month
+let ganttPxPerDay = 40;   // will be set by zoom
+let ganttScrollLeft = 0;
+let calYear, calMonth, calView = 'month';
+let calWeekStart = null; // for week view
+let searchQuery = '';
+
+// ============================================================
+// SCHEDULE SYNC LAYER (Todo /api/events)
+// ============================================================
+const SYNC_MAP_KEY = 'pm_sync_map';
+const SYNC_TIME = '18:00';
+
+function fetchWithAuth(url, options) {
+  options = options || {};
+  const headers = options.headers || {};
+  const token = localStorage.getItem('auth_token');
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  options.headers = headers;
+  return fetch(url, options);
+}
+
+function getSyncMap() {
+  try { return JSON.parse(localStorage.getItem(SYNC_MAP_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function saveSyncMap(map) { localStorage.setItem(SYNC_MAP_KEY, JSON.stringify(map)); }
+function getSyncEventId(taskId) { return getSyncMap()[taskId] || null; }
+function setSyncEventId(taskId, eventId) {
+  const m = getSyncMap(); m[taskId] = eventId; saveSyncMap(m);
+}
+function removeSyncMapping(taskId) {
+  const m = getSyncMap(); delete m[taskId]; saveSyncMap(m);
+}
+
+function buildEventPayload(task) {
+  const project = getProject(task.project);
+  const projectName = project ? project.name : '其他';
+  const descParts = [];
+  if (task.desc) descParts.push(task.desc);
+  if (task.assignee) descParts.push('负责人：' + task.assignee);
+  return {
+    title: (project ? '[' + project.name + '] ' : '') + (task.title || ''),
+    date: task.end || new Date().toISOString().split('T')[0],
+    time: SYNC_TIME,
+    category: '工作',
+    description: descParts.join('\n'),
+    completed: task.status === 'done' ? 1 : 0,
+    subtasks: [],
+  };
+}
+
+async function createSyncedEvent(task) {
+  const payload = buildEventPayload(task);
+  const postBody = { ...payload };
+  delete postBody.completed;              // POST cannot set completed
+  const res = await fetchWithAuth('/api/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(postBody),
+  });
+  if (!res.ok) throw new Error('创建日程失败 HTTP ' + res.status);
+  const event = await res.json();
+  if (task.status === 'done') {
+    try {
+      await fetchWithAuth('/api/events/' + event.id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: 1 }),
+      });
+    } catch (e) { console.warn('设置完成状态失败，稍后重试', e); }
+  }
+  return event.id;
+}
+
+async function updateSyncedEvent(task, eventId) {
+  const res = await fetchWithAuth('/api/events/' + eventId, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildEventPayload(task)),
+  });
+  if (res.status === 404) return 'missing';
+  if (!res.ok) throw new Error('更新日程失败 HTTP ' + res.status);
+  return 'ok';
+}
+
+async function syncTaskToSchedule(task) {
+  if (!task.sync) return { ok: true };
+  let eventId = getSyncEventId(task.id);
+  try {
+    if (eventId) {
+      const r = await updateSyncedEvent(task, eventId);
+      if (r === 'missing') {
+        removeSyncMapping(task.id);
+        eventId = await createSyncedEvent(task);
+        setSyncEventId(task.id, eventId);
+      }
+    } else {
+      eventId = await createSyncedEvent(task);
+      setSyncEventId(task.id, eventId);
+    }
+    return { ok: true, eventId };
+  } catch (err) {
+    console.error('同步日程失败', err);
+    return { ok: false, error: err };
+  }
+}
+
+async function removeSyncedEvent(taskId) {
+  const eventId = getSyncEventId(taskId);
+  removeSyncMapping(taskId);
+  if (!eventId) return;
+  try {
+    await fetchWithAuth('/api/events/' + eventId, { method: 'DELETE' });
+  } catch (err) { console.error('删除日程失败', err); }
+}
+
+async function reconcileSyncMap() {
+  const map = getSyncMap();
+  const ids = Object.keys(map);
+  if (ids.length === 0) return;
+  let events = [];
+  try {
+    const res = await fetchWithAuth('/api/events');
+    if (!res.ok) return;
+    events = await res.json();
+  } catch (e) { return; }
+  const existing = new Set(events.map(e => e.id));
+  let changed = false;
+  for (const taskId of ids) {
+    const eventId = map[taskId];
+    const task = appData.tasks.find(t => t.id === taskId);
+    if (!task) {
+      if (existing.has(eventId)) {
+        try { await fetchWithAuth('/api/events/' + eventId, { method: 'DELETE' }); } catch (e) {}
+      }
+      delete map[taskId]; changed = true;
+      continue;
+    }
+    if (!existing.has(eventId)) {
+      delete map[taskId]; changed = true;
+      if (task.sync) {
+        try { map[taskId] = await createSyncedEvent(task); changed = true; }
+        catch (e) { /* stays unsynced; orange indicator */ }
+      }
+    }
+  }
+  if (changed) saveSyncMap(map);
+  renderAll();
+}
+
+function getSyncBadge(task) {
+  if (!task || !task.sync) return '';
+  if (getSyncEventId(task.id)) {
+    return '<span class="sync-badge" title="已同步到日程" style="color:var(--success)"><i class="fa fa-calendar-check-o"></i></span>';
+  }
+  return '<span class="sync-badge" title="待同步/同步中断" style="color:var(--warning)"><i class="fa fa-exclamation-circle"></i></span>';
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+}
+function loadData() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try { appData = JSON.parse(raw); } catch(e) { initSampleData(); }
+    if (!appData.projects || !appData.tasks) initSampleData();
+  } else {
+    initSampleData();
+  }
+}
+
+function initSampleData() {
+  const now = new Date();
+  const d = (offset, h=0) => { const dt = new Date(now); dt.setDate(dt.getDate()+offset); dt.setHours(h,0,0,0); return dt.toISOString().split('T')[0]; };
+  appData = {
+    projects: [
+      { id: 'proj_1', name: '产品发布 v3.0', color: '#6366f1' },
+      { id: 'proj_2', name: '官网改版', color: '#10b981' },
+      { id: 'proj_3', name: '内部工具开发', color: '#f59e0b' },
+    ],
+    tasks: [
+      { id: 'task_1',  title: '需求文档定稿',        desc:'', project:'proj_1', status:'done',       priority:'high',   start:d(-14), end:d(-10), progress:100, assignee:'张三', deps:[] },
+      { id: 'task_2',  title: 'UI 设计稿评审',        desc:'', project:'proj_1', status:'done',       priority:'high',   start:d(-10), end:d(-6),  progress:100, assignee:'李四', deps:['task_1'] },
+      { id: 'task_3',  title: '前端页面开发',          desc:'', project:'proj_1', status:'in-progress',priority:'high',   start:d(-5),  end:d(3),   progress:60,  assignee:'王五', deps:['task_2'] },
+      { id: 'task_4',  title: '后端 API 开发',         desc:'', project:'proj_1', status:'in-progress',priority:'high',   start:d(-4),  end:d(2),   progress:45,  assignee:'赵六', deps:['task_2'] },
+      { id: 'task_5',  title: '联调测试',              desc:'', project:'proj_1', status:'todo',       priority:'high',   start:d(4),   end:d(8),   progress:0,   assignee:'张三', deps:['task_3','task_4'] },
+      { id: 'task_6',  title: '生产环境部署',          desc:'', project:'proj_1', status:'todo',       priority:'high',   start:d(9),   end:d(10),  progress:0,   assignee:'赵六', deps:['task_5'] },
+      { id: 'task_7',  title: '首页重新设计',          desc:'', project:'proj_2', status:'in-progress',priority:'medium', start:d(-8),  end:d(1),   progress:70,  assignee:'李四', deps:[] },
+      { id: 'task_8',  title: 'SEO 优化',              desc:'', project:'proj_2', status:'todo',       priority:'medium', start:d(2),   end:d(7),   progress:0,   assignee:'王五', deps:['task_7'] },
+      { id: 'task_9',  title: '自动化脚本编写',        desc:'', project:'proj_3', status:'in-progress',priority:'low',    start:d(-3),  end:d(5),   progress:30,  assignee:'张三', deps:[] },
+      { id: 'task_10', title: '监控面板搭建',          desc:'', project:'proj_3', status:'todo',       priority:'low',    start:d(6),   end:d(12),  progress:0,   assignee:'赵六', deps:['task_9'] },
+      { id: 'task_11', title: '压力测试',              desc:'', project:'proj_1', status:'todo',       priority:'medium', start:d(-2),  end:d(-1),  progress:0,   assignee:'王五', deps:[] },  // overdue
+      { id: 'task_12', title: '用户反馈收集',          desc:'', project:'proj_2', status:'review',     priority:'medium', start:d(-6),  end:d(0),   progress:90,  assignee:'李四', deps:[] },
+    ],
+    nextId: 13
+  };
+  saveData();
+}
+
+// Derived data helpers
+function getProject(id) { return appData.projects.find(p => p.id === id); }
+function getProjectColor(projId) { const p = getProject(projId); return p ? p.color : '#94a3b8'; }
+function getFilteredTasks() {
+  let tasks = [...appData.tasks];
+  if (activeProject !== 'all') tasks = tasks.filter(t => t.project === activeProject);
+  const now = new Date(); now.setHours(0,0,0,0);
+  if (quickFilter === 'active') tasks = tasks.filter(t => t.status === 'in-progress' || t.status === 'review');
+  if (quickFilter === 'overdue') tasks = tasks.filter(t => t.status !== 'done' && new Date(t.end) < now);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    tasks = tasks.filter(t => t.title.toLowerCase().includes(q) || (t.assignee||'').toLowerCase().includes(q) || (t.desc||'').toLowerCase().includes(q));
+  }
+  return tasks;
+}
+
+function onSearch(q) {
+  searchQuery = q;
+  renderAll();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadData();
+const now = new Date();
+calYear = now.getFullYear();
+calMonth = now.getMonth(); // 0-indexed
+
+renderAll();
+reconcileSyncMap();   // heal orphaned mappings, restore missing events
+
+// ============================================================
+// RENDER ALL
+// ============================================================
+function renderAll() {
+  renderProjects();
+  renderGantt();
+  renderKanban();
+  renderCalendar();
+}
+
+// ============================================================
+// PROJECTS
+// ============================================================
+function renderProjects() {
+  const container = document.getElementById('projectItems');
+  const allCount = appData.tasks.length;
+  let html = `<div class="project-item${activeProject==='all'?' active':''}" data-project="all" onclick="setActiveProject('all')">
+    <span class="project-color" style="background:#6366f1"></span> 全部项目 <span class="project-count">${allCount}</span>
+  </div>`;
+  html += appData.projects.map(p => {
+    const count = appData.tasks.filter(t => t.project === p.id).length;
+    return `<div class="project-item${activeProject===p.id?' active':''}" data-project="${p.id}">
+      <span class="project-color" style="background:${p.color}"></span> <span onclick="setActiveProject('${p.id}')" style="flex:1;">${escapeHtml(p.name)}</span>
+      <span class="project-count">${count}</span>
+      <span class="project-delete" title="删除项目" onclick="event.stopPropagation();deleteProject('${p.id}')">×</span>
+    </div>`;
+  }).join('');
+  container.innerHTML = html;
+}
+
+function setActiveProject(pid) {
+  activeProject = pid;
+  renderAll();
+}
+
+function addProject() {
+  const name = prompt('项目名称：');
+  if (!name || !name.trim()) return;
+  const p = { id: 'proj_' + (appData.nextId++), name: name.trim(), color: COLORS[appData.projects.length % COLORS.length] };
+  appData.projects.push(p);
+  saveData();
+  renderAll();
+  showToast('项目已创建');
+}
+
+async function deleteProject(projectId) {
+  const project = getProject(projectId);
+  if (!project) return;
+  const taskCount = appData.tasks.filter(t => t.project === projectId).length;
+  const msg = taskCount > 0
+    ? `确定删除项目「${project.name}」吗？\n\n该项目下有 ${taskCount} 个任务，将一并删除。\n此操作不可撤销！`
+    : `确定删除项目「${project.name}」吗？`;
+  if (!confirm(msg)) return;
+
+  // Delete synced events for all tasks in this project
+  const tasksToDelete = appData.tasks.filter(t => t.project === projectId);
+  for (const t of tasksToDelete) {
+    await removeSyncedEvent(t.id);
+  }
+
+  // Remove tasks belonging to this project
+  appData.tasks = appData.tasks.filter(t => t.project !== projectId);
+  // Clean up deps referencing deleted tasks
+  const deletedIds = new Set(tasksToDelete.map(t => t.id));
+  appData.tasks.forEach(t => { t.deps = (t.deps || []).filter(d => !deletedIds.has(d)); });
+
+  // Remove project
+  appData.projects = appData.projects.filter(p => p.id !== projectId);
+  if (activeProject === projectId) activeProject = 'all';
+
+  saveData();
+  renderAll();
+  showToast(`项目「${project.name}」已删除`);
+}
+
+// ============================================================
+// GANTT CHART
+// ============================================================
+function setGanttZoom(z) {
+  ganttZoom = z;
+  if (z === 'day') ganttPxPerDay = 40;
+  else if (z === 'week') ganttPxPerDay = 14;
+  else ganttPxPerDay = 4;
+  // Update zoom buttons
+  document.querySelectorAll('#viewGantt .zoom-btn').forEach(b => b.classList.toggle('active', b.dataset.zoom === z));
+  renderGantt();
+}
+
+function ganttGoToday() {
+  renderGantt();
+  setTimeout(() => {
+    const right = document.getElementById('ganttRight');
+    if (!right) return;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const { minDate } = getGanttDateRange();
+    const diffDays = Math.floor((today - minDate) / 86400000);
+    const scrollTo = diffDays * ganttPxPerDay - 200;
+    right.scrollLeft = Math.max(0, scrollTo);
+  }, 50);
+}
+
+function getGanttDateRange() {
+  const tasks = getFilteredTasks();
+  if (tasks.length === 0) {
+    const now = new Date(); now.setHours(0,0,0,0);
+    const later = new Date(now); later.setDate(later.getDate() + 30);
+    return { minDate: now, maxDate: later, totalDays: 30 };
+  }
+  let min = Infinity, max = -Infinity;
+  tasks.forEach(t => {
+    const s = new Date(t.start); const e = new Date(t.end);
+    if (s < min) min = s.getTime();
+    if (e > max) max = e.getTime();
+  });
+  const minDate = new Date(min); minDate.setDate(minDate.getDate() - 2);
+  const maxDate = new Date(max); maxDate.setDate(maxDate.getDate() + 4);
+  const totalDays = Math.ceil((maxDate - minDate) / 86400000);
+  return { minDate, maxDate, totalDays };
+}
+
+function renderGantt() {
+  const tasks = getFilteredTasks();
+  const { minDate, totalDays } = getGanttDateRange();
+  const pxPerDay = ganttPxPerDay;
+  const totalWidth = totalDays * pxPerDay;
+
+  // Render left side - task list
+  const leftRows = document.getElementById('ganttLeftRows');
+  leftRows.innerHTML = tasks.map(t => {
+    const color = getProjectColor(t.project);
+    const statusIcon = t.status === 'done' ? '✅' : t.status === 'in-progress' ? '🔄' : t.status === 'review' ? '👁' : '⬜';
+    return `<div class="gantt-left-row" onclick="openTaskModal('${t.id}')" title="${escapeHtml(t.title)}">
+      <span class="task-dot" style="background:${color}"></span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;">${statusIcon} ${escapeHtml(t.title)}</span>${getSyncBadge(t)}
+    </div>`;
+  }).join('');
+
+  // Render timeline header
+  const header = document.getElementById('ganttTimelineHeader');
+  let headerHtml = '';
+  // Month headers
+  let currentMonth = -1;
+  let monthStartIdx = 0;
+  let monthDayCount = 0;
+  const dayHeaders = [];
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(minDate); d.setDate(d.getDate() + i);
+    const m = d.getMonth();
+    if (m !== currentMonth) {
+      if (currentMonth >= 0) {
+        headerHtml += `<div class="month-col" style="width:${monthDayCount*pxPerDay}px">${currentMonth+1}月</div>`;
+      }
+      currentMonth = m;
+      monthStartIdx = i;
+      monthDayCount = 0;
+    }
+    monthDayCount++;
+    const dow = d.getDay();
+    const isToday = d.toDateString() === new Date().toDateString();
+    dayHeaders.push({ dow, isToday, date: d });
+  }
+  // Last month
+  if (monthDayCount > 0) {
+    headerHtml += `<div class="month-col" style="width:${monthDayCount*pxPerDay}px">${currentMonth+1}月</div>`;
+  }
+  // Day headers (only if zoom is day or week)
+  if (ganttZoom === 'day' || ganttZoom === 'week') {
+    headerHtml = '';
+    for (let i = 0; i < totalDays; i++) {
+      const d = dayHeaders[i];
+      const isWeekend = d.dow === 0 || d.dow === 6;
+      headerHtml += `<div class="day-col${isWeekend?' weekend':''}${d.isToday?' today':''}" style="width:${pxPerDay}px">${d.date.getDate()}</div>`;
+    }
+  }
+
+  header.innerHTML = headerHtml;
+  header.style.width = totalWidth + 'px';
+
+  // Render rows with bars
+  const rowsContainer = document.getElementById('ganttRows');
+  let rowsHtml = '';
+  tasks.forEach(t => {
+    const s = new Date(t.start); const e = new Date(t.end);
+    const left = Math.floor((s - minDate) / 86400000) * pxPerDay;
+    const width = Math.max(4, Math.ceil((e - s) / 86400000 + 1) * pxPerDay);
+    const color = getProjectColor(t.project);
+    rowsHtml += `<div class="gantt-row" style="width:${totalWidth}px">
+      ${ganttZoom === 'day' || ganttZoom === 'week' ? Array.from({length: totalDays}, (_,i) => {
+        const d = new Date(minDate); d.setDate(d.getDate()+i);
+        const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+        return `<div class="grid-line${isWeekend?' weekend':''}" style="left:${i*pxPerDay}px;width:${pxPerDay}px"></div>`;
+      }).join('') : ''}
+      <div class="gantt-bar" style="left:${left}px;width:${width}px;background:${hexToRgba(color, 0.45)};"
+           onclick="event.stopPropagation();openTaskModal('${t.id}')"
+           title="${escapeHtml(t.title)}: ${t.start} → ${t.end} (${t.progress}%)">
+        <span class="bar-progress${t.progress >= 100 ? ' full' : ''}" style="width:${t.progress}%;background:${color};"></span>
+        ${width > 60 ? `<span class="bar-label">${escapeHtml(t.title)}</span>` : ''}
+      </div>
+    </div>`;
+  });
+
+  // Today line
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayLeft = Math.floor((today - minDate) / 86400000) * pxPerDay;
+  if (todayLeft >= 0 && todayLeft <= totalWidth) {
+    rowsHtml += `<div class="gantt-today-line" style="left:${todayLeft}px"></div>`;
+  }
+
+  rowsContainer.innerHTML = rowsHtml;
+  rowsContainer.style.width = totalWidth + 'px';
+
+  // --- Dependency arrows (SVG) ---
+  const svg = document.getElementById('ganttSvg');
+  const rowH = 40;
+  const totalH = tasks.length * rowH;
+  svg.setAttribute('width', totalWidth);
+  svg.setAttribute('height', totalH);
+  svg.style.width = totalWidth + 'px';
+  svg.style.height = totalH + 'px';
+  // Build position map: taskId -> { left, width, rowIdx }
+  const posMap = {};
+  tasks.forEach((t, i) => {
+    const s = new Date(t.start); const e = new Date(t.end);
+    posMap[t.id] = {
+      left: Math.floor((s - minDate) / 86400000) * pxPerDay,
+      width: Math.max(4, Math.ceil((e - s) / 86400000 + 1) * pxPerDay),
+      rowIdx: i,
+      color: getProjectColor(t.project),
+    };
+  });
+  // Arrowhead marker — uses context-stroke to inherit per-arrow color
+  const markerId = 'arrowhead';
+  let svgHtml = `<defs><marker id="${markerId}" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="context-stroke"/></marker></defs>`;
+  tasks.forEach(t => {
+    if (!t.deps || !t.deps.length) return;
+    const succ = posMap[t.id];
+    if (!succ) return;
+    t.deps.forEach(depId => {
+      const pred = posMap[depId];
+      if (!pred) return;
+      const py = pred.rowIdx * rowH + rowH / 2;
+      const sy = succ.rowIdx * rowH + rowH / 2;
+      const px = pred.left + pred.width;
+      const sx = succ.left;
+      const hGap = 10;
+      const midX = Math.max(px + hGap, px + 6);
+      // FS arrow: predecessor end → right → vertical → successor start
+      const d = `M${px},${py} L${midX},${py} L${midX},${sy} L${sx - 4},${sy}`;
+      svgHtml += `<path d="${d}" class="dep-arrow" style="stroke:${pred.color};" data-from="${depId}" data-to="${t.id}"/>`;
+    });
+  });
+  svg.innerHTML = svgHtml;
+
+  // Update range label
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  document.getElementById('ganttRange').textContent = `${fmt(minDate)} — ${fmt(new Date(minDate.getTime()+totalDays*86400000))}`;
+
+  // Sync scroll position
+  const right = document.getElementById('ganttRight');
+  if (right) right.scrollLeft = ganttScrollLeft;
+}
+
+function syncGanttScroll() {
+  const right = document.getElementById('ganttRight');
+  const left = document.getElementById('ganttLeft');
+  if (right && left) {
+    left.scrollTop = right.scrollTop;
+    ganttScrollLeft = right.scrollLeft;
+  }
+}
+function syncGanttScrollLeft() {
+  const right = document.getElementById('ganttRight');
+  const left = document.getElementById('ganttLeft');
+  if (right && left) {
+    right.scrollTop = left.scrollTop;
+  }
+}
+
+// ============================================================
+// KANBAN BOARD
+// ============================================================
+function renderKanban() {
+  const container = document.getElementById('kanbanColumns');
+  const tasks = getFilteredTasks();
+
+  container.innerHTML = STATUS_ORDER.map(status => {
+    const colTasks = tasks.filter(t => t.status === status);
+    const color = KANBAN_COLORS[status];
+    return `<div class="kanban-col" style="border-top-color:${color}" data-status="${status}"
+                ondragover="handleKanbanDragOver(event)" ondragleave="handleKanbanDragLeave(event)" ondrop="handleKanbanDrop(event)">
+      <div class="kanban-col-header">
+        <span>${STATUS_MAP[status]}</span>
+        <span class="kanban-col-count">${colTasks.length}</span>
+      </div>
+      <div class="kanban-cards">
+        ${colTasks.map(t => {
+          const projColor = getProjectColor(t.project);
+          const priClass = 'priority-' + t.priority;
+          const priLabel = t.priority === 'high' ? '高' : t.priority === 'medium' ? '中' : '低';
+          const dueDate = t.end;
+          const isOverdue = t.status !== 'done' && new Date(t.end) < new Date();
+          return `<div class="kanban-card" draggable="true" data-task-id="${t.id}"
+                      style="border-left-color:${projColor}"
+                      ondragstart="handleKanbanDragStart(event)" ondragend="handleKanbanDragEnd(event)"
+                      onclick="openTaskModal('${t.id}')">
+            <div class="card-title">${escapeHtml(t.title)}</div>
+            <div class="card-meta">
+              <span class="card-priority ${priClass}">${priLabel}</span>
+              <span>${escapeHtml(t.assignee || '未分配')}</span>
+              ${dueDate ? `<span style="${isOverdue?'color:var(--danger);font-weight:600;':''}">📅 ${dueDate}</span>` : ''}
+              ${t.progress > 0 && t.progress < 100 ? `<span>${t.progress}%</span>` : ''}
+              ${getSyncBadge(t)}
+            </div>
+          </div>`;
+        }).join('')}
+        <button class="kanban-add-card" onclick="event.stopPropagation();quickAddTask('${status}')">+ 添加任务</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let dragTaskId = null;
+function handleKanbanDragStart(e) {
+  dragTaskId = e.target.closest('.kanban-card')?.dataset.taskId;
+  if (dragTaskId) {
+    e.target.closest('.kanban-card').classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragTaskId);
+  }
+}
+function handleKanbanDragEnd(e) {
+  e.target.closest('.kanban-card')?.classList.remove('dragging');
+  document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drop-target'));
+  dragTaskId = null;
+}
+function handleKanbanDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.target.closest('.kanban-col')?.classList.add('drop-target');
+}
+function handleKanbanDragLeave(e) {
+  e.target.closest('.kanban-col')?.classList.remove('drop-target');
+}
+async function handleKanbanDrop(e) {
+  e.preventDefault();
+  const col = e.target.closest('.kanban-col');
+  col?.classList.remove('drop-target');
+  const newStatus = col?.dataset.status;
+  if (dragTaskId && newStatus) {
+    const task = appData.tasks.find(t => t.id === dragTaskId);
+    if (task) {
+      task.status = newStatus;
+      if (newStatus === 'done') task.progress = 100;
+      saveData();
+      renderAll();
+      if (task.sync) await syncTaskToSchedule(task);
+      showToast(`任务已移至「${STATUS_MAP[newStatus]}」`);
+    }
+  }
+  dragTaskId = null;
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+function setCalView(v) {
+  calView = v;
+  // Maintain date context when switching views
+  if (v === 'week' && !calWeekStart) {
+    calWeekStart = new Date(calYear, calMonth, 1);
+    calWeekStart.setDate(calWeekStart.getDate() - calWeekStart.getDay());
+  }
+  if (v === 'day' && !calWeekStart) {
+    calWeekStart = new Date(calYear, calMonth, 1);
+  }
+  document.querySelectorAll('#viewCalendar .zoom-btn').forEach(b => b.classList.toggle('active', b.dataset.calview === v));
+  renderCalendar();
+}
+
+function calPrev() {
+  if (calView === 'month') { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } }
+  else if (calView === 'week') { calWeekStart.setDate(calWeekStart.getDate() - 7); }
+  else { const d = new Date(calYear, calMonth, calWeekStart ? calWeekStart.getDate() : 1); d.setDate(d.getDate() - 1); calYear = d.getFullYear(); calMonth = d.getMonth(); calWeekStart = d; }
+  renderCalendar();
+}
+function calNext() {
+  if (calView === 'month') { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } }
+  else if (calView === 'week') { calWeekStart.setDate(calWeekStart.getDate() + 7); }
+  else { const d = new Date(calYear, calMonth, calWeekStart ? calWeekStart.getDate() : 1); d.setDate(d.getDate() + 1); calYear = d.getFullYear(); calMonth = d.getMonth(); calWeekStart = d; }
+  renderCalendar();
+}
+function calToday() {
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  calWeekStart = new Date(now);
+  calWeekStart.setDate(calWeekStart.getDate() - calWeekStart.getDay());
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const title = document.getElementById('calTitle');
+  const grid = document.getElementById('calendarGrid');
+  const tasks = getFilteredTasks();
+
+  // Group tasks by date
+  const tasksByDate = {};
+  tasks.forEach(t => {
+    const start = new Date(t.start); start.setHours(0,0,0,0);
+    const end = new Date(t.end); end.setHours(0,0,0,0);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
+      const key = d.toISOString().split('T')[0];
+      if (!tasksByDate[key]) tasksByDate[key] = [];
+      tasksByDate[key].push(t);
+    }
+  });
+
+  if (calView === 'month') {
+    title.textContent = `${calYear}年 ${calMonth+1}月`;
+    const firstDay = new Date(calYear, calMonth, 1);
+    const lastDay = new Date(calYear, calMonth+1, 0);
+    const startPad = firstDay.getDay();
+    const totalCells = Math.ceil((lastDay.getDate() + startPad) / 7) * 7;
+
+    let html = `<div class="calendar-weekdays">${['日','一','二','三','四','五','六'].map((d,i) => `<div class="${i===0||i===6?'weekend':''}">${d}</div>`).join('')}</div>`;
+    html += '<div class="calendar-days">';
+
+    for (let i = 0; i < totalCells; i++) {
+      const dayNum = i - startPad + 1;
+      const isOtherMonth = dayNum < 1 || dayNum > lastDay.getDate();
+      const dateObj = new Date(calYear, calMonth, dayNum);
+      const dateKey = dateObj.toISOString().split('T')[0];
+      const today = new Date(); today.setHours(0,0,0,0);
+      const isToday = dateObj.getTime() === today.getTime();
+      const events = tasksByDate[dateKey] || [];
+
+      html += `<div class="calendar-day${isOtherMonth?' other-month':''}${isToday?' today':''}" onclick="openTaskModal()">
+        <span class="day-num">${isOtherMonth ? (dayNum < 1 ? new Date(calYear,calMonth,dayNum).getDate() : dayNum - lastDay.getDate()) : dayNum}</span>
+        <div class="day-events">${events.slice(0,4).map(t => {
+          const color = getProjectColor(t.project);
+          return `<div class="calendar-event" style="background:${color}" onclick="event.stopPropagation();openTaskModal('${t.id}')" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>`;
+        }).join('')}${events.length > 4 ? `<div style="font-size:10px;color:var(--text3);">+${events.length-4} 更多</div>` : ''}</div>
+      </div>`;
+    }
+    html += '</div>';
+    grid.innerHTML = html;
+
+  } else if (calView === 'week') {
+    if (!calWeekStart) { calWeekStart = new Date(); calWeekStart.setDate(calWeekStart.getDate() - calWeekStart.getDay()); }
+    const weekEnd = new Date(calWeekStart); weekEnd.setDate(weekEnd.getDate() + 6);
+    title.textContent = `${calWeekStart.getFullYear()}年 ${calWeekStart.getMonth()+1}月${calWeekStart.getDate()}日 — ${weekEnd.getMonth()+1}月${weekEnd.getDate()}日`;
+
+    let html = `<div class="calendar-weekdays">${['日','一','二','三','四','五','六'].map((d,i) => {
+      const day = new Date(calWeekStart); day.setDate(day.getDate()+i);
+      const isToday = day.toDateString() === new Date().toDateString();
+      return `<div class="day-header ${i===0||i===6?'weekend':''}${isToday?' today':''}" style="font-size:11px;${isToday?'background:var(--primary-light);color:var(--primary);border-radius:4px;':''}">${d}<br><span style="font-size:14px;font-weight:700;">${day.getDate()}</span></div>`;
+    }).join('')}</div>`;
+    html += '<div class="calendar-days" style="grid-auto-rows:auto;min-height:400px;">';
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(calWeekStart); day.setDate(day.getDate()+i);
+      const dateKey = day.toISOString().split('T')[0];
+      const events = tasksByDate[dateKey] || [];
+      const isToday = day.toDateString() === new Date().toDateString();
+      html += `<div class="calendar-day${isToday?' today':''}" style="min-height:120px;grid-auto-rows:auto;" onclick="openTaskModal()">
+        <div class="day-events">${events.map(t => {
+          const color = getProjectColor(t.project);
+          return `<div class="calendar-event" style="background:${color};font-size:11px;padding:4px 6px;" onclick="event.stopPropagation();openTaskModal('${t.id}')">${escapeHtml(t.title)}</div>`;
+        }).join('')}</div>
+      </div>`;
+    }
+    html += '</div>';
+    grid.innerHTML = html;
+
+  } else if (calView === 'day') {
+    if (!calWeekStart) calWeekStart = new Date();
+    title.textContent = `${calWeekStart.getFullYear()}年 ${calWeekStart.getMonth()+1}月${calWeekStart.getDate()}日`;
+    const dateKey = calWeekStart.toISOString().split('T')[0];
+    const events = tasksByDate[dateKey] || [];
+    let html = '<div style="padding:16px;">';
+    if (events.length === 0) {
+      html += '<div class="empty-state"><p>当天无任务</p></div>';
+    } else {
+      html += events.map(t => {
+        const color = getProjectColor(t.project);
+        const statusLabel = STATUS_MAP[t.status];
+        const priLabel = t.priority === 'high' ? '高优先级' : t.priority === 'medium' ? '中优先级' : '低优先级';
+        return `<div style="padding:12px;margin:8px 0;background:var(--surface);border-left:4px solid ${color};border-radius:var(--radius-sm);box-shadow:var(--shadow);cursor:pointer;" onclick="openTaskModal('${t.id}')">
+          <div style="font-weight:600;">${escapeHtml(t.title)}${getSyncBadge(t)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;">${statusLabel} · ${priLabel} · ${escapeHtml(t.assignee||'未分配')} · ${t.progress}%</div>
+        </div>`;
+      }).join('');
+    }
+    html += '</div>';
+    grid.innerHTML = html;
+  }
+}
+
+// ============================================================
+// VIEW SWITCHING
+// ============================================================
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  document.querySelectorAll('.view').forEach(vw => vw.classList.remove('active'));
+  const viewMap = { gantt: 'viewGantt', kanban: 'viewKanban', calendar: 'viewCalendar' };
+  const el = document.getElementById(viewMap[v]);
+  if (el) el.classList.add('active');
+  if (v === 'gantt') { renderGantt(); setTimeout(() => ganttGoToday(), 100); }
+  if (v === 'kanban') renderKanban();
+  if (v === 'calendar') renderCalendar();
+}
+
+function setQuickFilter(f) {
+  quickFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+  renderAll();
+}
+
+// ============================================================
+// TASK MODAL
+// ============================================================
+function openTaskModal(taskId) {
+  editingTaskId = taskId || null;
+  const task = taskId ? appData.tasks.find(t => t.id === taskId) : null;
+  document.getElementById('taskModalTitle').textContent = task ? '编辑任务' : '新建任务';
+  document.getElementById('btnDeleteTask').style.display = task ? '' : 'none';
+
+  // Populate project dropdown
+  const sel = document.getElementById('tfProject');
+  sel.innerHTML = appData.projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+
+  if (task) {
+    document.getElementById('tfTitle').value = task.title;
+    document.getElementById('tfDesc').value = task.desc || '';
+    document.getElementById('tfProject').value = task.project;
+    document.getElementById('tfStatus').value = task.status;
+    document.getElementById('tfPriority').value = task.priority;
+    document.getElementById('tfAssignee').value = task.assignee || '';
+    document.getElementById('tfStart').value = task.start;
+    document.getElementById('tfEnd').value = task.end;
+    document.getElementById('tfProgress').value = task.progress;
+    document.getElementById('tfDeps').value = (task.deps || []).join(', ');
+    document.getElementById('tfSync').checked = !!task.sync;
+  } else {
+    document.getElementById('tfTitle').value = '';
+    document.getElementById('tfDesc').value = '';
+    if (appData.projects.length > 0) document.getElementById('tfProject').value = activeProject !== 'all' ? activeProject : appData.projects[0].id;
+    document.getElementById('tfStatus').value = 'todo';
+    document.getElementById('tfPriority').value = 'medium';
+    document.getElementById('tfAssignee').value = '';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('tfStart').value = today;
+    const end = new Date(); end.setDate(end.getDate()+3);
+    document.getElementById('tfEnd').value = end.toISOString().split('T')[0];
+    document.getElementById('tfProgress').value = 0;
+    document.getElementById('tfDeps').value = '';
+    document.getElementById('tfSync').checked = false;
+  }
+  document.getElementById('tfProgressLabel').textContent = (task ? task.progress : 0) + '%';
+  document.getElementById('taskModalOverlay').classList.add('show');
+
+  // Progress slider sync
+  document.getElementById('tfProgress').oninput = function() {
+    document.getElementById('tfProgressLabel').textContent = this.value + '%';
+  };
+}
+
+function closeTaskModal() {
+  document.getElementById('taskModalOverlay').classList.remove('show');
+  editingTaskId = null;
+}
+
+async function saveTask() {
+  const title = document.getElementById('tfTitle').value.trim();
+  if (!title) { showToast('请输入任务标题'); return; }
+  const isEdit = !!editingTaskId;
+  const prevSync = isEdit ? !!(appData.tasks.find(t => t.id === editingTaskId) || {}).sync : false;
+  const data = {
+    title,
+    desc: document.getElementById('tfDesc').value.trim(),
+    project: document.getElementById('tfProject').value,
+    status: document.getElementById('tfStatus').value,
+    priority: document.getElementById('tfPriority').value,
+    assignee: document.getElementById('tfAssignee').value.trim(),
+    start: document.getElementById('tfStart').value,
+    end: document.getElementById('tfEnd').value,
+    progress: parseInt(document.getElementById('tfProgress').value),
+    deps: document.getElementById('tfDeps').value.split(',').map(s => s.trim()).filter(Boolean),
+    sync: document.getElementById('tfSync').checked,
+  };
+
+  let task;
+  if (isEdit) {
+    task = appData.tasks.find(t => t.id === editingTaskId);
+    if (task) {
+      Object.assign(task, data);
+      if (task.status === 'done') task.progress = 100;
+    }
+  } else {
+    task = { id: 'task_' + (appData.nextId++), ...data };
+    appData.tasks.push(task);
+  }
+
+  saveData();
+  closeTaskModal();
+  renderAll();
+
+  // Handle sync
+  if (data.sync) {
+    const r = await syncTaskToSchedule(task);
+    showToast(r.ok ? (isEdit ? '任务已更新，已同步日程' : '任务已创建，已同步日程') : '任务已保存，但同步日程失败');
+  } else if (isEdit && prevSync) {
+    await removeSyncedEvent(task.id);
+    showToast('任务已更新，已移除日程同步');
+  } else {
+    showToast(isEdit ? '任务已更新' : '任务已创建');
+  }
+  renderAll();   // refresh indicators after async sync
+}
+
+async function deleteTask() {
+  if (!editingTaskId) return;
+  if (!confirm('确定要删除这个任务吗？')) return;
+  const taskId = editingTaskId;
+  appData.tasks = appData.tasks.filter(t => t.id !== taskId);
+  // Clean up deps referencing this task
+  appData.tasks.forEach(t => { t.deps = (t.deps || []).filter(d => d !== taskId); });
+  saveData();
+  closeTaskModal();
+  renderAll();
+  await removeSyncedEvent(taskId);
+  showToast('任务已删除');
+}
+
+function quickAddTask(status) {
+  const title = prompt('快速添加任务（标题）：');
+  if (!title || !title.trim()) return;
+  const today = new Date().toISOString().split('T')[0];
+  const end = new Date(); end.setDate(end.getDate()+3);
+  const projId = activeProject !== 'all' ? activeProject : (appData.projects[0]?.id || 'proj_1');
+  // Ensure project exists
+  if (!appData.projects.find(p => p.id === projId)) {
+    appData.projects.push({ id: projId, name: '默认项目', color: COLORS[0] });
+  }
+  appData.tasks.push({
+    id: 'task_' + (appData.nextId++),
+    title: title.trim(), desc: '', project: projId,
+    status, priority: 'medium', assignee: '',
+    start: today, end: end.toISOString().split('T')[0],
+    progress: 0, deps: []
+  });
+  saveData();
+  renderAll();
+  showToast('任务已添加');
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function toggleSidebar() {
+  document.getElementById('pmSidebar').classList.toggle('collapsed');
+}
+
+function toggleTheme() {
+  const isDark = document.body.classList.toggle('dark');
+  document.getElementById('themeBtn').innerHTML = isDark ? '<span>☀️</span> 浅色模式' : '<span>🌙</span> 深色模式';
+  localStorage.setItem('pm_theme', isDark ? 'dark' : 'light');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function escapeHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(appData, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `project-data-${new Date().toISOString().split('T')[0]}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('数据已导出');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.projects || !data.tasks) throw new Error('格式不正确');
+      appData = data;
+      saveData();
+      renderAll();
+      showToast('数据已导入');
+    } catch(err) {
+      showToast('导入失败：文件格式不正确');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'n' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); openTaskModal(); }
+  if (e.key === '1' && !e.ctrlKey && !e.metaKey) switchView('gantt');
+  if (e.key === '2' && !e.ctrlKey && !e.metaKey) switchView('kanban');
+  if (e.key === '3' && !e.ctrlKey && !e.metaKey) switchView('calendar');
+  if (e.key === 'Escape') closeTaskModal();
+});
+
+// Click outside modal to close
+document.getElementById('taskModalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeTaskModal();
+});
+
+// Init theme
+if (localStorage.getItem('pm_theme') === 'dark') {
+  document.body.classList.add('dark');
+  document.getElementById('themeBtn').innerHTML = '<span>☀️</span> 浅色模式';
+}
+
+// Initial render
+renderAll();
+</script>
+<script src="/js/nav-loader.js"></script>
+</body>
+</html>

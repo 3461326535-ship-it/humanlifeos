@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LISUN Screenshot Review</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f0f3f7;
+    --text: #171b22;
+    --muted: #687386;
+    --line: #d9dee7;
+    --line-strong: #c3cad6;
+    --accent: #0b66d8;
+    --accent-soft: #e8f1ff;
+    --ok-soft: #e9f8ef;
+    --warn-soft: #fff4df;
+    --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+
+  button, input, select {
+    font: inherit;
+  }
+
+  .app {
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 292px 1fr;
+  }
+
+  main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .sidebar {
+    min-width: 0;
+    border-right: 1px solid var(--line);
+    background: #fbfcfe;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .brand {
+    padding: 18px 18px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .brand h1 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .brand p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .side-section {
+    padding: 14px 14px 0;
+  }
+
+  .side-title {
+    margin: 0 0 8px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .page-list {
+    overflow: auto;
+    padding: 0 10px 16px;
+  }
+
+  .page-button {
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text);
+    border-radius: 7px;
+    padding: 9px 10px;
+    margin: 2px 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .page-button:hover {
+    background: var(--panel-2);
+  }
+
+  .page-button.active {
+    background: var(--accent-soft);
+    border-color: #bbd5ff;
+    color: #084ea7;
+  }
+
+  .page-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+
+  .page-count {
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .content {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .toolbar {
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto auto;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .search input {
+    width: 100%;
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    padding: 10px 12px;
+    outline: none;
+    background: #fff;
+  }
+
+  .search input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(11, 102, 216, .12);
+  }
+
+  .select {
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    background: #fff;
+    padding: 9px 10px;
+    color: var(--text);
+  }
+
+  .button {
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    background: #fff;
+    padding: 9px 11px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .button:hover {
+    border-color: #9aa5b5;
+    background: #f8fafc;
+  }
+
+  .filters {
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 18px 12px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .filter-label {
+    width: 54px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .chip {
+    border: 1px solid var(--line-strong);
+    background: #fff;
+    color: var(--text);
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .chip.active {
+    background: var(--accent-soft);
+    border-color: #a8cbff;
+    color: #084ea7;
+  }
+
+  .status {
+    padding: 10px 18px;
+    color: var(--muted);
+    font-size: 13px;
+    border-bottom: 1px solid var(--line);
+    background: #fbfcfe;
+  }
+
+  .results {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 18px;
+  }
+
+  .section {
+    margin-bottom: 24px;
+  }
+
+  .section-header {
+    position: sticky;
+    top: -18px;
+    z-index: 2;
+    background: rgba(246, 247, 249, .96);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 16px;
+    padding: 8px 0 12px;
+  }
+
+  .section-title {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .section-meta {
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 300px), 1fr));
+    gap: 14px;
+  }
+
+  body.compact .grid {
+    --card-min: 230px;
+  }
+
+  body.large .grid {
+    --card-min: 420px;
+  }
+
+  .card {
+    position: relative;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+
+  .card:hover {
+    border-color: #98a6ba;
+  }
+
+  .thumb-wrap {
+    position: relative;
+    background: #e9edf4;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .thumb {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    display: block;
+  }
+
+  .device-pill {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.92);
+    border: 1px solid rgba(148, 163, 184, .45);
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .card-body {
+    padding: 11px 12px 12px;
+  }
+
+  .card-title {
+    margin: 0 0 8px;
+    font-size: 14px;
+    line-height: 1.35;
+    font-weight: 700;
+  }
+
+  .meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .tag {
+    border-radius: 999px;
+    padding: 3px 7px;
+    font-size: 11px;
+    color: #334155;
+    background: #eef2f7;
+  }
+
+  .tag.state-default { background: var(--ok-soft); }
+  .tag.state-hover { background: #eaf0ff; }
+  .tag.state-tab { background: #edf7ff; }
+  .tag.state-filter { background: var(--warn-soft); }
+  .tag.state-view { background: #f2ecff; }
+
+  .view-action {
+    margin-top: 10px;
+    width: 100%;
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    background: #fff;
+    color: var(--accent);
+    padding: 8px 10px;
+    cursor: zoom-in;
+    font-weight: 700;
+  }
+
+  .view-action:hover {
+    background: var(--accent-soft);
+    border-color: #a8cbff;
+  }
+
+  .filename {
+    color: var(--muted);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 70px 20px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 17, 25, .92);
+    z-index: 9999;
+    display: none;
+    grid-template-rows: auto 1fr;
+  }
+
+  .lightbox.active {
+    display: grid;
+  }
+
+  .lightbox-bar {
+    background: rgba(255,255,255,.97);
+    color: var(--text);
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .lightbox-title {
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .lightbox-subtitle {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 3px;
+  }
+
+  .lightbox-stage {
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+    padding: 18px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .lightbox-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-weight: 700;
+    pointer-events: none;
+  }
+
+  #lightboxImageStack {
+    width: 100%;
+    margin: 0 auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  #lightboxImageStack img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    background: #fff;
+    box-shadow: 0 18px 60px rgba(0,0,0,.35);
+    display: block;
+    vertical-align: top;
+  }
+
+  .nav {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 56px;
+    border: 1px solid rgba(255,255,255,.35);
+    background: rgba(255,255,255,.92);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 22px;
+  }
+
+  .prev { left: 18px; }
+  .next { right: 18px; }
+
+  @media (max-width: 900px) {
+    body { overflow: auto; }
+    .app { min-height: 100vh; height: auto; grid-template-columns: 1fr; }
+    main { display: block; }
+    .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
+    .page-list { max-height: 210px; }
+    .toolbar { grid-template-columns: 1fr; }
+    .results { overflow: visible; }
+  }
+</style>
+</head>
+<body class="comfortable">
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>LISUN Screenshot Review</h1>
+      <p id="totalSummary">Loading screenshots...</p>
+    </div>
+    <div class="side-section">
+      <div class="side-title">Quick pages</div>
+    </div>
+    <nav class="page-list" id="pageList"></nav>
+  </aside>
+
+  <main class="content">
+    <div class="toolbar">
+      <div class="search">
+        <input id="searchInput" type="search" placeholder="Search page, state, device, filename...">
+      </div>
+      <select class="select" id="sortSelect" title="Sort screenshots">
+        <option value="page">Sort by page</option>
+        <option value="device">Sort by device</option>
+        <option value="state">Sort by state</option>
+        <option value="file">Sort by filename</option>
+      </select>
+      <div class="actions">
+        <button class="button" id="densityButton" type="button">Compact</button>
+        <button class="button" id="resetButton" type="button">Reset</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="filter-row" id="deviceFilters"><span class="filter-label">Device</span></div>
+      <div class="filter-row" id="stateFilters"><span class="filter-label">State</span></div>
+    </div>
+
+    <div class="status" id="statusLine"></div>
+    <div class="results" id="results"></div>
+  </main>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-bar">
+    <div>
+      <div class="lightbox-title" id="lightboxTitle"></div>
+      <div class="lightbox-subtitle" id="lightboxSubtitle"></div>
+    </div>
+    <button class="button" type="button" id="closeLightbox">Close</button>
+  </div>
+  <button class="nav prev" type="button" id="prevButton">&lt;</button>
+  <div class="lightbox-stage" id="lightboxStage"><div class="lightbox-loading" id="lightboxLoading">Loading image...</div><div id="lightboxImageStack"></div></div>
+  <button class="nav next" type="button" id="nextButton">&gt;</button>
+</div>
+
+<script>
+const SCREENSHOTS = [{"file": "home_pc_default.png", "page": "home", "device": "pc", "type": "default", "subtype": "", "description": "Home - default state", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_pc_default.jpeg"}, {"file": "home_pc_hover_products.png", "page": "home", "device": "pc", "type": "hover", "subtype": "products", "description": "Home - hover Products menu", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_pc_hover_products.jpeg"}, {"file": "home_pc_hover_solutions.png", "page": "home", "device": "pc", "type": "hover", "subtype": "solutions", "description": "Home - hover Applications menu", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_pc_hover_solutions.jpeg"}, {"file": "home_pc_hover_standards.png", "page": "home", "device": "pc", "type": "hover", "subtype": "standards", "description": "Home - hover Standards menu", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_pc_hover_standards.jpeg"}, {"file": "home_pc_hover_company.png", "page": "home", "device": "pc", "type": "hover", "subtype": "company", "description": "Home - hover Company menu", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_pc_hover_company.jpeg"}, {"file": "products_pc.png", "page": "products", "device": "pc", "type": "default", "subtype": "", "description": "Products", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_pc_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_pc_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_pc_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_pc_part_003.jpeg"]}, {"file": "applications_pc.png", "page": "applications", "device": "pc", "type": "default", "subtype": "", "description": "Applications", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_pc_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_pc_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_pc_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_pc_part_003.jpeg"]}, {"file": "standards_pc.png", "page": "standards", "device": "pc", "type": "default", "subtype": "", "description": "Standards", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_pc.jpeg"}, {"file": "cases_pc_default.png", "page": "cases", "device": "pc", "type": "default", "subtype": "", "description": "Cases - default state", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pc_default.jpeg"}, {"file": "cases_pc_filter_country.png", "page": "cases", "device": "pc", "type": "filter", "subtype": "country", "description": "Cases - country filter (USA)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pc_filter_country.jpeg"}, {"file": "cases_pc_filter_tag.png", "page": "cases", "device": "pc", "type": "filter", "subtype": "tag", "description": "Cases - product filter (LMS-6000)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pc_filter_tag.jpeg"}, {"file": "cases_pc_view_list.png", "page": "cases", "device": "pc", "type": "view", "subtype": "list", "description": "Cases - list view", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pc_view_list.jpeg"}, {"file": "contact_pc.png", "page": "contact", "device": "pc", "type": "default", "subtype": "", "description": "Contact Us", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/contact_pc.jpeg"}, {"file": "news_pc.png", "page": "news", "device": "pc", "type": "default", "subtype": "", "description": "News", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_pc.jpeg"}, {"file": "about_pc.png", "page": "about", "device": "pc", "type": "default", "subtype": "", "description": "About Us", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/about_pc.jpeg"}, {"file": "ecatalog_pc.png", "page": "ecatalog", "device": "pc", "type": "default", "subtype": "", "description": "E-Catalog", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_pc.jpeg"}, {"file": "product_detail_pc_tab_default.png", "page": "product_detail", "device": "pc", "type": "tab", "subtype": "default", "description": "Product Detail (Goniophotometer) - default tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_default_part_002.jpeg"]}, {"file": "product_detail_pc_tab_specifications.png", "page": "product_detail", "device": "pc", "type": "tab", "subtype": "specifications", "description": "Product Detail (Goniophotometer) - Specifications tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_specifications_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_specifications_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_specifications_part_002.jpeg"]}, {"file": "product_detail_pc_tab_video.png", "page": "product_detail", "device": "pc", "type": "tab", "subtype": "video", "description": "Product Detail (Goniophotometer) - Videos tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_video.jpeg"}, {"file": "product_detail_pc_tab_download.png", "page": "product_detail", "device": "pc", "type": "tab", "subtype": "download", "description": "Product Detail (Goniophotometer) - Downloads tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_download.jpeg"}, {"file": "product_detail_pc_tab_applications.png", "page": "product_detail", "device": "pc", "type": "tab", "subtype": "applications", "description": "Product Detail (Goniophotometer) - Applications tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_applications.jpeg"}, {"file": "product_detail_pc_tab_standards.png", "page": "product_detail", "device": "pc", "type": "tab", "subtype": "standards", "description": "Product Detail (Goniophotometer) - Standards tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_standards.jpeg"}, {"file": "product_detail_pc_tab_portfolio.png", "page": "product_detail", "device": "pc", "type": "tab", "subtype": "portfolio", "description": "Product Detail (Goniophotometer) - Installations tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_portfolio.jpeg"}, {"file": "product_detail_pc_tab_technology.png", "page": "product_detail", "device": "pc", "type": "tab", "subtype": "technology", "description": "Product Detail (Goniophotometer) - Tech Articles tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pc_tab_technology.jpeg"}, {"file": "product_category_pc.png", "page": "product_category", "device": "pc", "type": "default", "subtype": "", "description": "Product Category (Goniophotometer)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_pc_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_pc_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_pc_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_pc_part_003.jpeg"]}, {"file": "app_detail_pc_tab_default.png", "page": "app_detail", "device": "pc", "type": "tab", "subtype": "default", "description": "Application Detail (LED Test Solutions) - default tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_default_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_default_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_default_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_default_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_default_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_default_part_008.jpeg"]}, {"file": "app_detail_pc_tab_content.png", "page": "app_detail", "device": "pc", "type": "tab", "subtype": "content", "description": "Application Detail (LED Test Solutions) - Content tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_content_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_content_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_content_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_content_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_content_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_content_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_content_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_content_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_content_part_008.jpeg"]}, {"file": "app_detail_pc_tab_products.png", "page": "app_detail", "device": "pc", "type": "tab", "subtype": "products", "description": "Application Detail (LED Test Solutions) - Products tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_products_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_products_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_products_part_002.jpeg"]}, {"file": "app_detail_pc_tab_standards.png", "page": "app_detail", "device": "pc", "type": "tab", "subtype": "standards", "description": "Application Detail (LED Test Solutions) - Standards tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_011.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_standards_part_012.jpeg"]}, {"file": "app_detail_pc_tab_articles.png", "page": "app_detail", "device": "pc", "type": "tab", "subtype": "articles", "description": "Application Detail (LED Test Solutions) - Articles tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_011.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_012.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_013.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_014.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_015.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_016.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_017.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_018.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_019.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_020.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_021.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_022.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_023.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_024.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_025.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_026.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_027.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_028.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_029.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_030.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_031.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_032.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_033.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_034.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_035.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_036.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_037.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_038.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_039.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_040.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_041.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_042.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_043.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pc_tab_articles_part_044.jpeg"]}, {"file": "standard_detail_pc.png", "page": "standard_detail", "device": "pc", "type": "default", "subtype": "", "description": "Standard Detail (IEC)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standard_detail_pc.jpeg"}, {"file": "case_detail_pc_tab_default.png", "page": "case_detail", "device": "pc", "type": "tab", "subtype": "default", "description": "Case Detail (Egypt) - default tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pc_tab_default.jpeg"}, {"file": "case_detail_pc_tab_content.png", "page": "case_detail", "device": "pc", "type": "tab", "subtype": "content", "description": "Case Detail (Egypt) - Content tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pc_tab_content.jpeg"}, {"file": "case_detail_pc_tab_products.png", "page": "case_detail", "device": "pc", "type": "tab", "subtype": "products", "description": "Case Detail (Egypt) - Products tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pc_tab_products.jpeg"}, {"file": "case_detail_pc_tab_applications.png", "page": "case_detail", "device": "pc", "type": "tab", "subtype": "applications", "description": "Case Detail (Egypt) - Applications tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pc_tab_applications.jpeg"}, {"file": "case_detail_pc_tab_standards.png", "page": "case_detail", "device": "pc", "type": "tab", "subtype": "standards", "description": "Case Detail (Egypt) - Standards tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pc_tab_standards_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pc_tab_standards_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pc_tab_standards_part_002.jpeg"]}, {"file": "home_pad_default.png", "page": "home", "device": "pad", "type": "default", "subtype": "", "description": "Home - default state", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_pad_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_pad_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_pad_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_pad_default_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_pad_default_part_004.jpeg"]}, {"file": "products_pad.png", "page": "products", "device": "pad", "type": "default", "subtype": "", "description": "Products", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_pad_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_pad_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_pad_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_pad_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_pad_part_004.jpeg"]}, {"file": "applications_pad.png", "page": "applications", "device": "pad", "type": "default", "subtype": "", "description": "Applications", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_pad_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_pad_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_pad_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_pad_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_pad_part_004.jpeg"]}, {"file": "standards_pad.png", "page": "standards", "device": "pad", "type": "default", "subtype": "", "description": "Standards", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_pad_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_pad_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_pad_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_pad_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_pad_part_004.jpeg"]}, {"file": "cases_pad_default.png", "page": "cases", "device": "pad", "type": "default", "subtype": "", "description": "Cases - default state", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_default_part_003.jpeg"]}, {"file": "cases_pad_filter_country.png", "page": "cases", "device": "pad", "type": "filter", "subtype": "country", "description": "Cases - country filter (USA)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_filter_country_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_filter_country_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_filter_country_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_filter_country_part_003.jpeg"]}, {"file": "cases_pad_filter_tag.png", "page": "cases", "device": "pad", "type": "filter", "subtype": "tag", "description": "Cases - product filter (LMS-6000)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_filter_tag_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_filter_tag_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_filter_tag_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_filter_tag_part_003.jpeg"]}, {"file": "cases_pad_view_list.png", "page": "cases", "device": "pad", "type": "view", "subtype": "list", "description": "Cases - list view", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_view_list_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_view_list_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_view_list_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_pad_view_list_part_003.jpeg"]}, {"file": "contact_pad.png", "page": "contact", "device": "pad", "type": "default", "subtype": "", "description": "Contact Us", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/contact_pad_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/contact_pad_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/contact_pad_part_002.jpeg"]}, {"file": "news_pad.png", "page": "news", "device": "pad", "type": "default", "subtype": "", "description": "News", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_pad_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_pad_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_pad_part_002.jpeg"]}, {"file": "about_pad.png", "page": "about", "device": "pad", "type": "default", "subtype": "", "description": "About Us", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/about_pad-scaled.jpeg"}, {"file": "ecatalog_pad.png", "page": "ecatalog", "device": "pad", "type": "default", "subtype": "", "description": "E-Catalog", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_pad_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_pad_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_pad_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_pad_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_pad_part_004.jpeg"]}, {"file": "product_detail_pad_tab_default.png", "page": "product_detail", "device": "pad", "type": "tab", "subtype": "default", "description": "Product Detail (Goniophotometer) - default tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_default_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_default_part_004.jpeg"]}, {"file": "product_detail_pad_tab_specifications.png", "page": "product_detail", "device": "pad", "type": "tab", "subtype": "specifications", "description": "Product Detail (Goniophotometer) - Specifications tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_specifications_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_specifications_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_specifications_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_specifications_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_specifications_part_004.jpeg"]}, {"file": "product_detail_pad_tab_video.png", "page": "product_detail", "device": "pad", "type": "tab", "subtype": "video", "description": "Product Detail (Goniophotometer) - Videos tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_video_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_video_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_video_part_002.jpeg"]}, {"file": "product_detail_pad_tab_download.png", "page": "product_detail", "device": "pad", "type": "tab", "subtype": "download", "description": "Product Detail (Goniophotometer) - Downloads tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_download_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_download_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_download_part_002.jpeg"]}, {"file": "product_detail_pad_tab_applications.png", "page": "product_detail", "device": "pad", "type": "tab", "subtype": "applications", "description": "Product Detail (Goniophotometer) - Applications tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_applications.jpeg"}, {"file": "product_detail_pad_tab_standards.png", "page": "product_detail", "device": "pad", "type": "tab", "subtype": "standards", "description": "Product Detail (Goniophotometer) - Standards tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_standards_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_standards_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_standards_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_standards_part_003.jpeg"]}, {"file": "product_detail_pad_tab_portfolio.png", "page": "product_detail", "device": "pad", "type": "tab", "subtype": "portfolio", "description": "Product Detail (Goniophotometer) - Installations tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_portfolio_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_portfolio_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_portfolio_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_portfolio_part_003.jpeg"]}, {"file": "product_detail_pad_tab_technology.png", "page": "product_detail", "device": "pad", "type": "tab", "subtype": "technology", "description": "Product Detail (Goniophotometer) - Tech Articles tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_technology_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_technology_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_technology_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_pad_tab_technology_part_003.jpeg"]}, {"file": "product_category_pad.png", "page": "product_category", "device": "pad", "type": "default", "subtype": "", "description": "Product Category (Goniophotometer)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_pad_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_pad_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_pad_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_pad_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_pad_part_004.jpeg"]}, {"file": "app_detail_pad_tab_default.png", "page": "app_detail", "device": "pad", "type": "tab", "subtype": "default", "description": "Application Detail (LED Test Solutions) - default tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_011.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_012.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_013.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_default_part_014.jpeg"]}, {"file": "app_detail_pad_tab_content.png", "page": "app_detail", "device": "pad", "type": "tab", "subtype": "content", "description": "Application Detail (LED Test Solutions) - Content tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_011.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_012.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_013.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_content_part_014.jpeg"]}, {"file": "app_detail_pad_tab_products.png", "page": "app_detail", "device": "pad", "type": "tab", "subtype": "products", "description": "Application Detail (LED Test Solutions) - Products tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_products_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_products_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_products_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_products_part_003.jpeg"]}, {"file": "app_detail_pad_tab_standards.png", "page": "app_detail", "device": "pad", "type": "tab", "subtype": "standards", "description": "Application Detail (LED Test Solutions) - Standards tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_011.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_012.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_013.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_014.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_015.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_016.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_017.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_018.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_019.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_020.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_021.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_022.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_023.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_024.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_025.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_026.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_027.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_028.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_029.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_030.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_031.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_032.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_033.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_034.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_035.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_036.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_037.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_038.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_039.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_040.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_041.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_042.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_pad_tab_standards_part_043.jpeg"]}, {"file": "standard_detail_pad.png", "page": "standard_detail", "device": "pad", "type": "default", "subtype": "", "description": "Standard Detail (IEC)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standard_detail_pad_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/standard_detail_pad_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standard_detail_pad_part_002.jpeg"]}, {"file": "case_detail_pad_tab_default.png", "page": "case_detail", "device": "pad", "type": "tab", "subtype": "default", "description": "Case Detail (Egypt) - default tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_default_part_003.jpeg"]}, {"file": "case_detail_pad_tab_content.png", "page": "case_detail", "device": "pad", "type": "tab", "subtype": "content", "description": "Case Detail (Egypt) - Content tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_content_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_content_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_content_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_content_part_003.jpeg"]}, {"file": "case_detail_pad_tab_products.png", "page": "case_detail", "device": "pad", "type": "tab", "subtype": "products", "description": "Case Detail (Egypt) - Products tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_products.jpeg"}, {"file": "case_detail_pad_tab_applications.png", "page": "case_detail", "device": "pad", "type": "tab", "subtype": "applications", "description": "Case Detail (Egypt) - Applications tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_applications.jpeg"}, {"file": "case_detail_pad_tab_standards.png", "page": "case_detail", "device": "pad", "type": "tab", "subtype": "standards", "description": "Case Detail (Egypt) - Standards tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_standards_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_standards_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_standards_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_standards_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_standards_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_standards_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_pad_tab_standards_part_006.jpeg"]}, {"file": "home_mobile_default.png", "page": "home", "device": "mobile", "type": "default", "subtype": "", "description": "Home - default state", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_mobile_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_mobile_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_mobile_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_mobile_default_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_mobile_default_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_mobile_default_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_mobile_default_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/home_mobile_default_part_007.jpeg"]}, {"file": "products_mobile.png", "page": "products", "device": "mobile", "type": "default", "subtype": "", "description": "Products", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_mobile_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_mobile_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_mobile_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_mobile_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_mobile_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_mobile_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_mobile_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/products_mobile_part_007.jpeg"]}, {"file": "applications_mobile.png", "page": "applications", "device": "mobile", "type": "default", "subtype": "", "description": "Applications", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_mobile_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_mobile_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_mobile_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_mobile_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_mobile_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_mobile_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_mobile_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/applications_mobile_part_007.jpeg"]}, {"file": "standards_mobile.png", "page": "standards", "device": "mobile", "type": "default", "subtype": "", "description": "Standards", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_mobile_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_mobile_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_mobile_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_mobile_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_mobile_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_mobile_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_mobile_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standards_mobile_part_007.jpeg"]}, {"file": "cases_mobile_default.png", "page": "cases", "device": "mobile", "type": "default", "subtype": "", "description": "Cases - default state", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_default_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_default_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_default_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_default_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_default_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_default_part_008.jpeg"]}, {"file": "cases_mobile_filter_country.png", "page": "cases", "device": "mobile", "type": "filter", "subtype": "country", "description": "Cases - country filter (USA)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_country_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_country_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_country_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_country_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_country_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_country_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_country_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_country_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_country_part_008.jpeg"]}, {"file": "cases_mobile_filter_tag.png", "page": "cases", "device": "mobile", "type": "filter", "subtype": "tag", "description": "Cases - product filter (LMS-6000)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_tag_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_tag_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_tag_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_tag_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_tag_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_tag_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_tag_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_tag_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_filter_tag_part_008.jpeg"]}, {"file": "cases_mobile_view_list.png", "page": "cases", "device": "mobile", "type": "view", "subtype": "list", "description": "Cases - list view", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_view_list_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_view_list_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_view_list_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_view_list_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_view_list_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_view_list_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_view_list_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_view_list_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/cases_mobile_view_list_part_008.jpeg"]}, {"file": "contact_mobile.png", "page": "contact", "device": "mobile", "type": "default", "subtype": "", "description": "Contact Us", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/contact_mobile_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/contact_mobile_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/contact_mobile_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/contact_mobile_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/contact_mobile_part_004.jpeg"]}, {"file": "news_mobile.png", "page": "news", "device": "mobile", "type": "default", "subtype": "", "description": "News", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/news_mobile_part_011.jpeg"]}, {"file": "about_mobile.png", "page": "about", "device": "mobile", "type": "default", "subtype": "", "description": "About Us", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/about_mobile-scaled.jpeg"}, {"file": "ecatalog_mobile.png", "page": "ecatalog", "device": "mobile", "type": "default", "subtype": "", "description": "E-Catalog", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_mobile_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_mobile_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_mobile_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_mobile_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_mobile_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_mobile_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_mobile_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/ecatalog_mobile_part_007.jpeg"]}, {"file": "product_detail_mobile_tab_default.png", "page": "product_detail", "device": "mobile", "type": "tab", "subtype": "default", "description": "Product Detail (Goniophotometer) - default tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_default_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_default_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_default_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_default_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_default_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_default_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_default_part_009.jpeg"]}, {"file": "product_detail_mobile_tab_specifications.png", "page": "product_detail", "device": "mobile", "type": "tab", "subtype": "specifications", "description": "Product Detail (Goniophotometer) - Specifications tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_specifications_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_specifications_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_specifications_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_specifications_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_specifications_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_specifications_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_specifications_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_specifications_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_specifications_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_specifications_part_009.jpeg"]}, {"file": "product_detail_mobile_tab_video.png", "page": "product_detail", "device": "mobile", "type": "tab", "subtype": "video", "description": "Product Detail (Goniophotometer) - Videos tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_video_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_video_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_video_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_video_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_video_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_video_part_005.jpeg"]}, {"file": "product_detail_mobile_tab_download.png", "page": "product_detail", "device": "mobile", "type": "tab", "subtype": "download", "description": "Product Detail (Goniophotometer) - Downloads tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_download_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_download_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_download_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_download_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_download_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_download_part_005.jpeg"]}, {"file": "product_detail_mobile_tab_applications.png", "page": "product_detail", "device": "mobile", "type": "tab", "subtype": "applications", "description": "Product Detail (Goniophotometer) - Applications tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_applications_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_applications_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_applications_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_applications_part_003.jpeg"]}, {"file": "product_detail_mobile_tab_standards.png", "page": "product_detail", "device": "mobile", "type": "tab", "subtype": "standards", "description": "Product Detail (Goniophotometer) - Standards tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_standards_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_standards_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_standards_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_standards_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_standards_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_standards_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_standards_part_006.jpeg"]}, {"file": "product_detail_mobile_tab_portfolio.png", "page": "product_detail", "device": "mobile", "type": "tab", "subtype": "portfolio", "description": "Product Detail (Goniophotometer) - Installations tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_portfolio_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_portfolio_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_portfolio_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_portfolio_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_portfolio_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_portfolio_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_portfolio_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_portfolio_part_007.jpeg"]}, {"file": "product_detail_mobile_tab_technology.png", "page": "product_detail", "device": "mobile", "type": "tab", "subtype": "technology", "description": "Product Detail (Goniophotometer) - Tech Articles tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_technology_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_technology_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_technology_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_technology_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_technology_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_technology_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_detail_mobile_tab_technology_part_006.jpeg"]}, {"file": "product_category_mobile.png", "page": "product_category", "device": "mobile", "type": "default", "subtype": "", "description": "Product Category (Goniophotometer)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_mobile_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_mobile_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_mobile_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_mobile_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_mobile_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_mobile_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_mobile_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/product_category_mobile_part_007.jpeg"]}, {"file": "app_detail_mobile_tab_default.png", "page": "app_detail", "device": "mobile", "type": "tab", "subtype": "default", "description": "Application Detail (LED Test Solutions) - default tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_011.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_012.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_013.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_014.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_015.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_016.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_017.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_018.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_019.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_020.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_021.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_022.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_023.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_default_part_024.jpeg"]}, {"file": "app_detail_mobile_tab_content.png", "page": "app_detail", "device": "mobile", "type": "tab", "subtype": "content", "description": "Application Detail (LED Test Solutions) - Content tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_011.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_012.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_013.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_014.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_015.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_016.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_017.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_018.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_019.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_020.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_021.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_022.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_023.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_content_part_024.jpeg"]}, {"file": "app_detail_mobile_tab_products.png", "page": "app_detail", "device": "mobile", "type": "tab", "subtype": "products", "description": "Application Detail (LED Test Solutions) - Products tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_011.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_012.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_013.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_014.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_015.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_016.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_products_part_017.jpeg"]}, {"file": "app_detail_mobile_tab_standards.png", "page": "app_detail", "device": "mobile", "type": "tab", "subtype": "standards", "description": "Application Detail (LED Test Solutions) - Standards tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_011.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_012.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_013.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_014.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_015.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_016.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_017.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_018.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_019.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_020.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_021.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_022.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_023.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_024.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_025.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_026.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_027.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_028.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_029.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_030.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_031.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_032.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_033.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_034.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_035.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_036.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_037.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_038.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_039.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_040.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_041.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_042.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_043.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_044.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_045.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_046.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_047.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_048.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_049.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_050.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_051.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_052.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_053.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_054.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_055.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_056.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_057.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_058.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_059.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_060.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_061.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_062.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_063.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_064.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_065.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_066.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_067.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_068.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_069.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_070.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_071.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_072.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_073.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_074.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_075.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_076.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_077.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_078.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_079.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_080.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_081.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_082.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_083.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_084.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_085.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_086.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_087.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_088.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_089.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_090.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_091.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_092.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/app_detail_mobile_tab_standards_part_093.jpeg"]}, {"file": "standard_detail_mobile.png", "page": "standard_detail", "device": "mobile", "type": "default", "subtype": "", "description": "Standard Detail (IEC)", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standard_detail_mobile_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/standard_detail_mobile_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standard_detail_mobile_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standard_detail_mobile_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/standard_detail_mobile_part_004.jpeg"]}, {"file": "case_detail_mobile_tab_default.png", "page": "case_detail", "device": "mobile", "type": "tab", "subtype": "default", "description": "Case Detail (Egypt) - default tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_default_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_default_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_default_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_default_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_default_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_default_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_default_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_default_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_default_part_008.jpeg"]}, {"file": "case_detail_mobile_tab_content.png", "page": "case_detail", "device": "mobile", "type": "tab", "subtype": "content", "description": "Case Detail (Egypt) - Content tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_content_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_content_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_content_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_content_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_content_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_content_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_content_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_content_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_content_part_008.jpeg"]}, {"file": "case_detail_mobile_tab_products.png", "page": "case_detail", "device": "mobile", "type": "tab", "subtype": "products", "description": "Case Detail (Egypt) - Products tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_products_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_products_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_products_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_products_part_003.jpeg"]}, {"file": "case_detail_mobile_tab_applications.png", "page": "case_detail", "device": "mobile", "type": "tab", "subtype": "applications", "description": "Case Detail (Egypt) - Applications tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_applications_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_applications_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_applications_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_applications_part_003.jpeg"]}, {"file": "case_detail_mobile_tab_standards.png", "page": "case_detail", "device": "mobile", "type": "tab", "subtype": "standards", "description": "Case Detail (Egypt) - Standards tab", "url": "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_001.jpeg", "urls": ["https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_001.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_002.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_003.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_004.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_005.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_006.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_007.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_008.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_009.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_010.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_011.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_012.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_013.jpeg", "https://humanlifeos.art:2003/wp-content/uploads/2026/08/case_detail_mobile_tab_standards_part_014.jpeg"]}];
+
+const PAGE_LABELS = {
+  home: "Home",
+  products: "Products",
+  applications: "Applications",
+  standards: "Standards",
+  cases: "Cases",
+  contact: "Contact Us",
+  news: "News",
+  about: "About Us",
+  ecatalog: "E-Catalog",
+  product_detail: "Product Detail",
+  product_category: "Product Category",
+  app_detail: "Application Detail",
+  standard_detail: "Standard Detail",
+  case_detail: "Case Detail"
+};
+
+const DEVICE_LABELS = { pc: "PC", pad: "Pad", mobile: "Mobile" };
+const STATE_LABELS = { default: "Default", hover: "Hover", tab: "Tab", filter: "Filter", view: "View" };
+const PAGE_ORDER = Object.keys(PAGE_LABELS);
+const DEVICE_ORDER = ["pc", "pad", "mobile"];
+const STATE_ORDER = ["default", "hover", "tab", "filter", "view"];
+
+const state = {
+  page: "all",
+  devices: new Set(DEVICE_ORDER),
+  states: new Set(STATE_ORDER),
+  query: "",
+  sort: "page",
+  density: "comfortable",
+  filtered: [],
+  lightboxIndex: 0
+};
+
+const pageList = document.getElementById("pageList");
+const results = document.getElementById("results");
+const statusLine = document.getElementById("statusLine");
+const searchInput = document.getElementById("searchInput");
+const sortSelect = document.getElementById("sortSelect");
+const densityButton = document.getElementById("densityButton");
+const resetButton = document.getElementById("resetButton");
+const lightbox = document.getElementById("lightbox");
+const lightboxTitle = document.getElementById("lightboxTitle");
+const lightboxSubtitle = document.getElementById("lightboxSubtitle");
+const lightboxImageStack = document.getElementById("lightboxImageStack");
+const lightboxStage = document.getElementById("lightboxStage");
+const lightboxLoading = document.getElementById("lightboxLoading");
+
+function labelFor(map, key) {
+  return map[key] || key.replaceAll("_", " ");
+}
+
+function compareByOrder(order, a, b) {
+  const ai = order.indexOf(a);
+  const bi = order.indexOf(b);
+  return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+}
+
+function enriched(item, index) {
+  return {
+    ...item,
+    index,
+    pageLabel: labelFor(PAGE_LABELS, item.page),
+    deviceLabel: labelFor(DEVICE_LABELS, item.device),
+    stateLabel: labelFor(STATE_LABELS, item.type),
+    searchText: [
+      item.page, labelFor(PAGE_LABELS, item.page),
+      item.device, labelFor(DEVICE_LABELS, item.device),
+      item.type, labelFor(STATE_LABELS, item.type),
+      item.subtype, item.file, item.description
+    ].join(" ").toLowerCase()
+  };
+}
+
+const ITEMS = SCREENSHOTS.map(enriched);
+
+function countBy(key) {
+  return ITEMS.reduce((acc, item) => {
+    acc[item[key]] = (acc[item[key]] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function buildPageNav() {
+  const counts = countBy("page");
+  const total = ITEMS.length;
+  const pageKeys = Object.keys(counts).sort((a, b) => compareByOrder(PAGE_ORDER, a, b) || a.localeCompare(b));
+  pageList.innerHTML = "";
+  pageList.appendChild(pageButton("all", "All pages", total));
+  pageKeys.forEach(page => pageList.appendChild(pageButton(page, labelFor(PAGE_LABELS, page), counts[page])));
+  document.getElementById("totalSummary").textContent = `${total} screenshots across ${pageKeys.length} pages`;
+}
+
+function pageButton(key, label, count) {
+  const button = document.createElement("button");
+  button.className = "page-button" + (state.page === key ? " active" : "");
+  button.type = "button";
+  button.innerHTML = `<span class="page-name">${label}</span><span class="page-count">${count}</span>`;
+  button.onclick = () => {
+    state.page = key;
+    buildPageNav();
+    render();
+  };
+  return button;
+}
+
+function buildChips(containerId, keys, activeSet, labels, onToggle) {
+  const container = document.getElementById(containerId);
+  container.querySelectorAll(".chip").forEach(chip => chip.remove());
+  keys.forEach(key => {
+    const chip = document.createElement("button");
+    chip.className = "chip" + (activeSet.has(key) ? " active" : "");
+    chip.type = "button";
+    chip.textContent = labels[key] || key;
+    chip.onclick = () => onToggle(key);
+    container.appendChild(chip);
+  });
+}
+
+function buildFilters() {
+  buildChips("deviceFilters", DEVICE_ORDER, state.devices, DEVICE_LABELS, key => {
+    toggleSet(state.devices, key);
+    buildFilters();
+    render();
+  });
+  buildChips("stateFilters", STATE_ORDER, state.states, STATE_LABELS, key => {
+    toggleSet(state.states, key);
+    buildFilters();
+    render();
+  });
+}
+
+function toggleSet(set, key) {
+  if (set.has(key)) {
+    set.delete(key);
+  } else {
+    set.add(key);
+  }
+}
+
+function filteredItems() {
+  const query = state.query.trim().toLowerCase();
+  let items = ITEMS.filter(item => {
+    if (state.page !== "all" && item.page !== state.page) return false;
+    if (!state.devices.has(item.device)) return false;
+    if (!state.states.has(item.type)) return false;
+    if (query && !item.searchText.includes(query)) return false;
+    return true;
+  });
+
+  items = items.sort((a, b) => {
+    if (state.sort === "device") {
+      return compareByOrder(DEVICE_ORDER, a.device, b.device) ||
+        compareByOrder(PAGE_ORDER, a.page, b.page) ||
+        a.file.localeCompare(b.file);
+    }
+    if (state.sort === "state") {
+      return compareByOrder(STATE_ORDER, a.type, b.type) ||
+        compareByOrder(PAGE_ORDER, a.page, b.page) ||
+        a.file.localeCompare(b.file);
+    }
+    if (state.sort === "file") {
+      return a.file.localeCompare(b.file);
+    }
+    return compareByOrder(PAGE_ORDER, a.page, b.page) ||
+      compareByOrder(DEVICE_ORDER, a.device, b.device) ||
+      compareByOrder(STATE_ORDER, a.type, b.type) ||
+      a.file.localeCompare(b.file);
+  });
+
+  return items;
+}
+
+function groupItems(items) {
+  if (state.sort === "device") return groupBy(items, "device", DEVICE_LABELS);
+  if (state.sort === "state") return groupBy(items, "type", STATE_LABELS);
+  if (state.page !== "all") return [[labelFor(PAGE_LABELS, state.page), items]];
+  return groupBy(items, "page", PAGE_LABELS);
+}
+
+function groupBy(items, key, labels) {
+  const groups = new Map();
+  items.forEach(item => {
+    const groupKey = item[key];
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push(item);
+  });
+  return Array.from(groups.entries()).map(([keyValue, groupItems]) => [labelFor(labels, keyValue), groupItems]);
+}
+
+function render() {
+  state.filtered = filteredItems();
+  const pageText = state.page === "all" ? "all pages" : labelFor(PAGE_LABELS, state.page);
+  statusLine.textContent = `${state.filtered.length} of ${ITEMS.length} screenshots shown in ${pageText}`;
+
+  if (state.filtered.length === 0) {
+    results.innerHTML = `<div class="empty">No screenshots match the current filters.</div>`;
+    return;
+  }
+
+  results.innerHTML = "";
+  groupItems(state.filtered).forEach(([title, items]) => {
+    const section = document.createElement("section");
+    section.className = "section";
+    section.innerHTML = `
+      <div class="section-header">
+        <h2 class="section-title">${title}</h2>
+        <div class="section-meta">${items.length} screenshots</div>
+      </div>
+      <div class="grid"></div>
+    `;
+    const grid = section.querySelector(".grid");
+    items.forEach(item => grid.appendChild(cardFor(item)));
+    results.appendChild(section);
+  });
+}
+
+function imageSrc(item) {
+  return item.url || `screenshots/${item.file}`;
+}
+
+function cardFor(item) {
+  const card = document.createElement("article");
+  card.className = "card";
+  card.tabIndex = 0;
+  card.setAttribute("role", "button");
+  card.setAttribute("aria-label", "View large screenshot: " + item.description);
+  card.addEventListener("click", event => {
+    event.preventDefault();
+    openLightbox(state.filtered.indexOf(item));
+  });
+  card.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openLightbox(state.filtered.indexOf(item));
+    }
+  });
+  card.innerHTML = `
+    <div class="thumb-wrap">
+      <img class="thumb" loading="lazy" src="${imageSrc(item)}" alt="${item.description}">
+      <span class="device-pill">${item.deviceLabel}</span>
+    </div>
+    <div class="card-body">
+      <h3 class="card-title">${item.description}</h3>
+      <div class="meta">
+        <span class="tag">${item.pageLabel}</span>
+        <span class="tag state-${item.type}">${item.stateLabel}</span>
+        ${item.subtype ? `<span class="tag">${item.subtype}</span>` : ""}
+      </div>
+      <div class="filename" title="${item.file}">${item.file}</div>
+      <button class="view-action" type="button">View large</button>
+    </div>
+  `;
+  return card;
+}
+
+function openLightbox(index) {
+  if (index < 0) return;
+  state.lightboxIndex = index;
+  updateLightbox();
+  lightbox.classList.add("active");
+}
+
+function updateLightbox() {
+  const item = state.filtered[state.lightboxIndex];
+  if (!item) return;
+  lightboxTitle.textContent = item.description;
+  lightboxSubtitle.textContent = `${item.pageLabel} / ${item.deviceLabel} / ${item.stateLabel} / ${item.file}`;
+  lightboxLoading.style.display = "grid";
+  lightboxImageStack.style.opacity = "0";
+  lightboxImageStack.scrollTop = 0;
+  renderLightboxImages(item);
+}
+
+function renderLightboxImages(item) {
+  const urls = item.urls && item.urls.length ? item.urls : [imageSrc(item)];
+  lightboxImageStack.innerHTML = urls.map((url, index) => `<img src="${url}" alt="${item.description} part ${index + 1}">`).join("");
+  const images = Array.from(lightboxImageStack.querySelectorAll("img"));
+  let loaded = 0;
+  images.forEach(image => image.addEventListener("load", () => {
+    loaded += 1;
+    if (loaded === images.length) {
+      lightboxLoading.style.display = "none";
+      lightboxImageStack.style.opacity = "1";
+    }
+  }));
+}
+
+function closeLightbox() {
+  lightbox.classList.remove("active");
+}
+
+function moveLightbox(delta) {
+  if (!state.filtered.length) return;
+  state.lightboxIndex = (state.lightboxIndex + delta + state.filtered.length) % state.filtered.length;
+  updateLightbox();
+}
+
+function reset() {
+  state.page = "all";
+  state.devices = new Set(DEVICE_ORDER);
+  state.states = new Set(STATE_ORDER);
+  state.query = "";
+  state.sort = "page";
+  searchInput.value = "";
+  sortSelect.value = "page";
+  buildPageNav();
+  buildFilters();
+  render();
+}
+
+searchInput.addEventListener("input", event => {
+  state.query = event.target.value;
+  render();
+});
+
+sortSelect.addEventListener("change", event => {
+  state.sort = event.target.value;
+  render();
+});
+
+densityButton.addEventListener("click", () => {
+  state.density = state.density === "comfortable" ? "compact" : state.density === "compact" ? "large" : "comfortable";
+  document.body.className = state.density;
+  densityButton.textContent = state.density === "comfortable" ? "Compact" : state.density === "compact" ? "Large" : "Comfort";
+});
+
+resetButton.addEventListener("click", reset);
+document.getElementById("closeLightbox").addEventListener("click", closeLightbox);
+document.getElementById("prevButton").addEventListener("click", () => moveLightbox(-1));
+document.getElementById("nextButton").addEventListener("click", () => moveLightbox(1));
+lightboxStage.addEventListener("click", event => {
+  if (event.target === lightboxStage) closeLightbox();
+});
+
+document.addEventListener("keydown", event => {
+  if (!lightbox.classList.contains("active")) return;
+  if (event.key === "Escape") closeLightbox();
+  if (event.key === "ArrowLeft") moveLightbox(-1);
+  if (event.key === "ArrowRight") moveLightbox(1);
+});
+
+buildPageNav();
+buildFilters();
+render();
+</script>
+</body>
+</html>
