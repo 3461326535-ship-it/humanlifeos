@@ -184,7 +184,7 @@ function buildTaskPrompt() {
 - 用户说"总结"/"汇总"/"今天做了什么"时，action 应为 "summary" 并提取 period，confidence 至少 8`;
 }
 
-async function handleSingleTask(message) {
+async function handleSingleTask(message, userId) {
   const raw = await callDeepSeek(buildTaskPrompt(), message, {
     temperature: 0.2, maxTokens: 500, responseFormat: 'json_object', label: 'SingleTask'
   });
@@ -206,7 +206,7 @@ async function handleSingleTask(message) {
         parsed.action !== 'suggestion' &&
         parsed.action !== 'analysis') {
       parsed.confirmId = generateConfirmId();
-      await savePendingAction(parsed.confirmId, parsed.action, parsed.data, null);
+      await savePendingAction(parsed.confirmId, parsed.action, parsed.data, userId);
     }
 
     return parsed;
@@ -272,7 +272,7 @@ router.post('/chat', validate({
         return res.json(chatResult);
       }
       console.log('[Route] → SingleTaskHandler');
-      const result = await handleSingleTask(message);
+      const result = await handleSingleTask(message, uid(req));
 
       if (!result) {
         // Parse failed, fallback to chat
