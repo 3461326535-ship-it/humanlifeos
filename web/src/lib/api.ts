@@ -202,8 +202,8 @@ export const api = {
     const s = qs.toString();
     return request<GanttBoard>(`/gantt${s ? `?${s}` : ''}`);
   },
-  /** 移动或拉伸任务条；cascade=true 时依赖它的后续任务自动顺延 */
-  moveGanttTask(id: number, data: { start: string; end?: string; cascade?: boolean }) {
+  /** 移动或拉伸任务条；cascade=true 时依赖它的后续任务自动顺延；milestone 可顺带转成/取消里程碑 */
+  moveGanttTask(id: number, data: { start: string; end?: string; cascade?: boolean; milestone?: boolean }) {
     return request<GanttMoveResult>(`/gantt/tasks/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),

@@ -33,6 +33,7 @@ export default function GanttTaskDialog({
 }) {
   const [start, setStart] = useState(task.start);
   const [end, setEnd] = useState(task.end);
+  const [milestone, setMilestone] = useState(!!task.milestone);
   const [status, setStatus] = useState(task.status);
   const [projectId, setProjectId] = useState<string>(task.project_id != null ? String(task.project_id) : '');
   const [title, setTitle] = useState(task.title);
@@ -55,21 +56,23 @@ export default function GanttTaskDialog({
     [tasks, task]
   );
 
-  const duration = dayDiff(start, end) + 1;
+  const duration = milestone ? 1 : dayDiff(start, end) + 1;
   const dirty =
-    start !== task.start || end !== task.end || status !== task.status ||
+    start !== task.start || (milestone ? start : end) !== task.end || milestone !== task.milestone ||
+    status !== task.status ||
     (projectId ? Number(projectId) : null) !== task.project_id || title.trim() !== task.title;
 
   async function save() {
     if (!title.trim()) return setError('标题不能为空');
     if (!start) return setError('开始日期不能为空');
-    if (end < start) return setError('结束日期不能早于开始日期');
+    if (!milestone && end < start) return setError('结束日期不能早于开始日期');
     setBusy(true);
     setError('');
     let msg = '已保存';
     try {
-      if (start !== task.start || end !== task.end) {
-        const r = await api.moveGanttTask(task.id, { start, end, cascade: true });
+      const endVal = milestone ? start : end;
+      if (start !== task.start || endVal !== task.end || milestone !== task.milestone) {
+        const r = await api.moveGanttTask(task.id, { start, end: endVal, cascade: true, milestone });
         if (r.cascaded > 0) msg = `已保存，顺延了 ${r.cascaded} 个后续任务`;
       }
       if (
@@ -143,8 +146,7 @@ export default function GanttTaskDialog({
             <div className="flex items-center gap-2">
               <span className={`h-[7px] w-[7px] flex-none rounded-full ${STATUS_DOT[status]}`} />
               <span className="text-[11.5px] text-ink-soft">
-                {STATUS_LABELS[status]} · 工期 {duration} 天
-                {task.milestone ? '（单日）' : ''}
+                {STATUS_LABELS[status]} · {milestone ? '里程碑（单个日期）' : `工期 ${duration} 天`}
               </span>
               {task.isCritical && (
                 <span className="chip border border-coral/40 bg-coral-soft/70 text-coral">关键路径</span>
@@ -161,9 +163,9 @@ export default function GanttTaskDialog({
             <input id="gt-title" className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className={milestone ? '' : 'grid grid-cols-2 gap-3'}>
             <div>
-              <label className="label" htmlFor="gt-start">开始</label>
+              <label className="label" htmlFor="gt-start">{milestone ? '达成日' : '开始'}</label>
               <input
                 id="gt-start"
                 type="date"
@@ -176,18 +178,38 @@ export default function GanttTaskDialog({
                 }}
               />
             </div>
-            <div>
-              <label className="label" htmlFor="gt-end">结束（含当天）</label>
-              <input
-                id="gt-end"
-                type="date"
-                className="input"
-                value={end}
-                min={start}
-                onChange={(e) => setEnd(e.target.value)}
-              />
-            </div>
+            {!milestone && (
+              <div>
+                <label className="label" htmlFor="gt-end">结束（含当天）</label>
+                <input
+                  id="gt-end"
+                  type="date"
+                  className="input"
+                  value={end}
+                  min={start}
+                  onChange={(e) => setEnd(e.target.value)}
+                />
+              </div>
+            )}
           </div>
+
+          <label className="flex cursor-pointer select-none items-center gap-2 text-[12.5px] text-ink-mid">
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 accent-[#2F6B4F]"
+              checked={milestone}
+              onChange={(e) => {
+                const v = e.target.checked;
+                setMilestone(v);
+                // 转里程碑：收敛成一天；转回任务：先保持一天，用户再拉长
+                setEnd(v ? start : end < start ? start : end);
+              }}
+            />
+            <span className="flex items-center gap-1.5">
+              <span className="text-moss-deep">◆</span>
+              里程碑（只有一个达成日，不占工期）
+            </span>
+          </label>
 
           <div className="grid grid-cols-2 gap-3">
             <div>

@@ -87,6 +87,13 @@ export default function EventRow({
               event.completed ? 'text-ink-soft line-through' : 'text-ink'
             }`}
           >
+            {event.is_milestone ? (
+              <span
+                className="mr-1.5 inline-block h-[7px] w-[7px] rotate-45 bg-moss-deep"
+                style={{ verticalAlign: '1px' }}
+                title="里程碑（只有一个达成日）"
+              />
+            ) : null}
             {event.title}
           </p>
 

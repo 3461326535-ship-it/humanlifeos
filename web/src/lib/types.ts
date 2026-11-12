@@ -22,6 +22,8 @@ export interface TodoEvent {
   end_time: string | null;
   /** 甘特：计划结束日（null = 单日任务） */
   end_date: string | null;
+  /** 甘特：里程碑（只占一个日期点，不占工期） */
+  is_milestone: number | null;
   project_id: number | null;
   position: number | null;
   completed_at: string | null;
@@ -49,6 +51,8 @@ export interface EventInput {
   priority?: string | null;
   /** 甘特：计划结束日（YYYY-MM-DD，不传/等于 date 即单日任务） */
   end_date?: string | null;
+  /** 甘特：里程碑（1 = 里程碑，只有一个日期点） */
+  is_milestone?: number | null;
   project_id?: number | null;
 }
 
@@ -175,7 +179,8 @@ export interface GanttTask {
   description: string;
   progress: number;             // 0-100，由子任务推导
   subtasks: { done: number; total: number };
-  milestone: boolean;           // 单日任务
+  milestone: boolean;           // 里程碑（菱形、不占工期）
+  singleDay: boolean;           // 只是恰好排了一天，仍是普通任务
   overdue: boolean;
   isCritical: boolean;
   slack: number | null;
@@ -210,6 +215,7 @@ export interface GanttBoard {
     overdue: number;
     critical: number;
     withDependencies: number;
+    milestones: number;
   };
 }
 

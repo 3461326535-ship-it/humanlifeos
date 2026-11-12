@@ -9,6 +9,7 @@ interface Draft {
   title: string;
   date: string;
   end_date: string;
+  milestone: boolean;
   time: string;
   category: string;
   description: string;
@@ -24,13 +25,16 @@ function toDraft(
   defaultDate: string,
   defaultStatus: TaskStatus = 'todo',
   defaultRecurrence: Recurrence | '' = '',
-  defaultEndDate = ''
+  defaultEndDate = '',
+  defaultMilestone = false
 ): Draft {
   if (event) {
+    const milestone = !!event.is_milestone;
     return {
       title: event.title,
       date: event.date,
-      end_date: event.end_date && event.end_date > event.date ? event.end_date : '',
+      end_date: milestone ? '' : event.end_date && event.end_date > event.date ? event.end_date : '',
+      milestone,
       time: event.time || '',
       category: event.category || '',
       description: event.description || '',
@@ -44,7 +48,8 @@ function toDraft(
   return {
     title: '',
     date: defaultDate,
-    end_date: defaultEndDate,
+    end_date: defaultMilestone ? '' : defaultEndDate,
+    milestone: defaultMilestone,
     time: '',
     category: '',
     description: '',
@@ -60,8 +65,9 @@ function toInput(d: Draft): EventInput {
   return {
     title: d.title.trim(),
     date: d.date,
-    // 甘特：跨天任务才有结束日；未填或填成单日 → null
-    end_date: d.end_date && d.end_date > d.date ? d.end_date : null,
+    // 甘特：跨天任务才有结束日；里程碑/未填/单日 → null
+    end_date: !d.milestone && d.end_date && d.end_date > d.date ? d.end_date : null,
+    is_milestone: d.milestone ? 1 : 0,
     time: d.time || '',
     category: d.category || '其他',
     description: d.description,
@@ -79,6 +85,7 @@ export default function EventDialog({
   defaultStatus,
   defaultRecurrence = '',
   defaultEndDate = '',
+  defaultMilestone = false,
   onClose,
   onSaved,
 }: {
@@ -87,11 +94,12 @@ export default function EventDialog({
   defaultStatus?: TaskStatus;
   defaultRecurrence?: Recurrence | '';
   defaultEndDate?: string;
+  defaultMilestone?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() =>
-    toDraft(event, defaultDate, defaultStatus, defaultRecurrence, defaultEndDate)
+    toDraft(event, defaultDate, defaultStatus, defaultRecurrence, defaultEndDate, defaultMilestone)
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
@@ -155,10 +163,10 @@ export default function EventDialog({
             />
           </div>
 
-          {/* 日期 / 结束日期（甘特：跨天任务填结束日） */}
+          {/* 日期 / 结束日期（甘特：跨天任务填结束日；里程碑只有一个达成日） */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label" htmlFor="ev-date">开始日期 *</label>
+              <label className="label" htmlFor="ev-date">{draft.milestone ? '达成日 *' : '开始日期 *'}</label>
               <input
                 id="ev-date"
                 type="date"
@@ -176,16 +184,36 @@ export default function EventDialog({
             </div>
             <div>
               <label className="label" htmlFor="ev-end-date">结束日期（可选）</label>
-              <input
-                id="ev-end-date"
-                type="date"
-                className="input"
-                value={draft.end_date}
-                min={draft.date}
-                onChange={(e) => set('end_date', e.target.value)}
-              />
+              {draft.milestone ? (
+                <div className="input flex items-center text-[12.5px] text-ink-faint">里程碑不占工期</div>
+              ) : (
+                <input
+                  id="ev-end-date"
+                  type="date"
+                  className="input"
+                  value={draft.end_date}
+                  min={draft.date}
+                  onChange={(e) => set('end_date', e.target.value)}
+                />
+              )}
             </div>
           </div>
+
+          <label className="flex cursor-pointer select-none items-center gap-2 text-[12.5px] text-ink-mid">
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 accent-[#2F6B4F]"
+              checked={draft.milestone}
+              onChange={(e) => {
+                const v = e.target.checked;
+                setDraft((d) => ({ ...d, milestone: v, end_date: v ? '' : d.end_date }));
+              }}
+            />
+            <span className="flex items-center gap-1.5">
+              <span className="text-moss-deep">◆</span>
+              里程碑 —— 只有一个达成日，不占工期
+            </span>
+          </label>
 
           {/* 时间 / 分类 */}
           <div className="grid grid-cols-2 gap-3">

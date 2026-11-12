@@ -54,7 +54,8 @@ router.post('/', validate({
   description: { rule: RULES.string, message: 'description 必须是字符串', optional: true },
   reminder: { rule: (v) => v === 0 || v === 1 || v === true || v === false, message: 'reminder 必须是 0 或 1', optional: true },
   subtasks: { rule: RULES.array, message: 'subtasks 必须是数组', optional: true },
-  end_date: { rule: RULES.string, message: 'end_date 必须是字符串（YYYY-MM-DD）', optional: true }
+  end_date: { rule: RULES.string, message: 'end_date 必须是字符串（YYYY-MM-DD）', optional: true },
+  is_milestone: { rule: (v) => v === 0 || v === 1 || v === true || v === false, message: 'is_milestone 必须是 0 或 1', optional: true }
 }), (req, res) => {
   EventModel.createEvent(uid(req), req.body, (err, event) => {
     if (err) {
@@ -88,7 +89,8 @@ router.put('/:id', validate({
   recurrence: { rule: RULES.string, message: 'recurrence 必须是字符串或 null', optional: true },
   recurrence_end_date: { rule: RULES.string, message: 'recurrence_end_date 必须是字符串', optional: true },
   subtasks: { rule: RULES.array, message: 'subtasks 必须是数组', optional: true },
-  end_date: { rule: RULES.string, message: 'end_date 必须是字符串（YYYY-MM-DD）', optional: true }
+  end_date: { rule: RULES.string, message: 'end_date 必须是字符串（YYYY-MM-DD）', optional: true },
+  is_milestone: { rule: (v) => v === 0 || v === 1 || v === true || v === false, message: 'is_milestone 必须是 0 或 1', optional: true }
 }), (req, res) => {
   const id = parseInt(req.params.id);
   const userId = uid(req);

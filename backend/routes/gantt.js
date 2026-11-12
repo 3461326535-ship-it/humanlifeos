@@ -42,11 +42,12 @@ router.patch('/tasks/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!Number.isInteger(id)) return res.status(400).json({ error: 'id 不合法' });
-    const { start, end, cascade } = req.body || {};
+    const { start, end, cascade, milestone } = req.body || {};
     const out = await Gantt.moveTask(uid(req), id, {
       start,
       end,
       cascade: cascade !== false,
+      milestone: milestone === undefined ? undefined : !!milestone,
     });
     res.json(out);
   } catch (err) {

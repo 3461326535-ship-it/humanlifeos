@@ -180,6 +180,7 @@ function initDatabase() {
     db.run(`ALTER TABLE events ADD COLUMN sort_date TEXT`, () => {});       // 实际层日期（双轨，第 4 阶段启用）
     db.run(`ALTER TABLE events ADD COLUMN priority TEXT`, () => {});        // low / medium / high
     db.run(`ALTER TABLE events ADD COLUMN end_date TEXT`, () => {});         // 甘特：计划结束日（NULL = 单日任务）
+    db.run(`ALTER TABLE events ADD COLUMN is_milestone INTEGER DEFAULT 0`, () => {}); // 甘特：里程碑（只占一个日期点，不占工期）
 
     // 甘特：依赖类型（FS 完成→开始 / SS 开始→开始 / FF 完成→完成 / SF 开始→完成）+ 滞后天数
     db.run(`ALTER TABLE task_dependencies ADD COLUMN type TEXT DEFAULT 'FS'`, () => {});

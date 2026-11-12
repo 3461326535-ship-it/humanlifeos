@@ -74,6 +74,7 @@ async function loadBoard(userId, { projectId = null, includeRecurring = false } 
   const hasArchived = await hasColumn('events', 'archived_at');
   const hasRule = await hasColumn('events', 'rule_id');
   const hasEndDate = await hasColumn('events', 'end_date');
+  const hasMilestone = await hasColumn('events', 'is_milestone');
 
   const wheres = [scopeWhere(userId)];
   const params = userId != null ? [userId] : [];
@@ -90,6 +91,7 @@ async function loadBoard(userId, { projectId = null, includeRecurring = false } 
     `SELECT e.id, e.title, e.date, e.status, e.priority, e.category, e.project_id,
             e.start_time, e.end_time, e.completed, e.description
             ${hasEndDate ? ', e.end_date' : ', NULL AS end_date'}
+            ${hasMilestone ? ', e.is_milestone' : ', 0 AS is_milestone'}
        FROM events e
       WHERE ${wheres.join(' AND ')}
       ORDER BY e.date, e.id
@@ -115,6 +117,7 @@ async function loadBoard(userId, { projectId = null, includeRecurring = false } 
     const progress = s.total > 0
       ? Math.round((s.done / s.total) * 100)
       : status === 'done' ? 100 : 0;
+    const milestone = !!Number(r.is_milestone);
     return {
       id: r.id,
       title: r.title,
@@ -130,7 +133,8 @@ async function loadBoard(userId, { projectId = null, includeRecurring = false } 
       description: r.description || '',
       progress,
       subtasks: { done: s.done, total: s.total },
-      milestone: dayIndex(end) === dayIndex(start),
+      milestone,                                  // 用户显式标的里程碑（菱形，不占工期）
+      singleDay: dayIndex(end) === dayIndex(start), // 只是恰好排了一天，仍是普通任务
       overdue: status !== 'done' && dayIndex(end) < todayIdx,
       // 下面由 CPM 填
       isCritical: false,
@@ -183,6 +187,7 @@ async function loadBoard(userId, { projectId = null, includeRecurring = false } 
     overdue: tasks.filter((t) => t.overdue).length,
     critical: tasks.filter((t) => t.isCritical).length,
     withDependencies: tasks.filter((t) => t.deps.length > 0).length,
+    milestones: tasks.filter((t) => t.milestone).length,
   };
 
   return { today, tasks, projects, deps, stats };
@@ -371,7 +376,8 @@ function httpError(code, message) {
 }
 
 // ── 写：移动 / 拉伸任务条 + 级联顺延 ──
-async function moveTask(userId, id, { start, end, cascade = true } = {}) {
+// milestone: true → 转成里程碑（强制单日）；false → 转回普通任务；不传 → 保持原状
+async function moveTask(userId, id, { start, end, cascade = true, milestone } = {}) {
   if (!isDateStr(start)) throw httpError('BAD_INPUT', 'start 必须是 YYYY-MM-DD');
   let s = start.slice(0, 10);
   let e = isDateStr(end) ? end.slice(0, 10) : s;
@@ -381,15 +387,22 @@ async function moveTask(userId, id, { start, end, cascade = true } = {}) {
   const task = board.tasks.find((t) => t.id === id);
   if (!task) throw httpError('NOT_FOUND', '任务不存在');
 
+  const wantMilestone = milestone === undefined ? !!task.milestone : !!milestone;
+  if (wantMilestone) e = s; // 里程碑只占一个日期点
+  const hasMsCol = await hasColumn('events', 'is_milestone');
+
   const movedTitles = [];
   const result = await withTx(async () => {
     await runSql(
-      `UPDATE events SET date = ?, end_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [s, e > s ? e : null, id]
+      `UPDATE events SET date = ?, end_date = ?${hasMsCol ? ', is_milestone = ?' : ''}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      hasMsCol
+        ? [s, e > s ? e : null, wantMilestone ? 1 : 0, id]
+        : [s, e > s ? e : null, id]
     );
     task.start = s;
     task.end = e;
     task.duration = dayIndex(e) - dayIndex(s) + 1;
+    task.milestone = wantMilestone;
 
     if (!cascade) return { moved: [] };
     const graph = buildMaps(board.tasks, board.deps);
@@ -401,7 +414,7 @@ async function moveTask(userId, id, { start, end, cascade = true } = {}) {
 
   return {
     success: true,
-    task: { id, start: s, end: e },
+    task: { id, start: s, end: e, milestone: wantMilestone },
     cascaded: result.moved.length,
     moved: movedTitles,
   };

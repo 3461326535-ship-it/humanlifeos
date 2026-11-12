@@ -72,7 +72,7 @@ export default function GanttPage() {
 
   // 交互
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [dialog, setDialog] = useState<{ open: boolean; event: TodoEvent | null }>({ open: false, event: null });
+  const [dialog, setDialog] = useState<{ open: boolean; event: TodoEvent | null; milestone?: boolean }>({ open: false, event: null });
   const [linkFrom, setLinkFrom] = useState<number | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -201,6 +201,12 @@ export default function GanttPage() {
 
   // ── 几何 ──
   function barGeom(t: GanttTask, s = t.start, e = t.end) {
+    if (t.milestone) {
+      // 里程碑只占一个日期点：菱形中心落在当天正中，两端顶点供依赖连线接
+      const cx = (idx(s) - startIdx) * dayWidth + dayWidth / 2;
+      const half = 7.5;
+      return { x0: cx - half, w: half * 2 };
+    }
     const x0 = (idx(s) - startIdx) * dayWidth;
     const w = Math.max((idx(e) - idx(s) + 1) * dayWidth - 2, 8);
     return { x0, w };
@@ -441,6 +447,17 @@ export default function GanttPage() {
         <div className="ml-auto flex items-center gap-2">
           <button className="btn-ghost text-[12.5px]" onClick={() => setConfirmAuto(true)}>自动排程</button>
           <button
+            className="btn-ghost text-[12.5px]"
+            onClick={() => {
+              setSelectedId(null);
+              setAnchor(mondayOf(todayStr()));
+              setDialog({ open: true, event: null, milestone: true });
+            }}
+            title="里程碑：时间轴上的一个点（如「上线」「验收通过」），不占工期，也能被依赖"
+          >
+            ◆ 里程碑
+          </button>
+          <button
             className="btn-primary"
             onClick={() => {
               setSelectedId(null);
@@ -636,11 +653,17 @@ export default function GanttPage() {
           </span>
         ))}
         <span className="flex items-center gap-1.5">
+          <span className="flex h-3.5 w-3.5 items-center justify-center">
+            <span className="block h-2 w-2 rotate-45 rounded-[1px] bg-[#B9AE99]" />
+          </span>
+          里程碑
+        </span>
+        <span className="flex items-center gap-1.5">
           <svg width="26" height="8" viewBox="0 0 26 8"><path d="M1 4h18" stroke="#C9503A" strokeWidth="1.4" /><path d="M20 1l5 3-5 3z" fill="#C9503A" /></svg>
           关键路径
         </span>
         <span className="ml-auto">
-          拖任务条移动 · 拖两端改工期 · 悬停后点右侧圆点连依赖
+          拖任务条移动 · 拖两端改工期 · 拖菱形改达成日 · 悬停后点右侧圆点连依赖
         </span>
       </div>
 
@@ -688,6 +711,7 @@ export default function GanttPage() {
           event={dialog.event}
           defaultDate={todayStr()}
           defaultEndDate={addDays(todayStr(), 3)}
+          defaultMilestone={!!dialog.milestone}
           onClose={() => setDialog({ open: false, event: null })}
           onSaved={() => {
             setDialog({ open: false, event: null });
@@ -725,68 +749,126 @@ function TaskRow({
 }) {
   const style = BAR_STYLE[task.status];
   const isLinkTarget = linkFrom != null && linkFrom !== task.id;
+  const MS = 15; // 菱形边长
+  const tip = task.milestone
+    ? `${task.title}（里程碑）\n${preview.start}`
+    : `${task.title}\n${preview.start} → ${preview.end}`;
   return (
     <div className={`group flex ${selected ? 'bg-moss-soft/25' : ''}`} style={{ height: ROW_H }}>
       <button
         className="sticky left-0 z-20 flex flex-none items-center gap-2 border-r border-line bg-white px-3 text-left transition-colors hover:bg-paper"
         style={{ width: LEFT_W }}
         onClick={onOpen}
-        title={`${task.title}　${task.start} → ${task.end}（${task.duration} 天）`}
+        title={task.milestone ? `${task.title}　里程碑 · ${task.start}` : `${task.title}　${task.start} → ${task.end}（${task.duration} 天）`}
       >
-        <span className={`h-[6px] w-[6px] flex-none rounded-full ${STATUS_DOT[task.status]}`} />
+        {task.milestone ? (
+          <span className="flex h-[10px] w-[10px] flex-none items-center justify-center">
+            <span
+              className={`block h-[6px] w-[6px] rotate-45 ${task.status === 'done' ? 'bg-moss' : 'bg-ink-soft'}`}
+            />
+          </span>
+        ) : (
+          <span className={`h-[6px] w-[6px] flex-none rounded-full ${STATUS_DOT[task.status]}`} />
+        )}
         <span className={`min-w-0 flex-1 truncate text-[12.5px] ${task.status === 'done' ? 'text-ink-soft line-through' : 'text-ink'}`}>
           {task.title}
         </span>
         {task.isCritical && <span className="h-1.5 w-1.5 flex-none rounded-full bg-coral" title="关键路径" />}
-        <span className="w-7 flex-none text-right text-[10px] tabular-nums text-ink-faint">{task.progress}%</span>
+        {task.milestone ? (
+          <span className="w-8 flex-none whitespace-nowrap text-right text-[10px] text-ink-faint">{preview.start.slice(5)}</span>
+        ) : (
+          <span className="w-7 flex-none text-right text-[10px] tabular-nums text-ink-faint">{task.progress}%</span>
+        )}
       </button>
 
       <div className="relative flex-none" style={{ width: totalWidth }}>
-        {/* 任务条 */}
-        <div
-          className={`absolute flex items-center gap-1 rounded-[5px] border ${style.shell} ${
-            task.isCritical ? 'ring-1 ring-coral/50' : ''
-          } ${dragging ? 'shadow-pop' : ''} ${isLinkTarget && linkFrom != null ? 'ring-2 ring-moss/60' : ''} cursor-grab active:cursor-grabbing`}
-          style={{ left: geom.x0, top: (ROW_H - BAR_H) / 2, width: geom.w, height: BAR_H }}
-          onPointerDown={(e) => onStartDrag(e, 'move')}
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen();
-          }}
-          title={`${task.title}\n${preview.start} → ${preview.end}`}
-        >
-          {/* 进度填充 */}
-          <span
-            className={`absolute inset-y-0 left-0 rounded-l-[4px] opacity-70 ${style.fill}`}
-            style={{ width: `${task.progress}%` }}
-          />
-          {/* 左侧拉伸把手 */}
-          <span
-            className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize"
-            onPointerDown={(e) => onStartDrag(e, 'l')}
-          />
-          {geom.w > 74 && (
-            <span className={`relative z-[1] truncate px-1.5 text-[10.5px] ${style.label}`}>
-              {task.title}
-            </span>
-          )}
-          {/* 右侧拉伸把手 + 连依赖圆点 */}
-          <span
-            className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize"
-            onPointerDown={(e) => onStartDrag(e, 'r')}
-          />
-          <button
-            type="button"
-            className="absolute -right-[13px] top-1/2 z-20 h-[9px] w-[9px] -translate-y-1/2 rounded-full border border-moss bg-white opacity-0 transition-opacity hover:bg-moss group-hover:opacity-100"
-            onPointerDown={(e) => e.stopPropagation()}
+        {task.milestone ? (
+          <>
+            {/* 菱形：中心落在当天正中，拖它就是改达成日 */}
+            <div
+              className={`absolute z-10 cursor-grab active:cursor-grabbing ${dragging ? 'shadow-pop' : ''} ${
+                isLinkTarget ? 'ring-2 ring-moss/60' : ''
+              }`}
+              style={{
+                left: geom.x0,
+                top: (ROW_H - MS) / 2,
+                width: MS,
+                height: MS,
+                transform: 'rotate(45deg)',
+                background: task.status === 'done' ? '#2F6B4F' : task.status === 'in_progress' ? '#5B87B5'
+                  : task.status === 'review' ? '#D9A441' : '#B9AE99',
+                boxShadow: task.isCritical
+                  ? '0 0 0 2px rgba(201,80,58,.75)'
+                  : '0 0 0 1.5px rgba(255,255,255,.95), 0 1px 2px rgba(0,0,0,.06)',
+              }}
+              onPointerDown={(e) => onStartDrag(e, 'move')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen();
+              }}
+              title={tip}
+              role="button"
+              aria-label={`里程碑 ${task.title}`}
+            />
+            <button
+              type="button"
+              className="absolute z-20 h-[9px] w-[9px] rounded-full border border-moss bg-white opacity-0 transition-opacity hover:bg-moss group-hover:opacity-100"
+              style={{ left: geom.x0 + MS + 3, top: ROW_H / 2 - 4.5 }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartLink();
+              }}
+              title="从这里连一条依赖（点一下，再点后续任务）"
+              aria-label="连依赖"
+            />
+          </>
+        ) : (
+          <div
+            className={`absolute flex items-center gap-1 rounded-[5px] border ${style.shell} ${
+              task.isCritical ? 'ring-1 ring-coral/50' : ''
+            } ${dragging ? 'shadow-pop' : ''} ${isLinkTarget && linkFrom != null ? 'ring-2 ring-moss/60' : ''} cursor-grab active:cursor-grabbing`}
+            style={{ left: geom.x0, top: (ROW_H - BAR_H) / 2, width: geom.w, height: BAR_H }}
+            onPointerDown={(e) => onStartDrag(e, 'move')}
             onClick={(e) => {
               e.stopPropagation();
-              onStartLink();
+              onOpen();
             }}
-            title="从这里拖出一条依赖（点一下，再点后续任务）"
-            aria-label="连依赖"
-          />
-        </div>
+            title={tip}
+          >
+            {/* 进度填充 */}
+            <span
+              className={`absolute inset-y-0 left-0 rounded-l-[4px] opacity-70 ${style.fill}`}
+              style={{ width: `${task.progress}%` }}
+            />
+            {/* 左侧拉伸把手 */}
+            <span
+              className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize"
+              onPointerDown={(e) => onStartDrag(e, 'l')}
+            />
+            {geom.w > 74 && (
+              <span className={`relative z-[1] truncate px-1.5 text-[10.5px] ${style.label}`}>
+                {task.title}
+              </span>
+            )}
+            {/* 右侧拉伸把手 + 连依赖圆点 */}
+            <span
+              className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize"
+              onPointerDown={(e) => onStartDrag(e, 'r')}
+            />
+            <button
+              type="button"
+              className="absolute -right-[13px] top-1/2 z-20 h-[9px] w-[9px] -translate-y-1/2 rounded-full border border-moss bg-white opacity-0 transition-opacity hover:bg-moss group-hover:opacity-100"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartLink();
+              }}
+              title="从这里拖出一条依赖（点一下，再点后续任务）"
+              aria-label="连依赖"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

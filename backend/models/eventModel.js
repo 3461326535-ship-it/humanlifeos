@@ -88,8 +88,10 @@ class EventModel {
       title, date, time = '', category = '其他', description = '', reminder = 0,
       subtasks = [], recurrence = null, recurrence_end_date = null,
       status, start_time, end_time, project_id, position, priority, sort_date,
-      end_date = null
+      end_date = null, is_milestone = 0
     } = eventData;
+    // 里程碑 = 时间轴上的一个点（达成日），不占工期：强制丢掉结束日
+    const milestone = is_milestone ? 1 : 0;
     let called = false; // 防重复调用
 
     // completed ↔ status 派生（单点，见 updateEvent 注释）
@@ -105,9 +107,9 @@ class EventModel {
 
     db.run(
       `INSERT INTO events (title, date, time, category, description, reminder, recurrence, recurrence_end_date, user_id,
-        status, start_time, end_time, project_id, position, completed_at, priority, sort_date, end_date,
+        status, start_time, end_time, project_id, position, completed_at, priority, sort_date, end_date, is_milestone,
         created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [title, date, time, category, description, reminder ? 1 : 0, recurrence, recurrence_end_date,
         userId != null ? userId : null,
         normStatus, startTimeVal,
@@ -117,8 +119,9 @@ class EventModel {
         completedAt,
         priority != null ? priority : null,
         sort_date != null ? sort_date : null,
-        // end_date 早于 date 视为脏数据，收敛为 NULL（= 单日）
-        (end_date && end_date > date) ? end_date : null],
+        // end_date 早于 date 视为脏数据，收敛为 NULL（= 单日）；里程碑一律 NULL
+        (!milestone && end_date && end_date > date) ? end_date : null,
+        milestone],
       function (err) {
         if (err) {
           if (!called) { called = true; callback(err, null); }
@@ -229,15 +232,20 @@ class EventModel {
     // 动态构建 SET 子句：只更新实际传入的字段
     const allowedFields = ['title', 'date', 'time', 'category', 'description', 'completed', 'reminder',
       'recurrence', 'recurrence_end_date', 'status', 'start_time', 'end_time', 'project_id',
-      'position', 'priority', 'sort_date', 'end_date'];
+      'position', 'priority', 'sort_date', 'end_date', 'is_milestone'];
     const setClauses = [];
     const values = [];
+
+    // 转成里程碑那次更新里，结束日必须一起清掉（里程碑 = 单点，不能有区间）
+    if (fields.is_milestone) fields.end_date = null;
 
     allowedFields.forEach(field => {
       if (field in fields) {
         setClauses.push(`${field} = ?`);
-        // completed 和 reminder 需要转为 0/1
-        values.push((field === 'completed' || field === 'reminder') ? (fields[field] ? 1 : 0) : fields[field]);
+        // completed / reminder / is_milestone 需要转为 0/1
+        values.push((field === 'completed' || field === 'reminder' || field === 'is_milestone')
+          ? (fields[field] ? 1 : 0)
+          : fields[field]);
       }
     });
 
