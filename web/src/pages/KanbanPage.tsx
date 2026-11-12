@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -42,6 +42,15 @@ const PRIORITY_DOT: Record<string, string> = {
 
 type Scope = 'today' | 'week' | 'all';
 type Columns = Record<TaskStatus, TodoEvent[]>;
+
+// 拖进「已完成」但还有未勾子任务时，先把动作挂起，等用户选
+type PendingDone = {
+  id: number;
+  fromCol: TaskStatus;
+  position: number;
+  event: TodoEvent;
+  undone: number;
+};
 
 // ── 日期工具 ──
 function todayStr() {
@@ -92,16 +101,32 @@ function findColumnOfId(columns: Columns, id: number): TaskStatus | undefined {
   return COLUMNS.find((c) => columns[c].some((e) => e.id === id));
 }
 
-// ── 看板卡片（可拖拽）──
-function KanbanCard({ event, onOpen }: { event: TodoEvent; onOpen: (e: TodoEvent) => void }) {
+function subProgress(event: TodoEvent) {
+  const list = event.subtasks || [];
+  const done = list.filter((s) => s.completed).length;
+  return { done, total: list.length };
+}
+
+// ── 看板卡片（可拖拽，卡内可展开子任务）──
+function KanbanCard({
+  event,
+  onOpen,
+  onToggleSubtask,
+}: {
+  event: TodoEvent;
+  onOpen: (e: TodoEvent) => void;
+  onToggleSubtask: (e: TodoEvent, subtaskId: number) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: event.id });
+  const [expanded, setExpanded] = useState(false);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
   };
-  const doneSub = (event.subtasks || []).filter((s) => s.completed).length;
-  const totalSub = (event.subtasks || []).length;
+  const { done: doneSub, total: totalSub } = subProgress(event);
+  const pct = totalSub > 0 ? Math.round((doneSub / totalSub) * 100) : 0;
+  const hasMeta = !!(event.time || (event.category && event.category !== '其他') || event.recurrence);
 
   return (
     <div
@@ -118,7 +143,8 @@ function KanbanCard({ event, onOpen }: { event: TodoEvent; onOpen: (e: TodoEvent
         )}
         <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">{event.title}</p>
       </div>
-      {(event.time || (event.category && event.category !== '其他') || event.recurrence || totalSub > 0) && (
+
+      {hasMeta && (
         <div className="flex flex-wrap items-center gap-1.5 pl-4 text-[11px]">
           {event.time && (
             <span className="rounded bg-indigo-50 px-1.5 py-0.5 font-medium text-indigo-600">{event.time}</span>
@@ -127,10 +153,52 @@ function KanbanCard({ event, onOpen }: { event: TodoEvent; onOpen: (e: TodoEvent
             <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">{event.category}</span>
           )}
           {event.recurrence && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">↻</span>}
-          {totalSub > 0 && (
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">
+        </div>
+      )}
+
+      {/* 子任务：进度条常驻，点开在卡内展开清单（不跳页、不开弹窗） */}
+      {totalSub > 0 && (
+        <div className="pl-4" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="flex w-full items-center gap-2 rounded py-0.5 text-[11px] text-slate-500 hover:text-slate-700"
+            aria-expanded={expanded}
+          >
+            <span className="h-1 w-14 flex-none overflow-hidden rounded-full bg-slate-200">
+              <span
+                className={`block h-full rounded-full ${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                style={{ width: `${pct}%` }}
+              />
+            </span>
+            <span className="font-medium tabular-nums">
               {doneSub}/{totalSub}
             </span>
+            <span className="ml-auto text-slate-400">{expanded ? '收起' : '展开'}</span>
+          </button>
+
+          {expanded && (
+            <ul className="mt-1 space-y-0.5">
+              {(event.subtasks || []).map((st) => (
+                <li key={st.id}>
+                  <label className="flex cursor-pointer items-start gap-1.5 rounded px-1 py-0.5 hover:bg-slate-50">
+                    <input
+                      type="checkbox"
+                      className="mt-[3px] h-3 w-3 flex-none accent-indigo-600"
+                      checked={st.completed}
+                      onChange={() => onToggleSubtask(event, st.id)}
+                    />
+                    <span
+                      className={`min-w-0 break-words text-[11px] leading-4 ${
+                        st.completed ? 'text-slate-400 line-through' : 'text-slate-600'
+                      }`}
+                    >
+                      {st.title}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}
@@ -140,6 +208,7 @@ function KanbanCard({ event, onOpen }: { event: TodoEvent; onOpen: (e: TodoEvent
 
 // 预览卡（DragOverlay 用，无交互）
 function CardPreview({ event }: { event: TodoEvent }) {
+  const { done: doneSub, total: totalSub } = subProgress(event);
   return (
     <div className="card cursor-grabbing space-y-1.5 p-3 shadow-pop">
       <div className="flex items-start gap-2">
@@ -148,11 +217,16 @@ function CardPreview({ event }: { event: TodoEvent }) {
         )}
         <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">{event.title}</p>
       </div>
-      {event.time && (
-        <div className="pl-4 text-[11px]">
+      <div className="flex items-center gap-1.5 pl-4 text-[11px]">
+        {event.time && (
           <span className="rounded bg-indigo-50 px-1.5 py-0.5 font-medium text-indigo-600">{event.time}</span>
-        </div>
-      )}
+        )}
+        {totalSub > 0 && (
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">
+            {doneSub}/{totalSub}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -163,11 +237,13 @@ function Column({
   events,
   onOpen,
   onAdd,
+  onToggleSubtask,
 }: {
   status: TaskStatus;
   events: TodoEvent[];
   onOpen: (e: TodoEvent) => void;
   onAdd: (s: TaskStatus) => void;
+  onToggleSubtask: (e: TodoEvent, subtaskId: number) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: status });
   return (
@@ -191,7 +267,7 @@ function Column({
       <div ref={setNodeRef} className="flex-1 space-y-2 px-2 pb-3">
         <SortableContext items={events.map((e) => e.id)} strategy={verticalListSortingStrategy}>
           {events.map((e) => (
-            <KanbanCard key={e.id} event={e} onOpen={onOpen} />
+            <KanbanCard key={e.id} event={e} onOpen={onOpen} onToggleSubtask={onToggleSubtask} />
           ))}
         </SortableContext>
         {events.length === 0 && (
@@ -199,6 +275,49 @@ function Column({
             拖拽任务到此处
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── 拖入「已完成」但有未勾子任务时的确认弹窗 ──
+function DoneConfirmDialog({
+  pending,
+  busy,
+  onFinishAll,
+  onKeep,
+  onCancel,
+}: {
+  pending: PendingDone;
+  busy: boolean;
+  onFinishAll: () => void;
+  onKeep: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4" onClick={onCancel}>
+      <div
+        className="w-full max-w-sm rounded-xl bg-white p-5 shadow-pop"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        <p className="text-sm font-semibold text-slate-900">这条任务还有 {pending.undone} 条子任务未完成</p>
+        <p className="mt-1.5 line-clamp-2 text-xs text-slate-500">「{pending.event.title}」</p>
+        <p className="mt-3 text-xs text-slate-500">
+          移到「已完成」后，子任务默认保持原样。要一起勾完吗？
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button className="btn-ghost" onClick={onCancel} disabled={busy}>
+            取消拖拽
+          </button>
+          <button className="btn-ghost" onClick={onKeep} disabled={busy}>
+            保持原样
+          </button>
+          <button className="btn-primary" onClick={onFinishAll} disabled={busy}>
+            {busy ? '处理中…' : `一起勾完 ${pending.undone} 项`}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -215,8 +334,16 @@ export default function KanbanPage() {
   const [editing, setEditing] = useState<TodoEvent | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<TaskStatus>('todo');
 
+  const [onlyUnfinishedSub, setOnlyUnfinishedSub] = useState(false);
+  const [pendingDone, setPendingDone] = useState<PendingDone | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [banner, setBanner] = useState<string | null>(null);
+
   const queryClient = useQueryClient();
   const { data: allEvents, isLoading } = useQuery({ queryKey: ['events'], queryFn: api.getEvents });
+
+  // commitMove 需要插入位置，用 ref 传递避免额外 state 抖动
+  const insertIndexRef = useRef(0);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['events'] });
 
@@ -237,11 +364,16 @@ export default function KanbanPage() {
 
   // 按范围过滤 + 分列
   const inScope = useMemo(() => {
-    if (scope === 'all') return () => true;
-    if (scope === 'today') return (e: TodoEvent) => e.date === date;
-    const { start, end } = weekBounds();
-    return (e: TodoEvent) => e.date >= start && e.date <= end;
-  }, [scope, date]);
+    let base: (e: TodoEvent) => boolean;
+    if (scope === 'all') base = () => true;
+    else if (scope === 'today') base = (e: TodoEvent) => e.date === date;
+    else {
+      const { start, end } = weekBounds();
+      base = (e: TodoEvent) => e.date >= start && e.date <= end;
+    }
+    if (!onlyUnfinishedSub) return base;
+    return (e: TodoEvent) => base(e) && (e.subtasks || []).some((s) => !s.completed);
+  }, [scope, date, onlyUnfinishedSub]);
 
   useEffect(() => {
     if (!allEvents) return;
@@ -252,6 +384,34 @@ export default function KanbanPage() {
     COLUMNS.forEach((c) => (grouped[c] = sortCol(grouped[c])));
     setColumns(grouped);
   }, [allEvents, inScope]);
+
+  // 卡内勾选单条子任务：回传全量 subtasks（后端做整体替换）
+  function toggleSubtask(event: TodoEvent, subtaskId: number) {
+    const next = (event.subtasks || []).map((s) => ({
+      title: s.title,
+      completed: s.id === subtaskId ? !s.completed : s.completed,
+    }));
+    setBanner(null);
+    api.updateEvent(event.id, { subtasks: next }).then(invalidate).catch((err: Error) => setBanner(err.message));
+  }
+
+  // 真正提交一次移动（服务端 + 本地乐观更新）
+  function commitMove(id: number, fromCol: TaskStatus | null, toCol: TaskStatus, pos: number) {
+    if (fromCol && fromCol !== toCol) {
+      statusMutation.mutate({ id, status: toCol, position: pos });
+    } else {
+      reorderMutation.mutate([{ id, position: pos }]);
+    }
+
+    setColumns((prev) => {
+      const moving = prev[toCol].find((x) => x.id === id) ?? allEvents?.find((x) => x.id === id);
+      if (!moving) return prev;
+      const without = prev[toCol].filter((x) => x.id !== id);
+      const at = Math.min(insertIndexRef.current, without.length);
+      const next = [...without.slice(0, at), { ...moving, position: pos }, ...without.slice(at)];
+      return { ...prev, [toCol]: sortCol(next) };
+    });
+  }
 
   // ── 拖拽 ──
   function onDragStart(e: DragStartEvent) {
@@ -288,9 +448,14 @@ export default function KanbanPage() {
 
   function onDragEnd(e: DragEndEvent) {
     const { active, over } = e;
+    const fromCol = originCol;
     setActiveId(null);
     setOriginCol(null);
-    if (!over) return;
+    if (!over) {
+      // 丢到列外：本地可能已被 onDragOver 挪过，拉一次真实数据回正
+      invalidate();
+      return;
+    }
     const id = Number(active.id);
     const overId = over.id;
     const toCol: TaskStatus | undefined =
@@ -304,21 +469,36 @@ export default function KanbanPage() {
       if (idx >= 0) insertIndex = idx;
     }
     const pos = computePosition(siblings, insertIndex);
+    insertIndexRef.current = insertIndex;
 
-    if (originCol && originCol !== toCol) {
-      statusMutation.mutate({ id, status: toCol, position: pos });
-    } else {
-      reorderMutation.mutate([{ id, position: pos }]);
+    // 跨列拖进「已完成」且子任务没勾完 → 先问一句，不自动勾、也不直接落库
+    const moving = allEvents?.find((x) => x.id === id);
+    const undoneList = (moving?.subtasks || []).filter((s) => !s.completed);
+    if (toCol === 'done' && fromCol && fromCol !== 'done' && moving && undoneList.length > 0) {
+      setPendingDone({ id, fromCol, position: pos, event: moving, undone: undoneList.length });
+      return;
     }
 
-    // 乐观更新本地列
-    setColumns((prev) => {
-      const moving = prev[toCol].find((x) => x.id === id) ?? allEvents?.find((x) => x.id === id);
-      if (!moving) return prev;
-      const without = prev[toCol].filter((x) => x.id !== id);
-      const next = [...without.slice(0, insertIndex), { ...moving, position: pos }, ...without.slice(insertIndex)];
-      return { ...prev, [toCol]: sortCol(next) };
-    });
+    commitMove(id, fromCol, toCol, pos);
+  }
+
+  async function finishAllSubtasks() {
+    if (!pendingDone) return;
+    const p = pendingDone;
+    setBusy(true);
+    setBanner(null);
+    try {
+      await api.updateStatus(p.id, 'done', p.position);
+      await api.updateEvent(p.id, {
+        subtasks: (p.event.subtasks || []).map((s) => ({ title: s.title, completed: true })),
+      });
+    } catch (err) {
+      setBanner((err as Error).message);
+    } finally {
+      setBusy(false);
+      setPendingDone(null);
+      invalidate();
+    }
   }
 
   // ── 弹窗 ──
@@ -375,6 +555,20 @@ export default function KanbanPage() {
           </div>
         )}
 
+        {/* 只看有未完成子任务的 */}
+        <button
+          onClick={() => setOnlyUnfinishedSub((v) => !v)}
+          className={`rounded-lg px-2.5 py-1 text-[13px] ring-1 transition ${
+            onlyUnfinishedSub
+              ? 'bg-indigo-50 text-indigo-700 ring-indigo-200'
+              : 'text-slate-500 ring-slate-200 hover:text-slate-700'
+          }`}
+          aria-pressed={onlyUnfinishedSub}
+          title="只显示还有未勾子任务的任务"
+        >
+          含未完成子项
+        </button>
+
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[13px] text-slate-400">{totalCount} 个任务</span>
           <button className="btn-primary" onClick={() => openAdd('todo')}>
@@ -382,6 +576,12 @@ export default function KanbanPage() {
           </button>
         </div>
       </div>
+
+      {banner && (
+        <div className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-600 ring-1 ring-rose-200">
+          {banner}
+        </div>
+      )}
 
       {/* 看板区 */}
       {isLoading ? (
@@ -402,11 +602,29 @@ export default function KanbanPage() {
                 events={columns[status]}
                 onOpen={openEdit}
                 onAdd={openAdd}
+                onToggleSubtask={toggleSubtask}
               />
             ))}
           </div>
           <DragOverlay>{activeEvent ? <CardPreview event={activeEvent} /> : null}</DragOverlay>
         </DndContext>
+      )}
+
+      {/* 拖入已完成前的子任务确认 */}
+      {pendingDone && (
+        <DoneConfirmDialog
+          pending={pendingDone}
+          busy={busy}
+          onFinishAll={finishAllSubtasks}
+          onKeep={() => {
+            commitMove(pendingDone.id, pendingDone.fromCol, 'done', pendingDone.position);
+            setPendingDone(null);
+          }}
+          onCancel={() => {
+            setPendingDone(null);
+            invalidate();
+          }}
+        />
       )}
 
       {/* 创建/编辑弹窗 */}
