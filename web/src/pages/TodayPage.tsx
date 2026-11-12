@@ -94,6 +94,20 @@ export default function TodayPage() {
     onSettled: invalidate,
   });
 
+  // 行内勾选单条子任务：后端是「整体替换 subtasks」，所以回传全量；先做乐观更新，点下去立刻有反馈
+  const toggleSubtask = (event: TodoEvent, subtaskId: number) => {
+    const next = (event.subtasks || []).map((s) =>
+      s.id === subtaskId ? { ...s, completed: !s.completed } : s
+    );
+    queryClient.setQueryData<TodoEvent[]>(['events'], (prev) =>
+      prev?.map((e) => (e.id === event.id ? { ...e, subtasks: next } : e))
+    );
+    api
+      .updateEvent(event.id, { subtasks: next.map((s) => ({ title: s.title, completed: s.completed })) })
+      .then(invalidate)
+      .catch(invalidate);
+  };
+
   const dayEvents = useMemo(() => {
     if (!allEvents) return [];
     return allEvents
@@ -191,6 +205,7 @@ export default function TodayPage() {
                         setEditing(event);
                         setDialogOpen(true);
                       }}
+                      onToggleSubtask={(sid) => toggleSubtask(event, sid)}
                     />
                   ))}
                 </ul>
@@ -217,6 +232,7 @@ export default function TodayPage() {
                           setEditing(event);
                           setDialogOpen(true);
                         }}
+                        onToggleSubtask={(sid) => toggleSubtask(event, sid)}
                       />
                     ))}
                   </ul>
