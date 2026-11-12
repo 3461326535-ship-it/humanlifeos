@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Routes, Route, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './lib/api';
@@ -30,6 +31,12 @@ export default function App() {
 
   const q = params.get('q') ?? '';
   const focus = params.get('focus') === '1';
+  const [newMenu, setNewMenu] = useState(false);
+
+  // 切路由就收起「新建」菜单
+  useEffect(() => {
+    setNewMenu(false);
+  }, [pathname]);
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
@@ -97,13 +104,74 @@ export default function App() {
                 </svg>
               </button>
 
-              {/* 新建 */}
-              <button
-                className="h-8 rounded-lg bg-moss-deep px-3.5 text-[12.5px] font-medium text-white transition-colors hover:bg-moss"
-                onClick={() => navigate('/?new=1')}
-              >
-                新建
-              </button>
+              {/* 新建：任务 / 习惯 两个入口 */}
+              <div className="relative">
+                <button
+                  className="flex h-8 items-center gap-1 rounded-lg bg-moss-deep px-3 text-[12.5px] font-medium text-white transition-colors hover:bg-moss"
+                  onClick={() => setNewMenu((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={newMenu}
+                >
+                  新建
+                  <span className={`text-[9px] leading-none transition-transform ${newMenu ? 'rotate-180' : ''}`}>▾</span>
+                </button>
+
+                {newMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setNewMenu(false)} />
+                    <div
+                      className="absolute right-0 top-full z-20 mt-1.5 w-44 overflow-hidden rounded-xl border border-line bg-white p-1 shadow-pop"
+                      role="menu"
+                    >
+                      <button
+                        role="menuitem"
+                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[12.5px] text-ink-mid transition-colors hover:bg-paper-deep hover:text-ink"
+                        onClick={() => {
+                          setNewMenu(false);
+                          navigate('/?new=1');
+                        }}
+                      >
+                        <span className="flex h-5 w-5 flex-none items-center justify-center rounded-md bg-moss-soft text-moss">
+                          <svg viewBox="0 0 14 14" className="h-3 w-3 fill-none stroke-current" strokeWidth="1.6" strokeLinecap="round">
+                            <path d="M7 2.5v9M2.5 7h9" />
+                          </svg>
+                        </span>
+                        单次任务
+                      </button>
+                      <button
+                        role="menuitem"
+                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[12.5px] text-ink-mid transition-colors hover:bg-paper-deep hover:text-ink"
+                        onClick={() => {
+                          setNewMenu(false);
+                          navigate('/?new=1&repeat=daily');
+                        }}
+                      >
+                        <span className="flex h-5 w-5 flex-none items-center justify-center rounded-md bg-lagoon-soft text-lagoon">
+                          <svg viewBox="0 0 14 14" className="h-3 w-3 fill-none stroke-current" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11.5 6.4A4.6 4.6 0 1 1 9.9 3M11.6 1.8v3.2H8.4" />
+                          </svg>
+                        </span>
+                        周期任务
+                      </button>
+                      <button
+                        role="menuitem"
+                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[12.5px] text-ink-mid transition-colors hover:bg-paper-deep hover:text-ink"
+                        onClick={() => {
+                          setNewMenu(false);
+                          navigate('/?habit=new');
+                        }}
+                      >
+                        <span className="flex h-5 w-5 flex-none items-center justify-center rounded-md bg-clay-soft text-clay">
+                          <svg viewBox="0 0 14 14" className="h-3 w-3 fill-none stroke-current" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M2.4 7.2l2.4 2.6 2.6-3M8 8.4l1.4 1.4L12 6.6" />
+                          </svg>
+                        </span>
+                        习惯
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* 账号 */}
               {auth ? (

@@ -18,7 +18,12 @@ interface Draft {
   subtasks: { title: string; completed: boolean }[];
 }
 
-function toDraft(event: TodoEvent | null, defaultDate: string, defaultStatus: TaskStatus = 'todo'): Draft {
+function toDraft(
+  event: TodoEvent | null,
+  defaultDate: string,
+  defaultStatus: TaskStatus = 'todo',
+  defaultRecurrence: Recurrence | '' = ''
+): Draft {
   if (event) {
     return {
       title: event.title,
@@ -41,7 +46,7 @@ function toDraft(event: TodoEvent | null, defaultDate: string, defaultStatus: Ta
     description: '',
     status: defaultStatus,
     priority: '',
-    recurrence: '',
+    recurrence: defaultRecurrence,
     recurrence_end_date: '',
     subtasks: [],
   };
@@ -66,16 +71,20 @@ export default function EventDialog({
   event,
   defaultDate,
   defaultStatus,
+  defaultRecurrence = '',
   onClose,
   onSaved,
 }: {
   event: TodoEvent | null;
   defaultDate: string;
   defaultStatus?: TaskStatus;
+  defaultRecurrence?: Recurrence | '';
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [draft, setDraft] = useState<Draft>(() => toDraft(event, defaultDate, defaultStatus));
+  const [draft, setDraft] = useState<Draft>(() =>
+    toDraft(event, defaultDate, defaultStatus, defaultRecurrence)
+  );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
   const isEdit = !!event;

@@ -66,6 +66,35 @@ export interface HabitOccurrence {
   completed_at: string | null;
 }
 
+// 习惯规则（habits 表；零物化，不写 events）
+export interface Habit {
+  id: number;
+  user_id: number;
+  title: string;
+  rrule: string;
+  dtstart: string;
+  until_date: string | null;
+  start_time: string;
+  end_time: string | null;
+  timezone: string;
+  valid_from: string;
+  valid_to: string | null;
+  category: string;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HabitInput {
+  title: string;
+  rrule: string;
+  dtstart: string;
+  start_time?: string;
+  end_time?: string;
+  category?: string;
+  until_date?: string | null;
+}
+
 export interface StatsOverview {
   range: number;
   totals: {

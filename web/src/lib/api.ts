@@ -1,4 +1,14 @@
-import type { AuthUser, EventInput, TodoEvent, StatsOverview, DailyReport, HabitOccurrence } from './types';
+import type {
+  AuthUser,
+  EventInput,
+  TodoEvent,
+  StatsOverview,
+  DailyReport,
+  HabitOccurrence,
+  Habit,
+  HabitInput,
+  HabitStatus,
+} from './types';
 
 // 同源部署（/app），Cookie 自动携带；token 不落 localStorage（XSS 防护决策见方案 §6.1）
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -98,6 +108,33 @@ export const api = {
     return request<{ from: string; to: string; items: HabitOccurrence[] }>(
       `/habits/occurrences?from=${from}&to=${to}`
     );
+  },
+
+  // ── 习惯规则（零物化：不往 events 写行）──
+  getHabits(from?: string, to?: string) {
+    const qs = from && to ? `?from=${from}&to=${to}` : '';
+    return request<Habit[]>(`/habits${qs}`);
+  },
+  createHabit(data: HabitInput) {
+    return request<Habit>('/habits', { method: 'POST', body: JSON.stringify(data) });
+  },
+  /** 改规则（rrule / dtstart / start_time）= 后端封旧规则、从今天起新建；其余字段就地改 */
+  updateHabit(id: number, patch: Partial<HabitInput>) {
+    return request<Habit>(`/habits/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
+  },
+  deleteHabit(id: number) {
+    return request<{ success: boolean; changes: number }>(`/habits/${id}`, { method: 'DELETE' });
+  },
+  /** 打卡 / 请假 / 断签：UPSERT (habit_id, date) */
+  setHabitOverride(id: number, date: string, status: HabitStatus, reason?: string) {
+    return request<unknown>(`/habits/${id}/overrides/${date}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, reason: reason || null }),
+    });
+  },
+  /** 撤销某天 → 回到自动推断（过去=断签，未来=待办） */
+  clearHabitOverride(id: number, date: string) {
+    return request<{ success: boolean }>(`/habits/${id}/overrides/${date}`, { method: 'DELETE' });
   },
 
   // ── 统计 / 战报 ──

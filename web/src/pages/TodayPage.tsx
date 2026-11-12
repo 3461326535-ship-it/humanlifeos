@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import type { TodoEvent } from '../lib/types';
+import type { TodoEvent, Recurrence } from '../lib/types';
 import EventDialog from '../components/EventDialog';
 import EventRow from '../components/EventRow';
 import ActiveTimer from '../components/ActiveTimer';
 import HabitCard from '../components/HabitCard';
+import HabitDialog from '../components/HabitDialog';
+import type { Habit } from '../lib/types';
 
 function todayStr() {
   const d = new Date();
@@ -49,6 +51,8 @@ export default function TodayPage() {
   const [date, setDate] = useState(todayStr());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TodoEvent | null>(null);
+  // 习惯弹窗：null = 关闭；{ habit: null } = 新建；{ habit } = 编辑
+  const [habitDialog, setHabitDialog] = useState<{ habit: Habit | null } | null>(null);
   const [doneOpen, setDoneOpen] = useState(true);
   const queryClient = useQueryClient();
 
@@ -56,17 +60,33 @@ export default function TodayPage() {
   const q = (params.get('q') ?? '').trim();
   const focus = params.get('focus') === '1';
   const newFlag = params.get('new');
+  const repeatFlag = params.get('repeat');
+  const habitFlag = params.get('habit');
+  // 「新建 → 周期任务」带过来的默认重复
+  const [newRecurrence, setNewRecurrence] = useState<Recurrence | ''>('');
 
-  // 顶部「新建」传 ?new=1 过来
+  // 顶部「新建」传 ?new=1 过来（?repeat=daily|weekly|... 表示周期任务）
   useEffect(() => {
     if (!newFlag) return;
     setEditing(null);
+    setNewRecurrence((repeatFlag as Recurrence) || '');
     setDialogOpen(true);
     const next = new URLSearchParams(params);
     next.delete('new');
+    next.delete('repeat');
     setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newFlag]);
+  }, [newFlag, repeatFlag]);
+
+  // 顶部「新建 → 习惯」传 ?habit=new 过来
+  useEffect(() => {
+    if (habitFlag !== 'new') return;
+    setHabitDialog({ habit: null });
+    const next = new URLSearchParams(params);
+    next.delete('habit');
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habitFlag]);
 
   const { data: allEvents, isLoading, error } = useQuery({
     queryKey: ['events'],
@@ -273,13 +293,30 @@ export default function TodayPage() {
         </div>
 
         {/* 习惯打卡：一周 7 格，数据来自 /api/habits/occurrences */}
-        <HabitCard />
+        <HabitCard
+          onNew={() => setHabitDialog({ habit: null })}
+          onEdit={(habit) => setHabitDialog({ habit })}
+        />
       </aside>
+
+      {habitDialog && (
+        <HabitDialog
+          habit={habitDialog.habit}
+          defaultDate={todayStr()}
+          onClose={() => setHabitDialog(null)}
+          onSaved={() => {
+            setHabitDialog(null);
+            queryClient.invalidateQueries({ queryKey: ['habits'] });
+            queryClient.invalidateQueries({ queryKey: ['habitOccurrences'] });
+          }}
+        />
+      )}
 
       {dialogOpen && (
         <EventDialog
           event={editing}
           defaultDate={date}
+          defaultRecurrence={newRecurrence}
           onClose={() => setDialogOpen(false)}
           onSaved={() => {
             setDialogOpen(false);
