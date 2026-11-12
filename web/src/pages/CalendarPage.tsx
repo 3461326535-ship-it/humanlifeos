@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import type { TodoEvent, TaskStatus } from '../lib/types';
+import type { TodoEvent, TaskStatus, HabitOccurrence, HabitStatus } from '../lib/types';
 import EventDialog from '../components/EventDialog';
 
 const WEEK_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
@@ -59,6 +59,16 @@ function eventSpan(e: TodoEvent) {
   return { startMin, endMin, start };
 }
 
+/** 习惯块：只按 start_time 占位，没有时长就按 45 分钟画（够看出被占住，又不至于盖住别的） */
+const HABIT_MIN_LEN = 45;
+function habitSpan(o: HabitOccurrence) {
+  const t = o.time || '';
+  if (!t.includes(':')) return null;
+  const [h, m] = t.split(':').map(Number);
+  const startMin = h * 60 + m;
+  return { startMin, endMin: startMin + HABIT_MIN_LEN, start: t };
+}
+
 export default function CalendarPage() {
   const [mode, setMode] = useState<'week' | 'month'>('week');
   const [anchor, setAnchor] = useState(todayStr());
@@ -98,6 +108,49 @@ export default function CalendarPage() {
 
   const tStr = todayStr();
   const cells = monthCells(monthView.y, monthView.m);
+
+  // 习惯：周视图画成时间块，月视图只在日期角上标个数（不铺开，否则天天都有、糊成一片）
+  const rangeFrom = mode === 'week' ? fmt(weekStart) : fmt(cells[0]);
+  const rangeTo = mode === 'week' ? fmt(weekEnd) : fmt(cells[41]);
+  const { data: habitOcc } = useQuery({
+    queryKey: ['habitOccurrences', rangeFrom, rangeTo],
+    queryFn: () => api.getHabitOccurrences(rangeFrom, rangeTo),
+  });
+
+  const habitsByDate = useMemo(() => {
+    const map: Record<string, HabitOccurrence[]> = {};
+    (habitOcc?.items || []).forEach((it) => {
+      (map[it.date] ||= []).push(it);
+    });
+    return map;
+  }, [habitOcc]);
+
+  // 日历里点习惯块 = 打卡 / 再点撤销（和右栏习惯卡同一套规则）
+  const habitToggle = useMutation({
+    mutationFn: ({ habitId, date, clear }: { habitId: number; date: string; clear: boolean }) =>
+      clear ? api.clearHabitOverride(habitId, date) : api.setHabitOverride(habitId, date, 'done'),
+    onMutate: async ({ habitId, date, clear }) => {
+      await qc.cancelQueries({ queryKey: ['habitOccurrences', rangeFrom, rangeTo] });
+      const prev = qc.getQueryData<{ items: HabitOccurrence[] }>(['habitOccurrences', rangeFrom, rangeTo]);
+      if (prev) {
+        const fallback: HabitStatus = date < todayStr() ? 'skipped' : 'pending';
+        qc.setQueryData(['habitOccurrences', rangeFrom, rangeTo], {
+          ...prev,
+          items: prev.items.map((it) =>
+            it.habit_id === habitId && it.date === date
+              ? { ...it, status: clear ? fallback : ('done' as HabitStatus) }
+              : it
+          ),
+        });
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['habitOccurrences', rangeFrom, rangeTo], ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['habitOccurrences'] }),
+  });
+
 
   const openAdd = (date: string, status: TaskStatus = 'todo') => {
     setEditing(null);
@@ -229,6 +282,17 @@ export default function CalendarPage() {
               const dayList = byDate[ds] || [];
               const timed = dayList.filter((e) => eventSpan(e));
               const allDay = dayList.filter((e) => !eventSpan(e));
+              // 同一格里任务和习惯时段撞上时左右分栏，谁也别盖住谁
+              const habitSpans = (habitsByDate[ds] || [])
+                .map((h) => ({ h, span: habitSpan(h) }))
+                .filter((x): x is { h: HabitOccurrence; span: { startMin: number; endMin: number; start: string } } => !!x.span);
+              const hitHabit = (a: { startMin: number; endMin: number }) =>
+                habitSpans.some((x) => a.startMin < x.span.endMin && x.span.startMin < a.endMin);
+              const hitTask = (b: { startMin: number; endMin: number }) =>
+                timed.some((e) => {
+                  const s = eventSpan(e);
+                  return !!s && s.startMin < b.endMin && b.startMin < s.endMin;
+                });
               return (
                 <div
                   key={di}
@@ -240,6 +304,49 @@ export default function CalendarPage() {
                   {hourLines.map((h, i) => (
                     <div key={h} className="absolute inset-x-0 border-t border-line/40" style={{ top: i * HOUR_H }} />
                   ))}
+
+                  {/* 习惯：虚线带，压在任务块下面（背景层），只为标出「这段时间被占」 */}
+                  {(habitsByDate[ds] || []).map((h) => {
+                    const span = habitSpan(h);
+                    if (!span) return null;
+                    const top = ((span.startMin - DAY_START * 60) / 60) * HOUR_H;
+                    if (top < 0 || top > TOTAL_H) return null;
+                    const height = Math.max(20, ((span.endMin - span.startMin) / 60) * HOUR_H - 2);
+                    const done = h.status === 'done';
+                    const split = hitTask(span);
+                    return (
+                      <button
+                        key={`habit-${h.habit_id}`}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          habitToggle.mutate({ habitId: h.habit_id, date: ds, clear: done });
+                        }}
+                        className={`absolute z-[5] overflow-hidden rounded-md border border-dashed px-1.5 py-0.5 text-left transition-colors ${
+                          done
+                            ? 'border-moss/50 bg-moss-soft/70'
+                            : 'border-moss/30 bg-moss-soft/30 hover:bg-moss-soft/50'
+                        }`}
+                        style={split ? { top, height, left: '56%', right: 8 } : { top, height, left: 8, right: 8 }}
+                        title={`${h.title} · 习惯 ${span.start}${done ? ' · 已打卡（点击撤销）' : ' · 点击打卡'}`}
+                      >
+                        {/* 分栏后列宽只剩一半，标题和时间改两行，避免一行内被截断成「吃药…」 */}
+                        {split ? (
+                          <>
+                            <p className="truncate text-[10px] font-medium leading-[1.25] text-moss">↻ {h.title}</p>
+                            <p className="truncate text-[9px] leading-[1.2] text-moss/70">{span.start}</p>
+                          </>
+                        ) : (
+                          <p className="truncate text-[10.5px] font-medium leading-tight text-moss">
+                            ↻ {h.title}
+                            <span className="ml-1 font-normal text-moss/70">{span.start}</span>
+                          </p>
+                        )}
+                        {done && (
+                          <span className="pointer-events-none absolute right-1 top-0.5 text-[9px] leading-none text-moss">✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
 
                   {/* 无具体时间的任务：贴顶 */}
                   {allDay.length > 0 && (
@@ -260,12 +367,46 @@ export default function CalendarPage() {
                     </div>
                   )}
 
+                  {/* 没设时间的习惯：贴顶细条，排在无时间任务之后 */}
+                  {(habitsByDate[ds] || []).filter((h) => !habitSpan(h)).length > 0 && (
+                    <div
+                      className="absolute inset-x-0.5 z-10 space-y-0.5"
+                      style={{ top: 4 + Math.min(allDay.length, 2) * 18 }}
+                    >
+                      {(habitsByDate[ds] || [])
+                        .filter((h) => !habitSpan(h))
+                        .slice(0, 2)
+                        .map((h) => (
+                          <button
+                            key={`habit-t-${h.habit_id}`}
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              habitToggle.mutate({
+                                habitId: h.habit_id,
+                                date: ds,
+                                clear: h.status === 'done',
+                              });
+                            }}
+                            className={`block w-full truncate rounded border border-dashed px-1 py-0.5 text-left text-[10px] ${
+                              h.status === 'done'
+                                ? 'border-moss/50 bg-moss-soft/70 text-moss'
+                                : 'border-moss/30 bg-moss-soft/30 text-moss/80'
+                            }`}
+                            title={`${h.title} · 习惯（未设时间）`}
+                          >
+                            ↻ {h.title}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+
                   {/* 时间块 */}
                   {timed.map((e) => {
                     const span = eventSpan(e)!;
                     const top = ((span.startMin - DAY_START * 60) / 60) * HOUR_H;
                     if (top < 0 || top > TOTAL_H) return null;
                     const height = Math.max(22, ((span.endMin - span.startMin) / 60) * HOUR_H - 2);
+                    const split = hitHabit(span);
                     return (
                       <button
                         key={e.id}
@@ -273,8 +414,8 @@ export default function CalendarPage() {
                           ev.stopPropagation();
                           openEdit(e);
                         }}
-                        className={`absolute inset-x-1 z-10 overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left transition-shadow hover:shadow-card-hover ${STATUS_BLOCK[e.status]}`}
-                        style={{ top, height }}
+                        className={`absolute left-1 z-10 overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left transition-shadow hover:shadow-card-hover ${STATUS_BLOCK[e.status]}`}
+                        style={{ top, height, right: split ? '47%' : 4 }}
                         title={`${e.title} ${span.start}`}
                       >
                         <p className="truncate text-[11.5px] font-medium leading-tight">{e.title}</p>
@@ -335,13 +476,24 @@ export default function CalendarPage() {
                     >
                       {d.getDate()}
                     </button>
-                    <button
-                      className="flex h-5 w-5 items-center justify-center rounded text-ink-faint opacity-0 transition hover:bg-paper-deep hover:text-ink-mid group-hover:opacity-100"
-                      onClick={() => openAdd(ds)}
-                      aria-label="新建"
-                    >
-                      +
-                    </button>
+                    <span className="flex items-center gap-0.5">
+                      {/* 月视图只给个角标：这天有几个习惯，不展开（否则天天都有、糊成一片）；非本月不标 */}
+                      {inMonth && (habitsByDate[ds] || []).length > 0 && (
+                        <span
+                          className="text-[9.5px] leading-none text-moss/60"
+                          title={`${(habitsByDate[ds] || []).length} 个习惯`}
+                        >
+                          ↻{(habitsByDate[ds] || []).length}
+                        </span>
+                      )}
+                      <button
+                        className="flex h-5 w-5 items-center justify-center rounded text-ink-faint opacity-0 transition hover:bg-paper-deep hover:text-ink-mid group-hover:opacity-100"
+                        onClick={() => openAdd(ds)}
+                        aria-label="新建"
+                      >
+                        +
+                      </button>
+                    </span>
                   </div>
                   <div className="mt-1 space-y-1">
                     {evs.slice(0, 3).map((e) => (
@@ -365,10 +517,10 @@ export default function CalendarPage() {
       )}
 
       <p className="mt-2.5 text-[11.5px] text-ink-soft">
-        双击空白格新建 · 时间块颜色对应状态：<span className="text-ink-mid">待开始</span>
+        双击空白格新建 · 实心块＝任务（<span className="text-ink-mid">待开始</span>
         <span className="text-clay"> · 进行中</span>
         <span className="text-lagoon"> · 待审核</span>
-        <span className="text-moss"> · 已完成</span>
+        <span className="text-moss"> · 已完成</span>）· 虚线块＝习惯，点一下打卡、再点撤销
       </p>
 
       {dialogOpen && (
