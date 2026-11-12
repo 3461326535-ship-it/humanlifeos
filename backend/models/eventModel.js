@@ -87,7 +87,8 @@ class EventModel {
     const {
       title, date, time = '', category = '其他', description = '', reminder = 0,
       subtasks = [], recurrence = null, recurrence_end_date = null,
-      status, start_time, end_time, project_id, position, priority, sort_date
+      status, start_time, end_time, project_id, position, priority, sort_date,
+      end_date = null
     } = eventData;
     let called = false; // 防重复调用
 
@@ -104,9 +105,9 @@ class EventModel {
 
     db.run(
       `INSERT INTO events (title, date, time, category, description, reminder, recurrence, recurrence_end_date, user_id,
-        status, start_time, end_time, project_id, position, completed_at, priority, sort_date,
+        status, start_time, end_time, project_id, position, completed_at, priority, sort_date, end_date,
         created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [title, date, time, category, description, reminder ? 1 : 0, recurrence, recurrence_end_date,
         userId != null ? userId : null,
         normStatus, startTimeVal,
@@ -115,7 +116,9 @@ class EventModel {
         position != null ? position : null,
         completedAt,
         priority != null ? priority : null,
-        sort_date != null ? sort_date : null],
+        sort_date != null ? sort_date : null,
+        // end_date 早于 date 视为脏数据，收敛为 NULL（= 单日）
+        (end_date && end_date > date) ? end_date : null],
       function (err) {
         if (err) {
           if (!called) { called = true; callback(err, null); }
@@ -226,7 +229,7 @@ class EventModel {
     // 动态构建 SET 子句：只更新实际传入的字段
     const allowedFields = ['title', 'date', 'time', 'category', 'description', 'completed', 'reminder',
       'recurrence', 'recurrence_end_date', 'status', 'start_time', 'end_time', 'project_id',
-      'position', 'priority', 'sort_date'];
+      'position', 'priority', 'sort_date', 'end_date'];
     const setClauses = [];
     const values = [];
 
@@ -302,6 +305,8 @@ class EventModel {
       if (fetchErr) return callback(fetchErr, null);
       db.run(`DELETE FROM events ${where}`, params, (err) => {
         if (err) return callback(err, null);
+        // 甘特：连带清掉这条件上的依赖，避免留下指向已删任务的孤儿边
+        db.run(`DELETE FROM task_dependencies WHERE event_id = ? OR depends_on = ?`, [id, id], () => {});
         if (row) EventModel._logActivity(userId, id, row.project_id, 'delete', row.title, null);
         callback(null, { success: true, id });
       });
@@ -329,6 +334,14 @@ class EventModel {
       db.run(`DELETE FROM events ${chainWhere}`, chainParams, function (err2) {
         if (err2) return callback(err2);
         const deleted = this.changes;
+
+        // 甘特：扫掉指向已删任务的孤儿依赖（一次全表，量级很小）
+        db.run(
+          `DELETE FROM task_dependencies
+            WHERE event_id NOT IN (SELECT id FROM events)
+               OR depends_on NOT IN (SELECT id FROM events)`,
+          () => {}
+        );
 
         // 2. 将剩余同链事件（date < 该日期）全部"封口"——清掉 recurrence，防止 catchUp 再生
         const sealWhere = userId != null

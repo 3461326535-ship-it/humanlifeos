@@ -11,6 +11,9 @@ import type {
   AiMessage,
   AiChatResponse,
   AiConfirmResponse,
+  GanttBoard,
+  GanttMoveResult,
+  DepType,
 } from './types';
 
 // 同源部署（/app），Cookie 自动携带；token 不落 localStorage（XSS 防护决策见方案 §6.1）
@@ -187,6 +190,43 @@ export const api = {
   },
   deleteEvent(id: number, chain = false) {
     return request<{ success: boolean }>(`/events/${id}${chain ? '?chain=true' : ''}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // ── 甘特图：任务条 / 依赖 / 级联排程 ──
+  getGantt(params?: { projectId?: number | null; includeRecurring?: boolean }) {
+    const qs = new URLSearchParams();
+    if (params?.projectId) qs.set('project_id', String(params.projectId));
+    if (params?.includeRecurring) qs.set('include_recurring', '1');
+    const s = qs.toString();
+    return request<GanttBoard>(`/gantt${s ? `?${s}` : ''}`);
+  },
+  /** 移动或拉伸任务条；cascade=true 时依赖它的后续任务自动顺延 */
+  moveGanttTask(id: number, data: { start: string; end?: string; cascade?: boolean }) {
+    return request<GanttMoveResult>(`/gantt/tasks/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+  /** 按依赖把有依赖关系的任务紧凑重排（可提前） */
+  autoSchedule() {
+    return request<GanttMoveResult>('/gantt/auto-schedule', { method: 'POST' });
+  },
+  addGanttDependency(data: { event_id: number; depends_on: number; type?: DepType; lag_days?: number }) {
+    return request<GanttMoveResult & { updated: boolean }>('/gantt/dependencies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  updateGanttDependency(eventId: number, dependsOn: number, data: { type?: DepType; lag_days?: number }) {
+    return request<GanttMoveResult>(`/gantt/dependencies/${eventId}/${dependsOn}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+  deleteGanttDependency(eventId: number, dependsOn: number) {
+    return request<{ success: boolean; deleted: number }>(`/gantt/dependencies/${eventId}/${dependsOn}`, {
       method: 'DELETE',
     });
   },

@@ -49,11 +49,12 @@ router.get('/:id', (req, res) => {
 router.post('/', validate({
   title: { rule: RULES.string, message: 'title 必须是字符串' },
   date: { rule: RULES.string, message: 'date 必须是字符串（YYYY-MM-DD）' },
-  time: { rule: RULES.string, message: 'time 必须是字符串（HH:MM）' },
+  time: { rule: RULES.string, message: 'time 必须是字符串（HH:MM）', optional: true },
   category: { rule: RULES.string, message: 'category 必须是字符串', optional: true },
   description: { rule: RULES.string, message: 'description 必须是字符串', optional: true },
   reminder: { rule: (v) => v === 0 || v === 1 || v === true || v === false, message: 'reminder 必须是 0 或 1', optional: true },
-  subtasks: { rule: RULES.array, message: 'subtasks 必须是数组', optional: true }
+  subtasks: { rule: RULES.array, message: 'subtasks 必须是数组', optional: true },
+  end_date: { rule: RULES.string, message: 'end_date 必须是字符串（YYYY-MM-DD）', optional: true }
 }), (req, res) => {
   EventModel.createEvent(uid(req), req.body, (err, event) => {
     if (err) {
@@ -86,7 +87,8 @@ router.put('/:id', validate({
   reminder: { rule: (v) => v === 0 || v === 1 || v === true || v === false, message: 'reminder 必须是 0 或 1', optional: true },
   recurrence: { rule: RULES.string, message: 'recurrence 必须是字符串或 null', optional: true },
   recurrence_end_date: { rule: RULES.string, message: 'recurrence_end_date 必须是字符串', optional: true },
-  subtasks: { rule: RULES.array, message: 'subtasks 必须是数组', optional: true }
+  subtasks: { rule: RULES.array, message: 'subtasks 必须是数组', optional: true },
+  end_date: { rule: RULES.string, message: 'end_date 必须是字符串（YYYY-MM-DD）', optional: true }
 }), (req, res) => {
   const id = parseInt(req.params.id);
   const userId = uid(req);

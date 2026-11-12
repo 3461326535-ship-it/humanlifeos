@@ -23,6 +23,7 @@ const timersRouter = require('./backend/routes/timers');
 const habitsRouter = require('./backend/routes/habits');
 const recurringRulesRouter = require('./backend/routes/recurring-rules');
 const calendarRouter = require('./backend/routes/calendar');
+const ganttRouter = require('./backend/routes/gantt');
 const createArchiveTask = require('./backend/models/archiveTask');
 const authRouter = require('./routes/auth');
 const yuexinRouter = require('./routes/yuexin');
@@ -133,6 +134,7 @@ app.use('/api/timers', optionalAuth, timersRouter);   // 计时: /api/timers/act
 app.use('/api/habits', optionalAuth, habitsRouter);                    // 习惯: 规则、按日状态、统计
 app.use('/api/recurring-rules', optionalAuth, recurringRulesRouter);   // 周期任务: 规则、窗口实例、归档
 app.use('/api/calendar', optionalAuth, calendarRouter);                // 三分类统一日历投影
+app.use('/api/gantt', optionalAuth, ganttRouter);                      // 甘特: 图、依赖、级联排程
 
 // AI 端点限流: 仅作用于 chat / confirm，历史读写不占用额度
 const aiLimiter = rateLimit({

@@ -5,6 +5,7 @@ import { api } from './lib/api';
 import LoginPage from './pages/LoginPage';
 import TodayPage from './pages/TodayPage';
 import KanbanPage from './pages/KanbanPage';
+import GanttPage from './pages/GanttPage';
 import CalendarPage from './pages/CalendarPage';
 import StatsPage from './pages/StatsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
@@ -20,6 +21,7 @@ function todayLabel() {
 const TABS = [
   { to: '/', label: '今天', end: true },
   { to: '/kanban', label: '看板', end: false },
+  { to: '/gantt', label: '甘特', end: false },
   { to: '/calendar', label: '日历', end: false },
   { to: '/stats', label: '统计', end: false },
 ];
@@ -219,6 +221,7 @@ export default function App() {
           <Route path="/" element={<TodayPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/kanban" element={<KanbanPage />} />
+          <Route path="/gantt" element={<GanttPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="*" element={<PlaceholderPage title="页面" milestone="—" />} />

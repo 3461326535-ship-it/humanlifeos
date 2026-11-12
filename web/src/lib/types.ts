@@ -20,6 +20,8 @@ export interface TodoEvent {
   completed: boolean;     // 只读：由 status 派生
   start_time: string | null;
   end_time: string | null;
+  /** 甘特：计划结束日（null = 单日任务） */
+  end_date: string | null;
   project_id: number | null;
   position: number | null;
   completed_at: string | null;
@@ -45,6 +47,9 @@ export interface EventInput {
   recurrence?: string | null;
   recurrence_end_date?: string | null;
   priority?: string | null;
+  /** 甘特：计划结束日（YYYY-MM-DD，不传/等于 date 即单日任务） */
+  end_date?: string | null;
+  project_id?: number | null;
 }
 
 export interface AuthUser {
@@ -142,6 +147,92 @@ export const RECURRENCE_LABELS: Record<Recurrence, string> = {
 };
 
 export const DEFAULT_CATEGORIES = ['其他', '工作', '学习', '生活', '健康'];
+
+// ── 甘特图（第五个板块）──
+/** 依赖类型：FS 完成→开始（默认） / SS 开始→开始 / FF 完成→完成 / SF 开始→完成 */
+export type DepType = 'FS' | 'SS' | 'FF' | 'SF';
+
+export interface GanttDepRef {
+  id: number;
+  type: DepType;
+  lag: number;
+}
+
+export interface GanttTask {
+  id: number;
+  title: string;
+  start: string;       // YYYY-MM-DD
+  end: string;         // YYYY-MM-DD（含当天）
+  duration: number;    // 天数
+  status: TaskStatus;
+  priority: Priority | null;
+  category: string;
+  project_id: number | null;
+  project_name: string | null;
+  project_color: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  description: string;
+  progress: number;             // 0-100，由子任务推导
+  subtasks: { done: number; total: number };
+  milestone: boolean;           // 单日任务
+  overdue: boolean;
+  isCritical: boolean;
+  slack: number | null;
+  deps: GanttDepRef[];          // 前置任务
+  successors: GanttDepRef[];    // 后续任务
+}
+
+export interface GanttEdge {
+  from: number;
+  to: number;
+  type: DepType;
+  lag: number;
+}
+
+export interface GanttProject {
+  id: number;
+  name: string;
+  color: string | null;
+  status?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+}
+
+export interface GanttBoard {
+  today: string;
+  tasks: GanttTask[];
+  projects: GanttProject[];
+  deps: GanttEdge[];
+  stats: {
+    total: number;
+    done: number;
+    overdue: number;
+    critical: number;
+    withDependencies: number;
+  };
+}
+
+export interface GanttMoveResult {
+  success: boolean;
+  task: { id: number; start: string; end: string };
+  cascaded: number;
+  moved: { id: number; title: string; start: string; end: string }[];
+}
+
+export const DEP_LABELS: Record<DepType, string> = {
+  FS: '完成 → 开始',
+  SS: '开始 → 开始',
+  FF: '完成 → 完成',
+  SF: '开始 → 完成',
+};
+
+export const DEP_SHORT: Record<DepType, string> = {
+  FS: 'FS',
+  SS: 'SS',
+  FF: 'FF',
+  SF: 'SF',
+};
 
 // ── AI 助手（后端 /api/ai：意图分类 → 确认 → 执行）──
 export interface AiMessage {

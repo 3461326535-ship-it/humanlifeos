@@ -179,6 +179,11 @@ function initDatabase() {
     db.run(`ALTER TABLE events ADD COLUMN completed_at TEXT`, () => {});    // 实际完成时间（战报/统计用）
     db.run(`ALTER TABLE events ADD COLUMN sort_date TEXT`, () => {});       // 实际层日期（双轨，第 4 阶段启用）
     db.run(`ALTER TABLE events ADD COLUMN priority TEXT`, () => {});        // low / medium / high
+    db.run(`ALTER TABLE events ADD COLUMN end_date TEXT`, () => {});         // 甘特：计划结束日（NULL = 单日任务）
+
+    // 甘特：依赖类型（FS 完成→开始 / SS 开始→开始 / FF 完成→完成 / SF 开始→完成）+ 滞后天数
+    db.run(`ALTER TABLE task_dependencies ADD COLUMN type TEXT DEFAULT 'FS'`, () => {});
+    db.run(`ALTER TABLE task_dependencies ADD COLUMN lag_days INTEGER DEFAULT 0`, () => {});
 
     // 旧数据一次性回填（WHERE IS NULL 守卫 → 幂等）
     db.run(`UPDATE events SET status = CASE WHEN completed = 1 THEN 'done' ELSE 'todo' END WHERE status IS NULL`, (err) => {

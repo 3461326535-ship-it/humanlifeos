@@ -8,6 +8,7 @@ import EventTimer from './EventTimer';
 interface Draft {
   title: string;
   date: string;
+  end_date: string;
   time: string;
   category: string;
   description: string;
@@ -22,12 +23,14 @@ function toDraft(
   event: TodoEvent | null,
   defaultDate: string,
   defaultStatus: TaskStatus = 'todo',
-  defaultRecurrence: Recurrence | '' = ''
+  defaultRecurrence: Recurrence | '' = '',
+  defaultEndDate = ''
 ): Draft {
   if (event) {
     return {
       title: event.title,
       date: event.date,
+      end_date: event.end_date && event.end_date > event.date ? event.end_date : '',
       time: event.time || '',
       category: event.category || '',
       description: event.description || '',
@@ -41,6 +44,7 @@ function toDraft(
   return {
     title: '',
     date: defaultDate,
+    end_date: defaultEndDate,
     time: '',
     category: '',
     description: '',
@@ -56,6 +60,8 @@ function toInput(d: Draft): EventInput {
   return {
     title: d.title.trim(),
     date: d.date,
+    // 甘特：跨天任务才有结束日；未填或填成单日 → null
+    end_date: d.end_date && d.end_date > d.date ? d.end_date : null,
     time: d.time || '',
     category: d.category || '其他',
     description: d.description,
@@ -72,6 +78,7 @@ export default function EventDialog({
   defaultDate,
   defaultStatus,
   defaultRecurrence = '',
+  defaultEndDate = '',
   onClose,
   onSaved,
 }: {
@@ -79,11 +86,12 @@ export default function EventDialog({
   defaultDate: string;
   defaultStatus?: TaskStatus;
   defaultRecurrence?: Recurrence | '';
+  defaultEndDate?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() =>
-    toDraft(event, defaultDate, defaultStatus, defaultRecurrence)
+    toDraft(event, defaultDate, defaultStatus, defaultRecurrence, defaultEndDate)
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
@@ -147,18 +155,40 @@ export default function EventDialog({
             />
           </div>
 
-          {/* 日期 / 时间 */}
+          {/* 日期 / 结束日期（甘特：跨天任务填结束日） */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label" htmlFor="ev-date">日期 *</label>
+              <label className="label" htmlFor="ev-date">开始日期 *</label>
               <input
                 id="ev-date"
                 type="date"
                 className="input"
                 value={draft.date}
-                onChange={(e) => set('date', e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDraft((d) => ({
+                    ...d,
+                    date: v,
+                    end_date: d.end_date && d.end_date < v ? v : d.end_date,
+                  }));
+                }}
               />
             </div>
+            <div>
+              <label className="label" htmlFor="ev-end-date">结束日期（可选）</label>
+              <input
+                id="ev-end-date"
+                type="date"
+                className="input"
+                value={draft.end_date}
+                min={draft.date}
+                onChange={(e) => set('end_date', e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* 时间 / 分类 */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label" htmlFor="ev-time">时间（可选）</label>
               <input
@@ -169,10 +199,6 @@ export default function EventDialog({
                 onChange={(e) => set('time', e.target.value)}
               />
             </div>
-          </div>
-
-          {/* 分类 / 状态 */}
-          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label" htmlFor="ev-category">分类</label>
               <input
@@ -189,6 +215,10 @@ export default function EventDialog({
                 ))}
               </datalist>
             </div>
+          </div>
+
+          {/* 状态 / 优先级 */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label" htmlFor="ev-status">状态</label>
               <select
@@ -204,10 +234,6 @@ export default function EventDialog({
                 ))}
               </select>
             </div>
-          </div>
-
-          {/* 优先级 / 重复 */}
-          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label" htmlFor="ev-priority">优先级</label>
               <select
@@ -222,6 +248,10 @@ export default function EventDialog({
                 <option value="high">高</option>
               </select>
             </div>
+          </div>
+
+          {/* 重复 / 重复截止 */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label" htmlFor="ev-recurrence">重复</label>
               <select
@@ -237,21 +267,21 @@ export default function EventDialog({
                 <option value="yearly">每年</option>
               </select>
             </div>
+            {draft.recurrence ? (
+              <div>
+                <label className="label" htmlFor="ev-rec-end">重复截止（可选）</label>
+                <input
+                  id="ev-rec-end"
+                  type="date"
+                  className="input"
+                  value={draft.recurrence_end_date}
+                  onChange={(e) => set('recurrence_end_date', e.target.value)}
+                />
+              </div>
+            ) : (
+              <div />
+            )}
           </div>
-
-          {/* 重复截止（仅重复时显示） */}
-          {draft.recurrence && (
-            <div>
-              <label className="label" htmlFor="ev-rec-end">重复截止（可选）</label>
-              <input
-                id="ev-rec-end"
-                type="date"
-                className="input"
-                value={draft.recurrence_end_date}
-                onChange={(e) => set('recurrence_end_date', e.target.value)}
-              />
-            </div>
-          )}
 
           {/* 备注 */}
           <div>
