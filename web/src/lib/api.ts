@@ -8,6 +8,9 @@ import type {
   Habit,
   HabitInput,
   HabitStatus,
+  AiMessage,
+  AiChatResponse,
+  AiConfirmResponse,
 } from './types';
 
 // 同源部署（/app），Cookie 自动携带；token 不落 localStorage（XSS 防护决策见方案 §6.1）
@@ -135,6 +138,41 @@ export const api = {
   /** 撤销某天 → 回到自动推断（过去=断签，未来=待办） */
   clearHabitOverride(id: number, date: string) {
     return request<{ success: boolean }>(`/habits/${id}/overrides/${date}`, { method: 'DELETE' });
+  },
+
+  // ── AI 助手（DeepSeek）──
+  // 后端 /api/ai 已存在，这里只是把旧页面（todo.html + js/script.js）的调用搬过来
+  aiChat(message: string, history: AiMessage[]) {
+    return request<AiChatResponse>('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, history }),
+    });
+  },
+  aiConfirm(confirmId: string) {
+    return request<AiConfirmResponse>('/ai/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ confirmId }),
+    });
+  },
+  /** 主动取消待确认动作，释放服务端 pending（防 30 分钟 TTL 内重放） */
+  aiCancel(confirmId: string) {
+    return request<AiConfirmResponse>('/ai/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ confirmId }),
+    });
+  },
+  /** 最近 7 天、最多 500 条，按用户隔离 */
+  getAiHistory() {
+    return request<{ history: AiMessage[] }>('/ai/history');
+  },
+  saveAiHistory(messages: AiMessage[]) {
+    return request<{ success: boolean; inserted?: number }>('/ai/history', {
+      method: 'POST',
+      body: JSON.stringify({ messages }),
+    });
+  },
+  clearAiHistory() {
+    return request<{ success: boolean; deleted: number }>('/ai/history', { method: 'DELETE' });
   },
 
   // ── 统计 / 战报 ──

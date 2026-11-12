@@ -84,6 +84,23 @@
     @apply bg-white text-ink shadow-[0_1px_2px_rgba(60,45,20,0.10)];
   }
 
+  /* ── AI 思考中的三点（ai-dot）── */
+  .ai-dot {
+    animation: ai-dot 1.15s ease-in-out infinite;
+  }
+  @keyframes ai-dot {
+    0%,
+    60%,
+    100% {
+      opacity: 0.25;
+      transform: translateY(0);
+    }
+    30% {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+  }
+
   /* ── 右侧辅助栏小标题 ── */
   .s-head {
     @apply mb-2.5 flex items-center justify-between;

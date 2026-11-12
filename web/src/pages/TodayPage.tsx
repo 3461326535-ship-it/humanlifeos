@@ -62,6 +62,7 @@ export default function TodayPage() {
   const newFlag = params.get('new');
   const repeatFlag = params.get('repeat');
   const habitFlag = params.get('habit');
+  const dateFlag = params.get('date');
   // 「新建 → 周期任务」带过来的默认重复
   const [newRecurrence, setNewRecurrence] = useState<Recurrence | ''>('');
 
@@ -88,11 +89,20 @@ export default function TodayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [habitFlag]);
 
+  // AI 执行完写操作后跳到任务所在日期（旧版也是「自动跳到那一天」），用完即清
+  useEffect(() => {
+    if (!dateFlag || !/^\d{4}-\d{2}-\d{2}$/.test(dateFlag)) return;
+    setDate(dateFlag);
+    const next = new URLSearchParams(params);
+    next.delete('date');
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFlag]);
+
   const { data: allEvents, isLoading, error } = useQuery({
     queryKey: ['events'],
     queryFn: api.getEvents,
   });
-
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['events'] });
 
   const toggleMutation = useMutation({

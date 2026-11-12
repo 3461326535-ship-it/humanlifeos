@@ -8,6 +8,7 @@ import KanbanPage from './pages/KanbanPage';
 import CalendarPage from './pages/CalendarPage';
 import StatsPage from './pages/StatsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import AiChat from './components/AiChat';
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -223,6 +224,9 @@ export default function App() {
           <Route path="*" element={<PlaceholderPage title="页面" milestone="—" />} />
         </Routes>
       </main>
+
+      {/* AI 助手：浮标 + 聊天窗 + 确认弹窗，走后端现有的 /api/ai/* */}
+      {!isLogin && <AiChat />}
     </div>
   );
 }

@@ -142,3 +142,67 @@ export const RECURRENCE_LABELS: Record<Recurrence, string> = {
 };
 
 export const DEFAULT_CATEGORIES = ['其他', '工作', '学习', '生活', '健康'];
+
+// ── AI 助手（后端 /api/ai：意图分类 → 确认 → 执行）──
+export interface AiMessage {
+  role: 'user' | 'assistant';
+  message: string;
+  createdAt?: string;
+}
+
+/** 单条操作的结构化数据（create / update / delete / addSubtask） */
+export interface AiActionData {
+  title?: string;
+  date?: string;
+  time?: string;
+  category?: string;
+  subtasks?: { title: string }[];
+  parentTitle?: string;
+  subtaskTitle?: string;
+  onlyCompleted?: boolean;
+  kind?: string;
+  rrule?: string;
+}
+
+/** 后端返回的待确认动作预览，type 决定弹窗怎么渲染 */
+export type AiActionType =
+  | 'create'
+  | 'update'
+  | 'delete'
+  | 'addSubtask'
+  | 'batchDelete'
+  | 'batchComplete'
+  | 'batchUpdateDate'
+  | 'projectPlan';
+
+export interface AiActionPreview {
+  type: AiActionType;
+  /** 单条操作 */
+  data?: AiActionData;
+  /** 批量操作 */
+  affectedCount?: number;
+  titles?: string[];
+  newDate?: string;
+  /** 项目计划 */
+  title?: string;
+  taskCount?: number;
+  phases?: { name: string; tasks: { title: string; date: string; time: string }[] }[];
+}
+
+export interface AiChatResponse {
+  reply: string;
+  action?: string | null;
+  data?: unknown;
+  needsConfirm?: boolean;
+  confirmId?: string;
+  actionPreview?: AiActionPreview;
+  needsClarify?: boolean;
+  clarifyOptions?: string[];
+}
+
+export interface AiConfirmResponse {
+  success: boolean;
+  reply: string;
+  actionExecuted?: boolean;
+  cancelled?: boolean;
+}
