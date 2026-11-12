@@ -8,10 +8,10 @@ import EventDialog from '../components/EventDialog';
 const WEEK_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
 
 const CHIP_CLASS: Record<TaskStatus, string> = {
-  todo: 'bg-slate-100 text-slate-600',
-  in_progress: 'bg-blue-50 text-blue-600',
-  review: 'bg-amber-50 text-amber-600',
-  done: 'bg-emerald-50 text-emerald-600',
+  todo: 'bg-line-soft text-ink-mid',
+  in_progress: 'bg-lagoon-soft text-lagoon',
+  review: 'bg-clay-soft text-clay',
+  done: 'bg-moss-soft text-moss',
 };
 
 function todayStr() {
@@ -80,47 +80,45 @@ export default function CalendarPage() {
   const selectedEvents = selectedDay ? (byDate[selectedDay] || []).slice().sort((a, b) => (a.time || '').localeCompare(b.time || '')) : [];
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="min-w-0">
       {/* 工具栏 */}
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">日历</h1>
-
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5">
-          <button className="btn-ghost" onClick={() => setView((v) => ({ ...v, m: v.m - 1 < 0 ? 11 : v.m - 1, y: v.m - 1 < 0 ? v.y - 1 : v.y }))} aria-label="上个月">←</button>
-          <span className="min-w-[88px] text-center text-[14px] font-semibold text-slate-700">
+          <button className="btn-ghost h-8 px-2" onClick={() => setView((v) => ({ ...v, m: v.m - 1 < 0 ? 11 : v.m - 1, y: v.m - 1 < 0 ? v.y - 1 : v.y }))} aria-label="上个月">‹</button>
+          <span className="min-w-[88px] text-center text-[13.5px] font-semibold text-ink">
             {view.y}年{view.m + 1}月
           </span>
-          <button className="btn-ghost" onClick={() => setView((v) => ({ ...v, m: v.m + 1 > 11 ? 0 : v.m + 1, y: v.m + 1 > 11 ? v.y + 1 : v.y }))} aria-label="下个月">→</button>
-          <button className="btn-ghost text-xs" onClick={() => { const n = new Date(); setView({ y: n.getFullYear(), m: n.getMonth() }); }}>今天</button>
+          <button className="btn-ghost h-8 px-2" onClick={() => setView((v) => ({ ...v, m: v.m + 1 > 11 ? 0 : v.m + 1, y: v.m + 1 > 11 ? v.y + 1 : v.y }))} aria-label="下个月">›</button>
+          <button className="btn-ghost h-7 px-2 text-xs" onClick={() => { const n = new Date(); setView({ y: n.getFullYear(), m: n.getMonth() }); }}>今天</button>
         </div>
 
         {/* 双轨切换 */}
-        <div className="flex rounded-lg bg-slate-100 p-0.5 text-[13px]">
+        <div className="seg">
           <button
             onClick={() => { setTrack('plan'); setSelectedDay(null); }}
-            className={`rounded-md px-2.5 py-1 ${track === 'plan' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`seg-item ${track === 'plan' ? 'seg-item-on' : ''}`}
           >
             计划
           </button>
           <button
             onClick={() => { setTrack('actual'); setSelectedDay(null); }}
-            className={`rounded-md px-2.5 py-1 ${track === 'actual' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`seg-item ${track === 'actual' ? 'seg-item-on' : ''}`}
           >
             实际
           </button>
         </div>
-        <span className="text-[12px] text-slate-400">
+        <span className="text-[12px] text-ink-soft">
           {track === 'plan' ? '按计划日期排布' : '按实际完成日期排布（仅已完成）'}
         </span>
       </div>
 
       {/* 月格 */}
       {isLoading ? (
-        <p className="py-24 text-center text-sm text-slate-400">加载中…</p>
+        <p className="py-24 text-center text-sm text-ink-soft">加载中…</p>
       ) : (
-        <div className="overflow-hidden rounded-xl ring-1 ring-slate-200/60">
+        <div className="overflow-hidden rounded-xl ring-1 ring-line/60">
           {/* 周头 */}
-          <div className="grid grid-cols-7 border-b border-slate-200/60 bg-slate-50/70 text-center text-[12px] font-medium text-slate-400">
+          <div className="grid grid-cols-7 border-b border-line/60 bg-paper-deep/70 text-center text-[12px] font-medium text-ink-soft">
             {WEEK_LABELS.map((w) => (
               <div key={w} className="py-2">{w}</div>
             ))}
@@ -134,23 +132,23 @@ export default function CalendarPage() {
               return (
                 <div
                   key={i}
-                  className={`group min-h-[104px] border-b border-r border-slate-100 p-1.5 ${i % 7 === 6 ? 'border-r-0' : ''} ${inMonth ? 'bg-white' : 'bg-slate-50/40'}`}
+                  className={`group min-h-[104px] border-b border-r border-line-soft p-1.5 ${i % 7 === 6 ? 'border-r-0' : ''} ${inMonth ? 'bg-white' : 'bg-paper-deep/40'}`}
                 >
                   <div className="flex items-center justify-between">
                     <button
                       onClick={() => setSelectedDay(ds === selectedDay ? null : ds)}
                       className={`flex h-6 w-6 items-center justify-center rounded-md text-[12px] font-medium ${
                         isToday
-                          ? 'bg-indigo-600 text-white'
+                          ? 'bg-moss text-white'
                           : inMonth
-                          ? 'text-slate-700 hover:bg-slate-100'
-                          : 'text-slate-300 hover:bg-slate-100'
+                          ? 'text-ink-mid hover:bg-line-soft'
+                          : 'text-ink-faint hover:bg-line-soft'
                       }`}
                     >
                       {d.getDate()}
                     </button>
                     <button
-                      className="flex h-5 w-5 items-center justify-center rounded text-slate-300 opacity-0 transition hover:bg-slate-100 hover:text-slate-500 group-hover:opacity-100"
+                      className="flex h-5 w-5 items-center justify-center rounded text-ink-faint opacity-0 transition hover:bg-line-soft hover:text-ink-soft group-hover:opacity-100"
                       onClick={() => openAdd(ds)}
                       aria-label="新建"
                     >
@@ -170,7 +168,7 @@ export default function CalendarPage() {
                       </button>
                     ))}
                     {evs.length > 3 && (
-                      <div className="px-1.5 text-[10px] text-slate-400">+{evs.length - 3} 更多</div>
+                      <div className="px-1.5 text-[10px] text-ink-soft">+{evs.length - 3} 更多</div>
                     )}
                   </div>
                 </div>
@@ -184,9 +182,9 @@ export default function CalendarPage() {
       {selectedDay && (
         <div className="mt-4 card p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-800">
+            <h3 className="text-sm font-semibold text-ink">
               {selectedDay}
-              <span className="ml-2 text-[12px] font-normal text-slate-400">
+              <span className="ml-2 text-[12px] font-normal text-ink-soft">
                 {selectedEvents.length} 项（{track === 'plan' ? '计划' : '实际'}）
               </span>
             </h3>
@@ -196,19 +194,19 @@ export default function CalendarPage() {
             </div>
           </div>
           {selectedEvents.length === 0 ? (
-            <p className="py-6 text-center text-[13px] text-slate-400">这一天没有任务</p>
+            <p className="py-6 text-center text-[13px] text-ink-soft">这一天没有任务</p>
           ) : (
             <ul className="space-y-1.5">
               {selectedEvents.map((e) => (
                 <li
                   key={e.id}
                   onClick={() => openEdit(e)}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-paper-deep"
                 >
                   <span className={`h-2 w-2 flex-none rounded-full ${dotColor(e.status)}`} />
-                  <span className="w-12 flex-none font-mono text-[12px] text-slate-400">{e.time || '—'}</span>
-                  <span className="flex-1 truncate text-[13px] text-slate-700">{e.title}</span>
-                  <span className="text-[11px] text-slate-400">{STATUS_LABELS[e.status]}</span>
+                  <span className="w-12 flex-none font-mono text-[12px] text-ink-soft">{e.time || '—'}</span>
+                  <span className="flex-1 truncate text-[13px] text-ink-mid">{e.title}</span>
+                  <span className="text-[11px] text-ink-soft">{STATUS_LABELS[e.status]}</span>
                 </li>
               ))}
             </ul>
@@ -235,9 +233,9 @@ export default function CalendarPage() {
 
 function dotColor(status: TaskStatus): string {
   return {
-    todo: 'bg-slate-400',
-    in_progress: 'bg-blue-500',
-    review: 'bg-amber-500',
-    done: 'bg-emerald-500',
+    todo: 'bg-ink-soft',
+    in_progress: 'bg-lagoon',
+    review: 'bg-clay',
+    done: 'bg-moss',
   }[status];
 }

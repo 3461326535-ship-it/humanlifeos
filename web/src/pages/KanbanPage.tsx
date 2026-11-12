@@ -28,16 +28,16 @@ import EventDialog from '../components/EventDialog';
 const COLUMNS: TaskStatus[] = ['todo', 'in_progress', 'review', 'done'];
 
 const STATUS_ACCENT: Record<TaskStatus, string> = {
-  todo: 'bg-slate-400',
-  in_progress: 'bg-blue-500',
-  review: 'bg-amber-500',
-  done: 'bg-emerald-500',
+  todo: 'bg-ink-soft',
+  in_progress: 'bg-lagoon',
+  review: 'bg-clay',
+  done: 'bg-moss',
 };
 
 const PRIORITY_DOT: Record<string, string> = {
-  high: 'bg-rose-500',
-  medium: 'bg-amber-500',
-  low: 'bg-sky-500',
+  high: 'bg-coral',
+  medium: 'bg-clay',
+  low: 'bg-lagoon',
 };
 
 type Scope = 'today' | 'week' | 'all';
@@ -141,18 +141,18 @@ function KanbanCard({
         {event.priority && (
           <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${PRIORITY_DOT[event.priority]}`} />
         )}
-        <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">{event.title}</p>
+        <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{event.title}</p>
       </div>
 
       {hasMeta && (
         <div className="flex flex-wrap items-center gap-1.5 pl-4 text-[11px]">
           {event.time && (
-            <span className="rounded bg-indigo-50 px-1.5 py-0.5 font-medium text-indigo-600">{event.time}</span>
+            <span className="rounded bg-moss-soft px-1.5 py-0.5 font-medium text-moss">{event.time}</span>
           )}
           {event.category && event.category !== '其他' && (
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">{event.category}</span>
+            <span className="rounded bg-line-soft px-1.5 py-0.5 text-ink-soft">{event.category}</span>
           )}
-          {event.recurrence && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">↻</span>}
+          {event.recurrence && <span className="rounded bg-line-soft px-1.5 py-0.5 text-ink-soft">↻</span>}
         </div>
       )}
 
@@ -162,35 +162,35 @@ function KanbanCard({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex w-full items-center gap-2 rounded py-0.5 text-[11px] text-slate-500 hover:text-slate-700"
+            className="flex w-full items-center gap-2 rounded py-0.5 text-[11px] text-ink-soft hover:text-ink-mid"
             aria-expanded={expanded}
           >
-            <span className="h-1 w-14 flex-none overflow-hidden rounded-full bg-slate-200">
+            <span className="h-1 w-14 flex-none overflow-hidden rounded-full bg-line">
               <span
-                className={`block h-full rounded-full ${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                className={`block h-full rounded-full ${pct === 100 ? 'bg-moss' : 'bg-moss'}`}
                 style={{ width: `${pct}%` }}
               />
             </span>
             <span className="font-medium tabular-nums">
               {doneSub}/{totalSub}
             </span>
-            <span className="ml-auto text-slate-400">{expanded ? '收起' : '展开'}</span>
+            <span className="ml-auto text-ink-soft">{expanded ? '收起' : '展开'}</span>
           </button>
 
           {expanded && (
             <ul className="mt-1 space-y-0.5">
               {(event.subtasks || []).map((st) => (
                 <li key={st.id}>
-                  <label className="flex cursor-pointer items-start gap-1.5 rounded px-1 py-0.5 hover:bg-slate-50">
+                  <label className="flex cursor-pointer items-start gap-1.5 rounded px-1 py-0.5 hover:bg-paper-deep">
                     <input
                       type="checkbox"
-                      className="mt-[3px] h-3 w-3 flex-none accent-indigo-600"
+                      className="mt-[3px] h-3 w-3 flex-none accent-moss"
                       checked={st.completed}
                       onChange={() => onToggleSubtask(event, st.id)}
                     />
                     <span
                       className={`min-w-0 break-words text-[11px] leading-4 ${
-                        st.completed ? 'text-slate-400 line-through' : 'text-slate-600'
+                        st.completed ? 'text-ink-soft line-through' : 'text-ink-mid'
                       }`}
                     >
                       {st.title}
@@ -215,14 +215,14 @@ function CardPreview({ event }: { event: TodoEvent }) {
         {event.priority && (
           <span className={`mt-1.5 h-2 w-2 flex-none rounded-full ${PRIORITY_DOT[event.priority]}`} />
         )}
-        <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">{event.title}</p>
+        <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{event.title}</p>
       </div>
       <div className="flex items-center gap-1.5 pl-4 text-[11px]">
         {event.time && (
-          <span className="rounded bg-indigo-50 px-1.5 py-0.5 font-medium text-indigo-600">{event.time}</span>
+          <span className="rounded bg-moss-soft px-1.5 py-0.5 font-medium text-moss">{event.time}</span>
         )}
         {totalSub > 0 && (
-          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">
+          <span className="rounded bg-line-soft px-1.5 py-0.5 text-ink-soft">
             {doneSub}/{totalSub}
           </span>
         )}
@@ -247,16 +247,16 @@ function Column({
 }) {
   const { setNodeRef } = useDroppable({ id: status });
   return (
-    <div className="flex min-w-[260px] flex-1 flex-col rounded-xl bg-slate-50/70 ring-1 ring-slate-200/60">
+    <div className="flex min-w-[260px] flex-1 flex-col rounded-xl bg-paper-deep/70 ring-1 ring-line/60">
       {/* 列头 */}
       <div className="flex items-center gap-2 px-3 pb-2 pt-3">
         <span className={`h-2 w-2 rounded-full ${STATUS_ACCENT[status]}`} />
-        <span className="text-[13px] font-semibold text-slate-700">{STATUS_LABELS[status]}</span>
-        <span className="rounded-full bg-slate-200/70 px-1.5 text-[11px] font-medium text-slate-500">
+        <span className="text-[13px] font-semibold text-ink-mid">{STATUS_LABELS[status]}</span>
+        <span className="rounded-full bg-line/70 px-1.5 text-[11px] font-medium text-ink-soft">
           {events.length}
         </span>
         <button
-          className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-200/70 hover:text-slate-600"
+          className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-ink-soft hover:bg-line/70 hover:text-ink-mid"
           onClick={() => onAdd(status)}
           aria-label={`在「${STATUS_LABELS[status]}」新建`}
         >
@@ -271,7 +271,7 @@ function Column({
           ))}
         </SortableContext>
         {events.length === 0 && (
-          <div className="rounded-lg border border-dashed border-slate-200 py-6 text-center text-[11px] text-slate-400">
+          <div className="rounded-lg border border-dashed border-line py-6 text-center text-[11px] text-ink-soft">
             拖拽任务到此处
           </div>
         )}
@@ -295,16 +295,16 @@ function DoneConfirmDialog({
   onCancel: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-4" onClick={onCancel}>
       <div
         className="w-full max-w-sm rounded-xl bg-white p-5 shadow-pop"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <p className="text-sm font-semibold text-slate-900">这条任务还有 {pending.undone} 条子任务未完成</p>
-        <p className="mt-1.5 line-clamp-2 text-xs text-slate-500">「{pending.event.title}」</p>
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="text-sm font-semibold text-ink">这条任务还有 {pending.undone} 条子任务未完成</p>
+        <p className="mt-1.5 line-clamp-2 text-xs text-ink-soft">「{pending.event.title}」</p>
+        <p className="mt-3 text-xs text-ink-soft">
           移到「已完成」后，子任务默认保持原样。要一起勾完吗？
         </p>
         <div className="mt-4 flex justify-end gap-2">
@@ -518,20 +518,16 @@ export default function KanbanPage() {
   const totalCount = COLUMNS.reduce((n, c) => n + columns[c].length, 0);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="min-w-0">
       {/* 工具栏 */}
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">看板</h1>
-
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         {/* 范围切换 */}
-        <div className="flex rounded-lg bg-slate-100 p-0.5 text-[13px]">
+        <div className="seg">
           {(['today', 'week', 'all'] as Scope[]).map((s) => (
             <button
               key={s}
               onClick={() => setScope(s)}
-              className={`rounded-md px-2.5 py-1 ${
-                scope === s ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
+              className={`seg-item ${scope === s ? 'seg-item-on' : ''}`}
             >
               {s === 'today' ? '今天' : s === 'week' ? '本周' : '全部'}
             </button>
@@ -560,8 +556,8 @@ export default function KanbanPage() {
           onClick={() => setOnlyUnfinishedSub((v) => !v)}
           className={`rounded-lg px-2.5 py-1 text-[13px] ring-1 transition ${
             onlyUnfinishedSub
-              ? 'bg-indigo-50 text-indigo-700 ring-indigo-200'
-              : 'text-slate-500 ring-slate-200 hover:text-slate-700'
+              ? 'bg-moss-soft text-moss-deep ring-line'
+              : 'text-ink-soft ring-line hover:text-ink-mid'
           }`}
           aria-pressed={onlyUnfinishedSub}
           title="只显示还有未勾子任务的任务"
@@ -570,7 +566,7 @@ export default function KanbanPage() {
         </button>
 
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-[13px] text-slate-400">{totalCount} 个任务</span>
+          <span className="text-[13px] text-ink-soft">{totalCount} 个任务</span>
           <button className="btn-primary" onClick={() => openAdd('todo')}>
             + 新任务
           </button>
@@ -578,14 +574,14 @@ export default function KanbanPage() {
       </div>
 
       {banner && (
-        <div className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-600 ring-1 ring-rose-200">
+        <div className="mb-3 rounded-lg bg-coral-soft px-3 py-2 text-xs text-coral ring-1 ring-coral/25">
           {banner}
         </div>
       )}
 
       {/* 看板区 */}
       {isLoading ? (
-        <p className="py-24 text-center text-sm text-slate-400">加载中…</p>
+        <p className="py-24 text-center text-sm text-ink-soft">加载中…</p>
       ) : (
         <DndContext
           sensors={sensors}

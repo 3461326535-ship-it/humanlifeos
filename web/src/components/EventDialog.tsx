@@ -112,15 +112,15 @@ export default function EventDialog({
 
   return (
     <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/25 p-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-20 flex items-center justify-center bg-ink/25 p-4 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div
-        className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200/60 bg-white p-6 shadow-pop"
+        className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-line/60 bg-white p-6 shadow-pop"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">{isEdit ? '编辑任务' : '新任务'}</h2>
+          <h2 className="text-base font-semibold text-ink">{isEdit ? '编辑任务' : '新任务'}</h2>
           <button className="btn-ghost -mr-2" onClick={onClose} aria-label="关闭">✕</button>
         </div>
 
@@ -265,7 +265,7 @@ export default function EventDialog({
                   <button
                     type="button"
                     className={`flex h-4 w-4 flex-none items-center justify-center rounded-[4px] border ${
-                      st.completed ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                      st.completed ? 'border-moss bg-moss text-white' : 'border-ink-faint'
                     }`}
                     onClick={() => setSubtask(i, { completed: !st.completed })}
                     aria-label="切换子任务完成"
@@ -279,7 +279,7 @@ export default function EventDialog({
                   />
                   <button
                     type="button"
-                    className="btn-ghost px-2 py-1 text-slate-300 hover:text-slate-500"
+                    className="btn-ghost px-2 py-1 text-ink-faint hover:text-ink-soft"
                     onClick={() => set('subtasks', draft.subtasks.filter((_, j) => j !== i))}
                     aria-label="删除子任务"
                   >
@@ -299,10 +299,10 @@ export default function EventDialog({
 
           {isEdit && <EventTimer eventId={event!.id} />}
 
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">{error}</p>}
 
           {/* 操作区 */}
-          <div className="-mx-6 flex items-center gap-2 border-t border-slate-100 px-6 pt-4">
+          <div className="-mx-6 flex items-center gap-2 border-t border-line-soft px-6 pt-4">
             {isEdit && (
               <div className="flex-none">
                 {confirmDelete ? (

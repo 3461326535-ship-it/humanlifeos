@@ -1,18 +1,20 @@
 import type { TodoEvent } from '../lib/types';
 import { RECURRENCE_LABELS, PRIORITY_LABELS } from '../lib/types';
 
-const PRIORITY_STYLE: Record<string, string> = {
-  high: 'bg-rose-50 text-rose-600',
-  medium: 'bg-amber-50 text-amber-600',
-  low: 'bg-sky-50 text-sky-600',
+const CAT_DOT: Record<string, string> = {
+  工作: 'bg-lagoon',
+  生活: 'bg-clay',
+  学习: 'bg-moss',
+  健康: 'bg-coral',
+  其他: 'bg-ink-faint',
 };
 
-const STATUS_STYLE: Record<string, string> = {
-  in_progress: 'bg-blue-50 text-blue-600',
-  review: 'bg-amber-50 text-amber-600',
+const STATUS_CHIP: Record<string, string> = {
+  in_progress: 'bg-lagoon-soft text-lagoon',
+  review: 'bg-clay-soft text-clay',
 };
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_TEXT: Record<string, string> = {
   in_progress: '进行中',
   review: '待审核',
 };
@@ -26,21 +28,22 @@ export default function EventRow({
   onToggle: () => void;
   onEdit: () => void;
 }) {
+  const subTotal = event.subtasks.length;
   const subDone = event.subtasks.filter((s) => s.completed).length;
+  const subPct = subTotal > 0 ? Math.round((subDone / subTotal) * 100) : 0;
 
   return (
     <li
-      className="group flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200/80 bg-white px-4 py-3
-        shadow-card transition-all hover:border-indigo-200/80 hover:shadow-card-hover"
+      className="group flex cursor-pointer items-start gap-3 border-t border-line-soft px-4 py-3 transition-colors hover:bg-paper-deep/40"
       onClick={onEdit}
     >
-      {/* 完成勾选（方形，效率工具风） */}
+      {/* 圆形勾选 */}
       <button
-        className={`mt-0.5 flex h-[18px] w-[18px] flex-none items-center justify-center rounded-[5px] border-2
+        className={`mt-0.5 flex h-[17px] w-[17px] flex-none items-center justify-center rounded-full border
           transition-all ${
             event.completed
-              ? 'border-indigo-600 bg-indigo-600 text-white'
-              : 'border-slate-300 group-hover:border-indigo-400'
+              ? 'border-moss bg-moss'
+              : 'border-[#CFC7BA] group-hover:border-moss/60'
           }`}
         onClick={(e) => {
           e.stopPropagation();
@@ -49,64 +52,69 @@ export default function EventRow({
         aria-label={event.completed ? '标记未完成' : '标记完成'}
       >
         {event.completed && (
-          <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 fill-current">
-            <path d="M4.5 8.6 1.4 5.5l1-1 2.1 2.1 4.1-4.1 1 1z" />
+          <svg viewBox="0 0 12 12" className="h-2 w-2 fill-none stroke-white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2.5 6.2 4.8 8.5 9.5 3.6" />
           </svg>
         )}
       </button>
 
-      {/* 时间列（固定宽度对齐） */}
-      {event.time && (
-        <span className="mt-[1px] w-11 flex-none text-[13px] font-semibold tabular-nums text-slate-400">
-          {event.time}
-        </span>
-      )}
-
       {/* 主体 */}
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="flex items-start gap-2">
           <span
-            className={`text-[14px] leading-6 ${
-              event.completed ? 'text-slate-300 line-through' : 'font-medium text-slate-800'
+            className={`min-w-0 flex-1 text-[13.5px] leading-[1.55] ${
+              event.completed ? 'text-ink-soft line-through' : 'text-ink'
             }`}
           >
             {event.title}
           </span>
-          {event.priority && (
-            <span className={`chip ${PRIORITY_STYLE[event.priority]}`}>
-              {PRIORITY_LABELS[event.priority]}
-            </span>
-          )}
-          {event.recurrence && (
-            <span className="chip bg-violet-50 text-violet-500">
-              ↻ {RECURRENCE_LABELS[event.recurrence]}
-            </span>
-          )}
-          {STATUS_STYLE[event.status] && (
-            <span className={`chip ${STATUS_STYLE[event.status]}`}>
-              <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-              {STATUS_LABEL[event.status]}
-            </span>
-          )}
+
+          <div className="flex flex-none items-center gap-1.5 pt-px">
+            {!event.completed && event.priority === 'high' && (
+              <span className="chip bg-coral-soft text-coral">{PRIORITY_LABELS.high}</span>
+            )}
+            {!event.completed && STATUS_CHIP[event.status] && (
+              <span className={`chip ${STATUS_CHIP[event.status]}`}>{STATUS_TEXT[event.status]}</span>
+            )}
+            {event.recurrence && (
+              <span className="chip bg-clay-soft text-clay">↻ {RECURRENCE_LABELS[event.recurrence]}</span>
+            )}
+          </div>
         </div>
 
         {event.description && (
-          <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-slate-400">{event.description}</p>
+          <p className="mt-0.5 line-clamp-1 text-[11.5px] leading-5 text-ink-soft">{event.description}</p>
         )}
 
-        {(event.category || event.subtasks.length > 0) && (
-          <div className="mt-1.5 flex items-center gap-2 text-[11px] text-slate-400">
-            {event.category && event.category !== '其他' && (
-              <span className="rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-500">
+        {(event.time || event.category || subTotal > 0) && (
+          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11.5px] text-ink-soft">
+            {event.time && <span className="tabular-nums">{event.time}</span>}
+            {event.time && event.category && <span className="h-[3px] w-[3px] rounded-full bg-ink-faint" />}
+            {event.category && (
+              <span className="flex items-center gap-1.5">
+                <i className={`h-[5px] w-[5px] rounded-full ${CAT_DOT[event.category] || 'bg-ink-faint'}`} />
                 {event.category}
               </span>
             )}
-            {event.subtasks.length > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <span className="inline-block h-1 w-1 rounded-full bg-slate-300" />
-                子任务 {subDone}/{event.subtasks.length}
-              </span>
+            {subTotal > 0 && (
+              <>
+                <span className="h-[3px] w-[3px] rounded-full bg-ink-faint" />
+                <span className="tabular-nums">
+                  子任务 {subDone}/{subTotal}
+                </span>
+              </>
             )}
+          </div>
+        )}
+
+        {subTotal > 0 && (
+          <div className="mt-1.5 flex items-center gap-2">
+            <div className="h-1 w-[150px] overflow-hidden rounded-full bg-line-soft">
+              <div
+                className={`h-full rounded-full transition-all ${subPct === 100 ? 'bg-moss/60' : 'bg-moss'}`}
+                style={{ width: `${subPct}%` }}
+              />
+            </div>
           </div>
         )}
       </div>

@@ -7,11 +7,30 @@
     @apply antialiased;
   }
   body {
-    @apply bg-slate-100/60 text-slate-800;
+    /* 页面底色为纸感暖白；左侧公用侧栏的 margin-left 由站点 /css/nav.css 的 .main-content 负责 */
+    @apply bg-paper text-ink;
     font-feature-settings: 'tnum';
   }
   ::selection {
-    @apply bg-indigo-100 text-indigo-900;
+    @apply bg-moss-soft text-moss-deep;
+  }
+  /* 细滚动条，别让默认灰条破坏纸面 */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #dcd4c6;
+    border: 3px solid transparent;
+    border-radius: 99px;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #c9bfac;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 }
 
@@ -22,32 +41,57 @@
       transition-all disabled:pointer-events-none disabled:opacity-40;
   }
   .btn-primary {
-    @apply btn bg-indigo-600 text-white shadow-sm hover:bg-indigo-500 active:bg-indigo-600;
+    @apply btn bg-moss text-white hover:bg-moss-deep active:bg-moss-deep;
   }
   .btn-ghost {
-    @apply btn text-slate-500 hover:bg-slate-200/60 hover:text-slate-700;
+    @apply btn text-ink-soft hover:bg-paper-deep hover:text-ink-mid;
   }
   .btn-danger {
-    @apply btn text-red-500 hover:bg-red-50 hover:text-red-600;
+    @apply btn text-coral hover:bg-coral-soft;
   }
 
   /* ── 表单 ── */
   .input {
-    @apply w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-800
-      placeholder:text-slate-400 transition-colors
-      focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100;
+    @apply w-full rounded-lg border border-line bg-white px-2.5 py-1.5 text-sm text-ink
+      placeholder:text-ink-faint transition-colors
+      focus:border-moss/50 focus:outline-none focus:ring-2 focus:ring-moss-soft;
   }
   .label {
-    @apply mb-1 block text-xs font-medium text-slate-400;
+    @apply mb-1 block text-xs font-medium text-ink-soft;
   }
 
-  /* ── 卡片 ── */
+  /* ── 卡片：靠 0.5px 边框分层，不用重阴影 ── */
   .card {
-    @apply rounded-xl border border-slate-200/80 bg-white shadow-card;
+    @apply rounded-xl border border-line bg-card;
+  }
+  .card-pad {
+    @apply card p-4;
   }
 
   /* ── 徽章 ── */
   .chip {
     @apply inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4;
+  }
+
+  /* ── 分段控件（日历计划/实际、统计 7/30/90 天） ── */
+  .seg {
+    @apply inline-flex rounded-lg bg-paper-deep p-0.5 text-[12.5px];
+  }
+  .seg-item {
+    @apply rounded-md px-2.5 py-1 text-ink-soft transition-colors hover:text-ink-mid;
+  }
+  .seg-item-on {
+    @apply bg-white text-ink shadow-[0_1px_2px_rgba(60,45,20,0.10)];
+  }
+
+  /* ── 右侧辅助栏小标题 ── */
+  .s-head {
+    @apply mb-2.5 flex items-center justify-between;
+  }
+  .s-title {
+    @apply text-[12px] font-semibold tracking-[0.03em] text-ink-mid;
+  }
+  .s-link {
+    @apply text-[11px] text-ink-soft transition-colors hover:text-moss;
   }
 }

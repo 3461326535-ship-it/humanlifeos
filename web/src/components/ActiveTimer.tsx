@@ -32,25 +32,49 @@ export default function ActiveTimer() {
     },
   });
 
-  if (!data?.running || !data.started_at) return null;
-
-  const elapsed = Math.max(
-    0,
-    Math.round((Date.now() - new Date(data.started_at.replace(' ', 'T') + 'Z').getTime()) / 1000)
-  );
+  const running = Boolean(data?.running && data.started_at);
+  const elapsed = running
+    ? Math.max(
+        0,
+        Math.round((Date.now() - new Date(data!.started_at!.replace(' ', 'T') + 'Z').getTime()) / 1000)
+      )
+    : 0;
 
   return (
-    <span className="flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[12px] font-medium text-indigo-600">
-      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" />
-      <span className="font-mono tabular-nums">{fmtClock(elapsed)}</span>
-      <span className="max-w-[120px] truncate text-indigo-500">{data.event_title}</span>
-      <button
-        className="ml-0.5 text-indigo-400 hover:text-indigo-700"
-        onClick={() => stopMut.mutate()}
-        aria-label="停止计时"
-      >
-        ✕
-      </button>
-    </span>
+    <div className="card p-4">
+      <div className="s-head">
+        <span className="s-title">专注计时</span>
+        {running ? (
+          <span className="flex items-center gap-1.5 text-[11px] text-moss">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-moss" />
+            进行中
+          </span>
+        ) : (
+          <span className="text-[11px] text-ink-faint">未开始</span>
+        )}
+      </div>
+
+      {running ? (
+        <>
+          <div className="text-[26px] font-medium leading-none tracking-[0.01em] tabular-nums text-moss">
+            {fmtClock(elapsed)}
+          </div>
+          <p className="mt-2 truncate text-[12px] text-ink-mid" title={data?.event_title}>
+            正在做：{data?.event_title}
+          </p>
+          <button
+            className="btn-ghost mt-3 h-8 w-full border border-line text-[12px]"
+            onClick={() => stopMut.mutate()}
+            disabled={stopMut.isPending}
+          >
+            结束计时
+          </button>
+        </>
+      ) : (
+        <p className="text-[12px] leading-6 text-ink-soft">
+          在任务详情里点「开始计时」，这里会显示秒表。
+        </p>
+      )}
+    </div>
   );
 }
