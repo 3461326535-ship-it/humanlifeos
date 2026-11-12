@@ -160,10 +160,42 @@ class EventModel {
     const { subtasks = [], ...fields } = eventData;
     let called = false;
 
+    // 【子任务保护】只有调用方真的传了 subtasks 数组，本次才允许重建子任务；
+    // 否则一律保持原样。避免「只想改标题/状态却没带 subtasks」把子任务静默清空。
+    const hasSubtasks = Array.isArray(eventData.subtasks);
+
     // 规范化子任务：过滤无效条目，确保每个子任务都有有效的 title
     const validSubtasks = subtasks
       .filter(st => st && typeof st === 'object' && typeof st.title === 'string' && st.title.trim())
       .map(st => ({ title: st.title.trim(), completed: !!st.completed }));
+
+    // 子任务整体替换（DELETE + 逐条 INSERT）。未显式传 subtasks 时直接跳过，不碰库。
+    const syncSubtasks = (done) => {
+      if (!hasSubtasks) return done(null);
+      db.run(`DELETE FROM subtasks WHERE event_id = ?`, [id], (err2) => {
+        if (err2) return done(err2);
+        if (validSubtasks.length === 0) return done(null);
+
+        let inserted = 0;
+        let failed = false;
+
+        validSubtasks.forEach(subtask => {
+          db.run(
+            `INSERT INTO subtasks (event_id, title, completed) VALUES (?, ?, ?)`,
+            [id, subtask.title, subtask.completed ? 1 : 0],
+            (err3) => {
+              if (failed) return;
+              if (err3) {
+                failed = true;
+                return done(err3);
+              }
+              inserted++;
+              if (inserted === validSubtasks.length) done(null);
+            }
+          );
+        });
+      });
+    };
 
     // ===== completed ↔ status 单点双向派生（勿在路由层重复实现！）=====
     // 规则：
@@ -207,8 +239,15 @@ class EventModel {
     });
 
     if (setClauses.length === 0) {
-      // 没有任何要更新的字段 — 直接返回当前事件
-      return EventModel.getEventById(userId, id, callback);
+      // 没有任何要更新的字段：若调用方只改了子任务，仍要落库；否则直接返回当前事件
+      if (!hasSubtasks) return EventModel.getEventById(userId, id, callback);
+      return syncSubtasks((err) => {
+        if (err) {
+          if (!called) { called = true; callback(err, null); }
+          return;
+        }
+        if (!called) { called = true; EventModel.getEventById(userId, id, callback); }
+      });
     }
 
     // 派生出的 completed_at（仅当本次更新涉及状态字段）
@@ -242,39 +281,13 @@ class EventModel {
             { fields: allowedFields.filter(f => f in fields) });
         }
 
-        // 删除旧子任务
-        db.run(`DELETE FROM subtasks WHERE event_id = ?`, [id], (err2) => {
+        // 子任务同步：只有显式传了 subtasks 才重建
+        syncSubtasks((err2) => {
           if (err2) {
             if (!called) { called = true; callback(err2, null); }
             return;
           }
-
-          if (validSubtasks.length === 0) {
-            if (!called) { called = true; EventModel.getEventById(userId, id, callback); }
-            return;
-          }
-
-          let inserted = 0;
-          let hasError = false;
-
-          validSubtasks.forEach(subtask => {
-            db.run(
-              `INSERT INTO subtasks (event_id, title, completed) VALUES (?, ?, ?)`,
-              [id, subtask.title, subtask.completed ? 1 : 0],
-              (err3) => {
-                if (hasError) return;
-                if (err3) {
-                  hasError = true;
-                  if (!called) { called = true; callback(err3, null); }
-                  return;
-                }
-                inserted++;
-                if (inserted === validSubtasks.length) {
-                  if (!called) { called = true; EventModel.getEventById(userId, id, callback); }
-                }
-              }
-            );
-          });
+          if (!called) { called = true; EventModel.getEventById(userId, id, callback); }
         });
       }
     );
