@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "小日志": {
+      "url": "https://humanlifeos.art/mcp/sse",
+      "headers": {
+        "x-api-key": "123456"
+      }
+    }
+  }
+}

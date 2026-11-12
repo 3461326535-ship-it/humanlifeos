@@ -56,7 +56,8 @@ function getPendingAction(confirmId) {
         if (err) return reject(err);
         if (!row) return resolve(null);
         try {
-          resolve({ type: row.type, data: JSON.parse(row.data_json) });
+          // ownerUserId 一并返回，由调用方校验归属（防跨用户越权执行）
+          resolve({ type: row.type, data: JSON.parse(row.data_json), ownerUserId: row.user_id });
         } catch (e) {
           resolve(null);
         }
@@ -118,7 +119,7 @@ function buildTaskPrompt() {
 {
   "action": "create_task" | "update_task" | "delete_task" | "add_subtask" | "summary" | "suggestion" | "analysis",
   "data": {
-    // create_task: { "title", "date"(YYYY-MM-DD), "time"(HH:MM), "category", "description", "subtasks":[{"title":"子任务标题","completed":false}], "recurrence"(可选:"daily"|"weekly"|"monthly"|"yearly") }
+    // create_task: { "kind":"task"|"habit"|"recurring_task", "title", "date"(YYYY-MM-DD), "time"(HH:MM), "category", "description", "subtasks":[...], "rrule"(仅 habit / recurring_task 必填) }
     //   ⚠️ subtasks 必须是对象数组，每个对象包含 title(string) 和 completed(boolean)，不能是字符串数组！
     //   ⚠️ 子任务提取规则（重要！）:
     //     当用户用"并且"/"还要"/"同时"/"然后"/"顺便"/"记得"连接多个动作时，第一个动作是主任务 title，
@@ -129,10 +130,11 @@ function buildTaskPrompt() {
     //       title:"去超市购物", time:"09:00", subtasks:[{title:"买牛奶",completed:false},{title:"买面包",completed:false},{title:"寄快递",completed:false}]
     //     例如 "下午3点写周报然后回复邮件" →
     //       title:"写周报", time:"15:00", subtasks:[{title:"回复邮件",completed:false}]
-    //   重要: 如果用户说"每天"/"每周"/"每月"/"每年"/"每天早上"/"每周三"等周期表述，必须设置 recurrence！
-    //   例如 "每天早上9点吃药" → title:"吃药", time:"09:00", recurrence:"daily"
-    //   例如 "每周五下午开会" → title:"周五下午开会"(或"周会"), time:"14:00"(或具体时间), recurrence:"weekly"
-    // update_task: { "title"(要修改的任务关键词), "newTitle", "newDate", "newTime", "newCategory", "completed"(true/false), "newRecurrence" }
+    //   ⚠️ 周期表述必须先判类型再给 rrule（见下方「三分类判别」），不要再用旧 recurrence 四值枚举！
+    //   例如 "每天早上9点吃药" → kind:"habit", title:"吃药", time:"09:00", rrule:"FREQ=DAILY;INTERVAL=1"
+    //   例如 "每周五下午写周报" → kind:"recurring_task", title:"写周报", rrule:"FREQ=WEEKLY;BYDAY=FR;INTERVAL=1"
+    // update_task: { "title"(要修改的任务关键词), "newTitle", "newDate", "newTime", "newCategory", "completed"(true/false) }
+    //   注: update_task 只作用于一次性 Task；改习惯 / 周期规则请走对应新接口
     // delete_task: { "title"(要删除的任务关键词), "onlyCompleted"(true/false) }
     // add_subtask: { "parentTitle"(父任务关键词), "subtaskTitle" }
     // summary: { "period": "today"|"week"|"month" }
@@ -160,17 +162,19 @@ function buildTaskPrompt() {
   * 不要在 title 里堆砌所有动作，不要用"和/与/及"连接多个动作当一个标题
   * 如果用户列了一串同类事项（如买菜清单），每项都拆成子任务
   * 如果用户没有额外说明/备注/地点等补充信息，description 留空字符串 ""，不要把子任务内容塞进 description
-- ⚠️ 周期识别（必须设置 recurrence 字段）:
-  * 只在用户明确提到周期词时才设置 recurrence！没有周期词就设为 null 或不传
-  * "每天"/"每日"/"天天"/"每天早上"/"每天晚上" → recurrence: "daily"
-  * "每周"/"每周一/二/三/四/五/六/日"/"每个星期" → recurrence: "weekly"
-  * "每月"/"每个月"/"每月1号" → recurrence: "monthly"
-  * "每年"/"每年一次" → recurrence: "yearly"
-  * 关键: 带周期表述的任务，title 去掉周期词，用 recurrence 字段表示！
-    例如 "每天早上9点吃药" → title:"吃药", time:"09:00", recurrence:"daily"
-    例如 "每周五下午3点周会" → title:"周会", time:"15:00", recurrence:"weekly"
-    例如 "提醒我每天晚上跑步" → title:"跑步", time:"20:00", recurrence:"daily"
-  * 如果没有周期词（如"晚上9点"、"下午3点"、"明天上午"），recurrence 必须为 null
+- ⚠️ 三分类判别（先判类型，再决定字段）:
+  * 判别法：「这次没做，是断了一次还是欠了一次？」断了不补 → habit；欠了必须补且有产出 → recurring_task；没有周期 → task
+  * habit（习惯打卡）: 吃药 / 喝水 / 遛狗 / 背单词 / 早睡 / 打卡。核心是坚持，不进看板、不需计时
+    - rrule 只允许 FREQ=DAILY;INTERVAL=1 或 FREQ=WEEKLY;BYDAY=MO,TU,...;INTERVAL=1
+    - 禁止 MONTHLY / YEARLY / BYMONTHDAY / BYSETPOS（后端会拒绝）
+  * recurring_task（周期任务）: 写周报 / 交房租 / 周会 / 月底对账 / 大扫除。必须进看板、有交付物、可改期
+    - rrule 允许 DAILY / WEEKLY / MONTHLY / YEARLY + BYDAY / BYMONTHDAY(1~31 或 -1) / BYSETPOS
+    - "每月1号交房租" → FREQ=MONTHLY;BYMONTHDAY=1;INTERVAL=1
+    - "每月最后一个工作日对账" → FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1;INTERVAL=1
+  * task（一次性）: kind:"task"，不要传 rrule
+  * 带周期表述时 title 去掉周期词，用 rrule 表示
+  * 没有周期词（如"晚上9点"、"下午3点"、"明天上午"）→ kind:"task"，rrule 必须为 null
+  * ⚠️ 不要再输出旧的 recurrence: "daily"|"weekly"|"monthly"|"yearly" 字段
 - update_task 的 title 用任务关键词匹配（而非完整标题）
 - create/update/delete/add_subtask 的 needsConfirm 为 true；summary/suggestion/analysis 为 false
 - 如果信息不足，reply 中可以追问，confidence 应降低
@@ -543,6 +547,23 @@ router.post('/chat', validate({
 });
 
 // ============================================================
+// POST /api/ai/cancel — 用户主动取消待确认操作（释放服务端 pending，防 30 分钟 TTL 内重放）
+// ============================================================
+router.post('/cancel', validate({
+  confirmId: { rule: RULES.string, message: 'confirmId 必须是字符串' }
+}), async (req, res) => {
+  const { confirmId } = req.body;
+  const action = await getPendingAction(confirmId);
+
+  // 归属校验：只能取消自己的待确认操作
+  if (action && action.ownerUserId === (uid(req) != null ? uid(req) : null)) {
+    await deletePendingAction(confirmId);
+    return res.json({ success: true, reply: '已取消该操作。', cancelled: true });
+  }
+  res.json({ success: true, reply: '操作已过期或不存在。', cancelled: false });
+});
+
+// ============================================================
 // POST /api/ai/confirm — Execute confirmed actions
 // ============================================================
 router.post('/confirm', validate({
@@ -556,6 +577,11 @@ router.post('/confirm', validate({
     return res.json({ success: false, reply: '⏰ 操作已过期，请重新操作。' });
   }
 
+  // 归属校验：pending_actions.user_id 必须与当前用户一致（guest = null）
+  if (action.ownerUserId !== (uid(req) != null ? uid(req) : null)) {
+    return res.json({ success: false, reply: '⏰ 操作已过期，请重新操作。' });
+  }
+
   // 立即删除待确认记录，防止重复执行
   await deletePendingAction(confirmId);
 
@@ -564,6 +590,37 @@ router.post('/confirm', validate({
   switch (action.type) {
     // ===== Single-task operations (unchanged from v1) =====
     case 'create_task': {
+      // v0.4：AI 先判类型，habit / recurring_task 走新模型（零物化 / 窗口物化），
+      // 不再用旧 recurrence 一次生成几十上百条实体行。
+      const kind = action.data && action.data.kind;
+      if (kind === 'habit' || kind === 'recurring_task') {
+        const isHabit = kind === 'habit';
+        const Model = isHabit
+          ? require('../models/habitModel')(db)
+          : require('../models/recurringRuleModel')(db);
+        // 模型要求 YYYY-MM-DD；AI 偶尔会省略 date（如「每天早上吃药」），兜底为今天
+        const d = action.data.date;
+        const dtstart = /^\d{4}-\d{2}-\d{2}$/.test(d || '')
+          ? d
+          : require('../models/rrule').todayStr();
+        const payload = {
+          title: action.data.title,
+          rrule: action.data.rrule,
+          dtstart,
+          start_time: action.data.time || '',
+          category: action.data.category,
+        };
+        const create = isHabit ? Model.createHabit : Model.createRule;
+        create(uid(req), payload, (err, row) => {
+          if (err) return res.json({ success: false, reply: '创建失败：' + err.message });
+          res.json({
+            success: true,
+            reply: `✅ 已创建${isHabit ? '习惯' : '周期任务'}「${row.title}」！`,
+            actionExecuted: true,
+          });
+        });
+        break;
+      }
       EventModel.createEvent(uid(req), action.data, (err, event) => {
         if (err) return res.json({ success: false, reply: '创建失败：' + sanitizeError(err) });
         res.json({ success: true, reply: `✅ 已创建「${event.title}」！`, actionExecuted: true });

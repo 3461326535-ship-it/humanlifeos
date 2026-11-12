@@ -56,7 +56,12 @@ async function callDeepSeek(systemPrompt, userMessage, opts = {}) {
     });
 
     if (!res.ok) {
-      console.error(`[aiClient] ${label} — API error ${res.status}`);
+      let detail = '';
+      try { detail = (await res.text()).slice(0, 300); } catch (e) { /* ignore */ }
+      console.error(`[aiClient] ${label} - API error ${res.status}: ${detail}`);
+      if (res.status === 401) console.error('[aiClient] API key 无效，请检查 DEEPSEEK_API_KEY');
+      if (res.status === 402) console.error('[aiClient] DeepSeek 余额不足，请充值或更换 API key');
+      if (res.status === 429) console.error('[aiClient] DeepSeek 触发限流，请稍后重试');
       return null;
     }
 

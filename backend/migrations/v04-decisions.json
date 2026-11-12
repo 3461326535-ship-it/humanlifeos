@@ -1,0 +1,65 @@
+{
+  "version": "0.4",
+  "generated": "2026-11-12",
+  "source": "audit/recurrence_chains.csv + audit/迁移前决策记录.md（用户授权自主决定）",
+  "note": "归类唯一输入。迁移脚本不硬编码任何链条，改这个文件即可改归类。",
+  "policy": {
+    "dedupe_order": ["completed DESC", "created_at ASC", "id ASC"],
+    "habit_override_status": "done",
+    "write_excused": false,
+    "write_skipped": false,
+    "enable_foreign_keys": false,
+    "archive_days": 90,
+    "timezone": "Asia/Shanghai",
+    "quarantine_rule": "日期不符合 RRULE 众数，或挂有 time_entries / subtasks 的行，降级为一次性 Task（recurrence=NULL, rule_id=NULL），不删除、不静默省略",
+    "legacy_recurrence_kept_for_dual_read": true,
+    "dual_read_note": "Recurring Task 实例的 recurrence 列保留非空供双读一周；v04Schema 闸门会在新模型表建好后停掉旧 catchUp / generateForwardInstances，因此不会被写回脏"
+  },
+  "chains": [
+    {
+      "chain_id": "C001",
+      "title": "遛狗",
+      "kind": "habit",
+      "rrule": "FREQ=DAILY;INTERVAL=1",
+      "dtstart": "2026-06-25",
+      "start_time": "18:30",
+      "reason": "daily、习惯词、无工时无子任务、零产出；断了不补"
+    },
+    {
+      "chain_id": "C002",
+      "title": "吃药",
+      "kind": "habit",
+      "rrule": "FREQ=DAILY;INTERVAL=1",
+      "dtstart": "2026-06-24",
+      "start_time": "10:00",
+      "reason": "同上；挂有效 time_entry 的 events.id=1245 由 quarantine 规则自动摘出，降级一次性 Task 保留"
+    },
+    {
+      "chain_id": "C003",
+      "title": "写周报",
+      "kind": "recurring_task",
+      "rrule": "FREQ=WEEKLY;BYDAY=FR;INTERVAL=1",
+      "dtstart": "2026-07-10",
+      "start_time": "17:40",
+      "reason": "明确交付物，必须进看板/四态/计时/改期。BYDAY 取日期众数（45 行里 44 个周五、1 个周一），不能取 dtstart 的星期；dtstart 取符合规律的最早日"
+    },
+    {
+      "chain_id": "C004",
+      "title": "大扫除",
+      "kind": "recurring_task",
+      "rrule": "FREQ=WEEKLY;BYDAY=SA;INTERVAL=1",
+      "dtstart": "2026-07-04",
+      "start_time": "21:00",
+      "reason": "推翻脚本 habit 判定：非 daily、有明确交付结果、欠了要补"
+    },
+    {
+      "chain_id": "C005",
+      "title": "带乖乖洗澡",
+      "kind": "recurring_task",
+      "rrule": "FREQ=MONTHLY;BYMONTHDAY=20;INTERVAL=1",
+      "dtstart": "2026-07-20",
+      "start_time": "09:00",
+      "reason": "推翻脚本 habit 判定：非 daily、有明确交付结果。每月 20 号无 setMonth 溢出问题"
+    }
+  ]
+}
