@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  body {
+    @apply bg-slate-100/60 text-slate-800;
+    font-feature-settings: 'tnum';
+  }
+  ::selection {
+    @apply bg-indigo-100 text-indigo-900;
+  }
+}
+
+@layer components {
+  /* ── 按钮 ── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium
+      transition-all disabled:pointer-events-none disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply btn bg-indigo-600 text-white shadow-sm hover:bg-indigo-500 active:bg-indigo-600;
+  }
+  .btn-ghost {
+    @apply btn text-slate-500 hover:bg-slate-200/60 hover:text-slate-700;
+  }
+  .btn-danger {
+    @apply btn text-red-500 hover:bg-red-50 hover:text-red-600;
+  }
+
+  /* ── 表单 ── */
+  .input {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-800
+      placeholder:text-slate-400 transition-colors
+      focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-slate-400;
+  }
+
+  /* ── 卡片 ── */
+  .card {
+    @apply rounded-xl border border-slate-200/80 bg-white shadow-card;
+  }
+
+  /* ── 徽章 ── */
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4;
+  }
+}
