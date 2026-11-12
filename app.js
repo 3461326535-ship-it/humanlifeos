@@ -7,15 +7,26 @@ const path = require('path');
 // MySQL（便签墙）
 const { testConnection } = require('./config/database');
 
-// SQLite（日程管理 + AI）— db.js 加载时自动初始化
-require('./backend/models/db');
+// SQLite（日程管理 + AI）— db.js 加载时自动初始化（含 v0.4 三表 / 三列 / 五索引）
+const db = require('./backend/models/db');
 
 // ===== 路由模块 =====
 const notesRouter = require('./routes/notes');
 const eventsRouter = require('./backend/routes/events');
 const aiRouter = require('./backend/routes/ai');
+const projectsRouter = require('./backend/routes/projects');
+const activitiesRouter = require('./backend/routes/activities');
+const statsRouter = require('./backend/routes/stats');
+const reportsRouter = require('./backend/routes/reports');
+const timersRouter = require('./backend/routes/timers');
+// v0.4 三分类：Habit / Recurring Task / 统一日历
+const habitsRouter = require('./backend/routes/habits');
+const recurringRulesRouter = require('./backend/routes/recurring-rules');
+const calendarRouter = require('./backend/routes/calendar');
+const createArchiveTask = require('./backend/models/archiveTask');
 const authRouter = require('./routes/auth');
 const yuexinRouter = require('./routes/yuexin');
+const commonSitesRouter = require('./routes/common-sites');
 const { optionalAuth } = require('./middleware/auth');
 
 // ===== 启动前校验 =====
@@ -108,20 +119,39 @@ app.use(express.static(__dirname));     // 桌面端资源 + 公共文件
 // ===== Auth 路由（不需要鉴权）=====
 app.use('/api/auth', authRouter);     // 登录: /api/auth/login 等
 app.use('/api/yuexin', yuexinRouter); // 月信: /api/yuexin/records, /api/yuexin/sync
+app.use('/api/common-sites', commonSitesRouter); // 常用网站: /api/common-sites, /api/common-sites/sync
 
 // ===== API 路由（可选鉴权 → 设置 req.user）=====
 app.use('/api', optionalAuth, notesRouter);         // 便签: /api/notes
-app.use('/api/events', optionalAuth, eventsRouter); // 日程: /api/events
+app.use('/api/events', optionalAuth, eventsRouter); // 日程: /api/events（v2 含 /status /reorder /timer）
+app.use('/api/projects', optionalAuth, projectsRouter);   // 项目: /api/projects
+app.use('/api/activities', optionalAuth, activitiesRouter); // 动态流: /api/activities
+app.use('/api/stats', optionalAuth, statsRouter);    // 统计: /api/stats/overview
+app.use('/api/reports', optionalAuth, reportsRouter); // 战报: /api/reports/daily
+app.use('/api/timers', optionalAuth, timersRouter);   // 计时: /api/timers/active
+// v0.4 三分类 API（旧 /api/events /overview /daily 保持兼容，不动）
+app.use('/api/habits', optionalAuth, habitsRouter);                    // 习惯: 规则、按日状态、统计
+app.use('/api/recurring-rules', optionalAuth, recurringRulesRouter);   // 周期任务: 规则、窗口实例、归档
+app.use('/api/calendar', optionalAuth, calendarRouter);                // 三分类统一日历投影
 
-// AI 端点限流: 10次/分钟
+// AI 端点限流: 仅作用于 chat / confirm，历史读写不占用额度
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: 20,
   message: { success: false, message: '请求太频繁，请稍后再试' }
 });
 app.use('/api/ai', optionalAuth);
-app.use('/api/ai', aiLimiter);
+app.use(['/api/ai/chat', '/api/ai/confirm'], aiLimiter);
 app.use('/api/ai', aiRouter);         // AI:   /api/ai/chat, /api/ai/confirm
+
+// ===== PC 端 React 版（/app，M1 灰度入口）=====
+const WEB_DIST = path.join(__dirname, 'web', 'dist');
+// 静态资源（vite 产物带 hash，可长缓存；index 不走 static 以免吃缓存）
+app.use('/app', express.static(WEB_DIST, { maxAge: '1y', index: false }));
+// SPA fallback：/app/kanban 等前端路由一律回退 index.html（React Router 接管）
+app.get(['/app', '/app/*'], (req, res) => {
+  res.sendFile(path.join(WEB_DIST, 'index.html'));
+});
 
 // ===== 健康检查 =====
 app.get('/health', (req, res) => {
@@ -162,6 +192,13 @@ async function startServer() {
   }
 
   app.listen(PORT, () => {
+    // v0.4：每天软归档「已完成且超过 90 天」的周期实例，不删行、不影响统计。
+    // 环境变量 V04_ARCHIVE_DISABLED=1 可一键停掉，便于上线回滚。
+    if (process.env.V04_ARCHIVE_DISABLED !== '1') {
+      createArchiveTask(db).start();
+      console.log('📦 v0.4 周期实例归档任务已启动（90 天 / 每 24h）');
+    }
+
     console.log('\n🚀 服务器启动成功！');
     console.log('📍 首页:     http://localhost:' + PORT);
     console.log('📍 便签 API: http://localhost:' + PORT + '/api/notes');

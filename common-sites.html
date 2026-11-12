@@ -137,6 +137,10 @@
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
         }
+        .cat-group {
+            flex: 0 1 160px;
+            min-width: 140px;
+        }
         .btn-add {
             background: linear-gradient(100deg, #3b82f6, #2563eb);
             border: none;
@@ -174,6 +178,161 @@
             font-weight: 500;
             color: #1e4a76;
         }
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 1.2rem;
+        }
+        .filter-chip {
+            background: rgba(255,255,255,0.85);
+            border: 1px solid #e2edf2;
+            padding: 6px 16px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #4a6a8a;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .filter-chip:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .filter-chip.active {
+            background: linear-gradient(100deg, #3b82f6, #2563eb);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 4px 10px rgba(59,130,246,0.25);
+        }
+        .manage-cat-btn {
+            background: rgba(255,255,240,0.8);
+            border: 1px solid #cddfe7;
+            padding: 7px 16px;
+            border-radius: 60px;
+            font-weight: 500;
+            color: #2c4f6e;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .manage-cat-btn:hover {
+            background: white;
+            border-color: #3b82f6;
+            color: #3b82f6;
+            box-shadow: 0 4px 10px rgba(59,130,246,0.2);
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15,23,42,0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            backdrop-filter: blur(3px);
+            padding: 1rem;
+        }
+        .modal {
+            background: white;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+            overflow: hidden;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid #eef3f8;
+        }
+        .modal-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0f2b3b;
+        }
+        .modal-close {
+            background: #f1f5f9;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            color: #5b6e8c;
+            font-size: 0.9rem;
+            transition: 0.15s;
+        }
+        .modal-close:hover { background: #fee2e2; color: #dc2626; }
+        .modal-body { padding: 1.2rem 1.5rem 1.5rem; }
+        .cat-add-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+        .cat-add-row input {
+            flex: 1;
+            min-width: 0;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: 1.5px solid #e2edf2;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+        }
+        .cat-add-row input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+        .btn-cat-add {
+            background: linear-gradient(100deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-cat-add:hover { filter: brightness(1.05); }
+        .cat-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 320px;
+            overflow-y: auto;
+            margin: 0;
+            padding: 0;
+        }
+        .cat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-radius: 14px;
+            border: 1px solid #eef3f8;
+        }
+        .cat-name { flex: 1; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cat-count { font-size: 0.75rem; color: #94a3b8; white-space: nowrap; }
+        .cat-act {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            color: #5b6e8c;
+            font-size: 0.85rem;
+            transition: 0.15s;
+            flex-shrink: 0;
+        }
+        .cat-act.edit:hover { background: #e0f2fe; color: #0284c7; }
+        .cat-act.del:hover { background: #fee2e2; color: #dc2626; }
         .empty-hint {
             text-align: center;
             padding: 3rem 1rem;
@@ -235,13 +394,31 @@
             flex: 1;
             overflow: hidden;
         }
+        .site-name-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
         .site-name {
+            flex: 1;
+            min-width: 0;
             font-weight: 700;
             font-size: 1.1rem;
             color: #0f2b3b;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        .cat-badge {
+            flex-shrink: 0;
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: #2563eb;
+            background: rgba(59,130,246,0.12);
+            padding: 2px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
         }
         .site-url {
             font-size: 0.7rem;
@@ -363,6 +540,11 @@
                     <label><i class="fas fa-link"></i> 网址链接</label>
                     <input type="text" id="siteUrl" placeholder="https:// 或 http:// 或 github.com" autocomplete="off">
                 </div>
+                <div class="input-group cat-group">
+                    <label><i class="fas fa-folder"></i> 分类</label>
+                    <input type="text" id="siteCategory" list="categoryList" placeholder="工作 / 娱乐 / 自定义" autocomplete="off">
+                    <datalist id="categoryList"></datalist>
+                </div>
                 <button class="btn-add" id="addBookmarkBtn">
                     <i class="fas fa-plus-circle"></i> 添加网页
                 </button>
@@ -371,13 +553,34 @@
 
         <div class="stats">
             <div class="bookmark-count" id="bookmarkCount">✨ 加载中...</div>
+            <button class="manage-cat-btn" id="manageCatBtn"><i class="fas fa-folder-plus"></i> 管理分类</button>
         </div>
+
+        <div class="filter-bar" id="filterBar"></div>
 
         <div id="bookmarkGrid" class="grid"></div>
     </div>
 </div>
 
 <!-- 引入导航加载器（负责加载 nav.html 到 #sidebar，并注入 active 样式） -->
+
+<!-- 分类管理弹窗 -->
+<div class="modal-overlay" id="categoryModal" style="display:none;">
+    <div class="modal">
+        <div class="modal-header">
+            <h2><i class="fas fa-folder"></i> 管理分类</h2>
+            <button class="modal-close" id="closeCatModal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="cat-add-row">
+                <input type="text" id="newCategoryInput" placeholder="新分类名称，如：工具" autocomplete="off">
+                <button class="btn-cat-add" id="addCategoryBtn"><i class="fas fa-plus"></i> 添加</button>
+            </div>
+            <ul class="cat-list" id="catList"></ul>
+        </div>
+    </div>
+</div>
+
 <script src="/js/utils.js"></script>
 <script src="/js/nav-loader.js"></script>
 
@@ -385,16 +588,20 @@
 <script>
     // ---------- 存储与书签管理（原样保留） ----------
     const STORAGE_KEY = 'web_bookmarks_master';
+    const CATEGORIES_KEY = 'web_bookmark_categories';
+    const DEFAULT_CATEGORIES = ['工作', '娱乐', '学习', '生活'];
     const DEFAULT_BOOKMARKS = [
-        { id: '1', name: 'GitHub 开源世界', url: 'https://github.com' },
-        { id: '2', name: 'MDN Web 文档', url: 'https://developer.mozilla.org/zh-CN/' },
-        { id: '3', name: 'Stack Overflow', url: 'https://stackoverflow.com' },
-        { id: '4', name: 'Google 搜索', url: 'https://www.google.com' },
-        { id: '5', name: 'YouTube 创意', url: 'https://www.youtube.com' },
-        { id: '6', name: '知乎·知识库', url: 'https://www.zhihu.com' }
+        { id: '1', name: 'GitHub 开源世界', url: 'https://github.com', category: '工作' },
+        { id: '2', name: 'MDN Web 文档', url: 'https://developer.mozilla.org/zh-CN/', category: '学习' },
+        { id: '3', name: 'Stack Overflow', url: 'https://stackoverflow.com', category: '工作' },
+        { id: '4', name: 'Google 搜索', url: 'https://www.google.com', category: '生活' },
+        { id: '5', name: 'YouTube 创意', url: 'https://www.youtube.com', category: '娱乐' },
+        { id: '6', name: '知乎·知识库', url: 'https://www.zhihu.com', category: '生活' }
     ];
 
     let bookmarks = [];
+    let categories = [];
+    let currentFilter = '全部';
     let toastTimer = null;
 
     function showMessage(text, isError = false) {
@@ -430,6 +637,21 @@
         }
     }
 
+    // 书签唯一标识：规范化 URL（与后端 /api/common-sites/sync 去重逻辑保持一致）
+    function urlKey(rawUrl) {
+        if (!rawUrl) return '';
+        let s = String(rawUrl).trim();
+        if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+        try {
+            const u = new URL(s);
+            if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+            u.hash = '';
+            return u.href;
+        } catch (e) {
+            return s.toLowerCase();
+        }
+    }
+
     function extractDomainFromUrl(fullUrl) {
         try {
             const urlObj = new URL(fullUrl);
@@ -447,6 +669,78 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
     }
 
+    // ---------- 云同步 ----------
+    let cloudSyncTimer = null;
+    function cloudSave() {
+        clearTimeout(cloudSyncTimer);
+        cloudSyncTimer = setTimeout(() => {
+            fetch('/api/common-sites/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bookmarks })
+            }).then(r => r.json())
+              .then(d => { if (d && d.success) console.log('☁️ 常用网站已同步 ' + d.count + ' 个'); })
+              .catch(() => {});
+        }, 200);
+    }
+
+    function cloudPull() {
+        fetch('/api/common-sites')
+            .then(r => r.json())
+            .then(d => {
+                if (!d || !d.success || !Array.isArray(d.bookmarks)) return;
+                const cloudList = d.bookmarks;
+                const seen = {};
+                const merged = [];
+                // 以规范化 URL 为唯一标识合并：云端优先（已有记录的权威），本地仅补充云端没有的
+                [...cloudList, ...bookmarks].forEach(b => {
+                    const key = urlKey(b.url);
+                    if (!key || seen[key]) return;
+                    seen[key] = true;
+                    merged.push(b);
+                });
+                bookmarks = merged;
+                saveToLocal();
+                renderGrid();
+                // 合并后统一回推，让云端也完成去重
+                cloudSave();
+                if (cloudList.length) showMessage('☁️ 已同步 ' + bookmarks.length + ' 个常用网站');
+            })
+            .catch(() => {});
+    }
+
+    // ---------- 分类云同步 ----------
+    let cloudCatTimer = null;
+    function cloudSaveCategories() {
+        clearTimeout(cloudCatTimer);
+        cloudCatTimer = setTimeout(() => {
+            fetch('/api/common-sites/categories/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ categories })
+            }).then(r => r.json())
+              .then(d => { if (d && d.success) console.log('☁️ 分类已同步 ' + d.count + ' 个'); })
+              .catch(() => {});
+        }, 200);
+    }
+
+    function cloudPullCategories() {
+        fetch('/api/common-sites/categories')
+            .then(r => r.json())
+            .then(d => {
+                if (!d || !d.success || !Array.isArray(d.categories)) return;
+                const cloud = d.categories;
+                const merged = Array.from(new Set([...cloud, ...categories]));
+                categories = merged;
+                saveCategoriesLocal();
+                const localOnly = categories.filter(c => !cloud.includes(c));
+                if (localOnly.length) cloudSaveCategories();
+                renderCategories();
+                renderCatModal();
+            })
+            .catch(() => {});
+    }
+
     function loadBookmarks() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -454,6 +748,7 @@
                 const parsed = JSON.parse(stored);
                 if (Array.isArray(parsed)) {
                     bookmarks = parsed;
+                    dedupeBookmarks();
                     return;
                 }
             } catch(e) { console.warn(e); }
@@ -462,27 +757,84 @@
         saveToLocal();
     }
 
+    // 按规范化 URL 去重（保留首次出现的记录）
+    function dedupeBookmarks() {
+        const seen = {};
+        bookmarks = bookmarks.filter(b => {
+            const key = urlKey(b.url);
+            if (!key || seen[key]) return false;
+            seen[key] = true;
+            return true;
+        });
+    }
+
+    function saveCategoriesLocal() {
+        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+    }
+
+    function loadCategories() {
+        const stored = localStorage.getItem(CATEGORIES_KEY);
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) {
+                    categories = parsed;
+                    return;
+                }
+            } catch(e) { console.warn(e); }
+        }
+        categories = [...DEFAULT_CATEGORIES];
+        saveCategoriesLocal();
+    }
+
     function escapeAttr(str) {
         return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    function getAllCategories() {
+        const set = new Set(categories);
+        bookmarks.forEach(b => { if (b.category && b.category.trim()) set.add(b.category.trim()); });
+        return Array.from(set);
+    }
+
+    function renderCategories() {
+        const cats = getAllCategories();
+        const dl = document.getElementById('categoryList');
+        if (dl) dl.innerHTML = cats.map(c => `<option value="${escapeAttr(c)}"></option>`).join('');
+        const bar = document.getElementById('filterBar');
+        if (bar) {
+            const chips = ['全部', ...cats];
+            bar.innerHTML = chips.map(c => `<button class="filter-chip ${c === currentFilter ? 'active' : ''}" data-cat="${escapeAttr(c)}">${escapeHtml(c)}</button>`).join('');
+        }
+    }
+
     function renderGrid() {
+        renderCategories();
         const gridContainer = document.getElementById('bookmarkGrid');
         const countSpan = document.getElementById('bookmarkCount');
         if (!gridContainer) return;
 
-        if (!bookmarks.length) {
-            gridContainer.innerHTML = `<div class="empty-hint" style="grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size: 3rem; opacity: 0.6; margin-bottom: 12px; display: block;"></i>📭 暂无网页汇总，点击上方「添加网页」开始收藏～</div>`;
-            if (countSpan) countSpan.innerHTML = `📚 0 个书签`;
+        const filtered = currentFilter === '全部'
+            ? bookmarks
+            : bookmarks.filter(b => (b.category || '').trim() === currentFilter);
+
+        if (!filtered.length) {
+            const emptyMsg = bookmarks.length
+                ? '<i class="fas fa-folder-open" style="font-size: 3rem; opacity: 0.6; margin-bottom: 12px; display: block;"></i>📭 该分类下暂无网站'
+                : '<i class="fas fa-folder-open" style="font-size: 3rem; opacity: 0.6; margin-bottom: 12px; display: block;"></i>📭 暂无网页汇总，点击上方「添加网页」开始收藏～';
+            gridContainer.innerHTML = `<div class="empty-hint" style="grid-column:1/-1;">${emptyMsg}</div>`;
+            if (countSpan) countSpan.innerHTML = `📚 ${filtered.length} 个书签`;
             return;
         }
 
         let cardsHtml = '';
-        bookmarks.forEach(bookmark => {
+        filtered.forEach(bookmark => {
             const displayUrl = bookmark.url.length > 45 ? bookmark.url.substring(0, 42) + '...' : bookmark.url;
             const favIconSrc = getFaviconUrl(bookmark.url);
             const safeName = escapeHtml(bookmark.name);
             const safeUrl = escapeHtml(bookmark.url);
+            const cat = (bookmark.category || '').trim();
+            const catBadge = cat ? `<span class="cat-badge">${escapeHtml(cat)}</span>` : '';
             cardsHtml += `
                 <div class="card" data-id="${bookmark.id}" data-url="${escapeAttr(bookmark.url)}">
                     <div class="delete-btn" data-id="${bookmark.id}" title="删除书签">
@@ -493,7 +845,10 @@
                             <img class="site-icon" src="${favIconSrc}" alt="icon" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'fas fa-globe fallback-icon\'></i>';">
                         </div>
                         <div class="info">
-                            <div class="site-name">${safeName}</div>
+                            <div class="site-name-row">
+                                <div class="site-name">${safeName}</div>
+                                ${catBadge}
+                            </div>
                             <div class="site-url" title="${safeUrl}">${escapeHtml(displayUrl)}</div>
                         </div>
                     </div>
@@ -502,11 +857,13 @@
         });
         gridContainer.innerHTML = cardsHtml;
         if (countSpan) {
-            countSpan.innerHTML = `📖 共 ${bookmarks.length} 个常用网站`;
+            countSpan.innerHTML = currentFilter === '全部'
+                ? `📖 共 ${bookmarks.length} 个常用网站`
+                : `📖 ${currentFilter} · ${filtered.length} 个`;
         }
     }
 
-    function addBookmark(name, rawUrl) {
+    function addBookmark(name, rawUrl, category) {
         if (!name || name.trim() === '') {
             showMessage('❌ 请填写网站名称', true);
             return false;
@@ -517,15 +874,16 @@
             showMessage('❌ 网址无效，请以 http:// 或 https:// 开头或输入正确域名', true);
             return false;
         }
-        const existing = bookmarks.find(b => b.url === normalized);
+        const existing = bookmarks.find(b => urlKey(b.url) === urlKey(normalized));
         if (existing) {
             showMessage(`⚠️ "${existing.name}" 已经存在，不要重复添加`, true);
             return false;
         }
         const newId = Date.now().toString() + '-' + Math.random().toString(36).substring(2, 6);
-        const newBookmark = { id: newId, name: trimmedName, url: normalized };
+        const newBookmark = { id: newId, name: trimmedName, url: normalized, category: (category || '').trim() };
         bookmarks.push(newBookmark);
         saveToLocal();
+        cloudSave();
         renderGrid();
         showMessage(`✅ 成功添加「${trimmedName}」`, false);
         return true;
@@ -537,6 +895,7 @@
         const removedName = bookmarks[targetIndex].name;
         bookmarks.splice(targetIndex, 1);
         saveToLocal();
+        cloudSave();
         renderGrid();
         showMessage(`🗑️ 已移除「${removedName}」`, false);
         return true;
@@ -546,9 +905,88 @@
         if (confirm('⚠️ 重置将会删除当前所有自定义网页，恢复默认常用网站示例。\n确定要继续吗？')) {
             bookmarks = DEFAULT_BOOKMARKS.map((item, idx) => ({ ...item, id: `def_${Date.now()}_${idx}` }));
             saveToLocal();
+            cloudSave();
             renderGrid();
             showMessage('✨ 已恢复默认网页汇总', false);
         }
+    }
+
+    // ---------- 分类管理 ----------
+    function renderCatModal() {
+        const list = document.getElementById('catList');
+        if (!list) return;
+        if (!categories.length) {
+            list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:1rem;">暂无分类，先在上方添加一个吧</div>';
+            return;
+        }
+        list.innerHTML = categories.map(name => {
+            const count = bookmarks.filter(b => (b.category || '').trim() === name).length;
+            return `<li class="cat-item">
+                <span class="cat-name">${escapeHtml(name)}</span>
+                <span class="cat-count">${count} 个</span>
+                <button class="cat-act edit" data-name="${escapeAttr(name)}" title="重命名"><i class="fas fa-pen"></i></button>
+                <button class="cat-act del" data-name="${escapeAttr(name)}" title="删除"><i class="fas fa-trash-alt"></i></button>
+            </li>`;
+        }).join('');
+    }
+
+    function openCatModal() {
+        renderCatModal();
+        document.getElementById('categoryModal').style.display = 'flex';
+    }
+
+    function closeCatModal() {
+        document.getElementById('categoryModal').style.display = 'none';
+    }
+
+    function addCategory(name) {
+        const trimmed = (name || '').trim();
+        if (!trimmed) { showMessage('❌ 请输入分类名称', true); return false; }
+        if (categories.includes(trimmed)) { showMessage('⚠️ 分类「' + trimmed + '」已存在', true); return false; }
+        categories.push(trimmed);
+        saveCategoriesLocal();
+        cloudSaveCategories();
+        renderCategories();
+        renderCatModal();
+        showMessage('✅ 已添加分类「' + trimmed + '」');
+        return true;
+    }
+
+    function renameCategory(oldName, newName) {
+        const trimmed = (newName || '').trim();
+        if (!trimmed) { showMessage('❌ 分类名不能为空', true); return false; }
+        if (trimmed === oldName) return true;
+        if (categories.includes(trimmed)) { showMessage('⚠️ 分类「' + trimmed + '」已存在', true); return false; }
+        const idx = categories.indexOf(oldName);
+        if (idx !== -1) categories[idx] = trimmed;
+        bookmarks.forEach(b => { if ((b.category || '').trim() === oldName) b.category = trimmed; });
+        saveCategoriesLocal();
+        saveToLocal();
+        cloudSaveCategories();
+        cloudSave();
+        if (currentFilter === oldName) currentFilter = trimmed;
+        renderCategories();
+        renderGrid();
+        renderCatModal();
+        showMessage('✅ 已重命名为「' + trimmed + '」');
+        return true;
+    }
+
+    function deleteCategory(name) {
+        const count = bookmarks.filter(b => (b.category || '').trim() === name).length;
+        if (!confirm('⚠️ 确定删除分类「' + name + '」吗？\n其下 ' + count + ' 个网站将归入「未分类」。')) return false;
+        categories = categories.filter(c => c !== name);
+        bookmarks.forEach(b => { if ((b.category || '').trim() === name) b.category = ''; });
+        saveCategoriesLocal();
+        saveToLocal();
+        cloudSaveCategories();
+        cloudSave();
+        if (currentFilter === name) currentFilter = '全部';
+        renderCategories();
+        renderGrid();
+        renderCatModal();
+        showMessage('🗑️ 已删除分类「' + name + '」');
+        return true;
     }
 
     // 事件绑定
@@ -556,15 +994,25 @@
         const addBtn = document.getElementById('addBookmarkBtn');
         const nameInput = document.getElementById('siteName');
         const urlInput = document.getElementById('siteUrl');
+        const categoryInput = document.getElementById('siteCategory');
         const resetBtn = document.getElementById('resetDefaultBtn');
         const grid = document.getElementById('bookmarkGrid');
+        const filterBar = document.getElementById('filterBar');
+        const manageCatBtn = document.getElementById('manageCatBtn');
+        const catModal = document.getElementById('categoryModal');
+        const closeCatModalBtn = document.getElementById('closeCatModal');
+        const addCategoryBtn = document.getElementById('addCategoryBtn');
+        const newCategoryInput = document.getElementById('newCategoryInput');
+        const catList = document.getElementById('catList');
 
         const performAdd = () => {
             const name = nameInput.value;
             const url = urlInput.value;
-            if (addBookmark(name, url)) {
+            const category = categoryInput ? categoryInput.value : '';
+            if (addBookmark(name, url, category)) {
                 nameInput.value = '';
                 urlInput.value = '';
+                if (categoryInput) categoryInput.value = '';
                 nameInput.focus();
             }
         };
@@ -572,7 +1020,41 @@
         addBtn.addEventListener('click', performAdd);
         nameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performAdd(); });
         urlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performAdd(); });
+        if (categoryInput) categoryInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performAdd(); });
         resetBtn.addEventListener('click', resetToDefault);
+
+        if (filterBar) {
+            filterBar.addEventListener('click', (e) => {
+                const chip = e.target.closest('.filter-chip');
+                if (!chip) return;
+                currentFilter = chip.getAttribute('data-cat') || '全部';
+                renderGrid();
+            });
+        }
+
+        // 分类管理弹窗
+        if (manageCatBtn) manageCatBtn.addEventListener('click', openCatModal);
+        if (closeCatModalBtn) closeCatModalBtn.addEventListener('click', closeCatModal);
+        if (catModal) catModal.addEventListener('click', (e) => { if (e.target === catModal) closeCatModal(); });
+
+        const performAddCategory = () => {
+            if (addCategory(newCategoryInput.value)) newCategoryInput.value = '';
+        };
+        if (addCategoryBtn) addCategoryBtn.addEventListener('click', performAddCategory);
+        if (newCategoryInput) newCategoryInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performAddCategory(); });
+
+        if (catList) {
+            catList.addEventListener('click', (e) => {
+                const delBtn = e.target.closest('.cat-act.del');
+                const editBtn = e.target.closest('.cat-act.edit');
+                if (delBtn) { deleteCategory(delBtn.getAttribute('data-name')); return; }
+                if (editBtn) {
+                    const old = editBtn.getAttribute('data-name');
+                    const newName = prompt('重命名分类「' + old + '」为：', old);
+                    if (newName !== null) renameCategory(old, newName);
+                }
+            });
+        }
 
         grid.addEventListener('click', (e) => {
             const delBtn = e.target.closest('.delete-btn');
@@ -593,8 +1075,11 @@
     // 初始化
     function init() {
         loadBookmarks();
+        loadCategories();
         renderGrid();
         bindEvents();
+        // 启动云同步
+        setTimeout(() => { cloudPull(); cloudPullCategories(); }, 500);
         // 移动端菜单交互由 nav-loader.js 统一处理
     }
     init();

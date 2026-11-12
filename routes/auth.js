@@ -36,6 +36,17 @@ router.post('/login', validate({
       { expiresIn: TOKEN_EXPIRY }
     );
 
+    // web React 版：httpOnly Cookie 会话（SameSite=Strict 防 CSRF，XSS 拿不到）
+    // secure 跟随实际协议（trust proxy 已开，req.secure 反映 nginx 的 https）
+    const cookieOpts = {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: req.secure,
+      maxAge: 30 * 24 * 3600 * 1000, // 与 TOKEN_EXPIRY=30d 对齐
+      path: '/'
+    };
+    res.cookie('token', token, cookieOpts);
+
     res.json({
       success: true,
       token,
@@ -181,7 +192,8 @@ router.post('/migrate', requireAuth, (req, res) => {
 // POST /api/auth/logout
 // ═══════════════════════════════════════════════
 router.post('/logout', optionalAuth, (req, res) => {
-  // 客户端清除 token 即完成登出，服务端无需额外操作
+  // web 版：清除 httpOnly Cookie；旧版客户端自行清 localStorage 即可
+  res.clearCookie('token', { path: '/' });
   res.json({ success: true, message: '已退出登录' });
 });
 

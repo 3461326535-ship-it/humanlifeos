@@ -32,6 +32,10 @@
   <!-- DOMPurify XSS 防护 -->
   <script src="https://fastly.jsdelivr.net/npm/dompurify@3/dist/purify.min.js" defer></script>
 
+  <!-- Turndown HTML → Markdown（可视化编辑回写用） -->
+  <script src="https://fastly.jsdelivr.net/npm/turndown@7.1.2/dist/turndown.js" defer></script>
+  <script src="https://fastly.jsdelivr.net/npm/turndown-plugin-gfm@1.0.2/dist/turndown-plugin-gfm.js" defer></script>
+
   <!-- 网站导航样式 -->
   <link rel="stylesheet" href="/css/nav.css">
 
@@ -216,7 +220,8 @@
 
     #line-numbers-toggle.active,
     #preview-toggle.active,
-    #outline-toggle.active {
+    #outline-toggle.active,
+    #wysiwyg-toggle.active {
       color: var(--accent);
     }
 
@@ -574,6 +579,35 @@
       font-size: 15px;
       line-height: 1.7;
       color: var(--text-primary);
+    }
+
+    /* ===== 可视化编辑（WYSIWYG）===== */
+    #preview[contenteditable="true"] {
+      cursor: text;
+      outline: 2px dashed var(--accent);
+      outline-offset: -2px;
+    }
+    .mdx-chip {
+      display: inline-block;
+      padding: 1px 7px;
+      margin: 0 2px;
+      background: var(--bg-hover);
+      border: 1px dashed var(--accent);
+      border-radius: var(--radius);
+      color: var(--accent);
+      font-size: 0.82em;
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    div.mdx-chip {
+      display: block;
+      margin: 14px 0;
+      padding: 10px 14px;
+      text-align: center;
+      font-size: 0.9em;
+      white-space: normal;
     }
 
     /* ===== 拖拽分隔线 ===== */
@@ -1218,6 +1252,9 @@
           <button class="tool-btn" data-action="preview-only" title="仅预览" id="preview-toggle">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
           </button>
+          <button class="tool-btn" data-action="wysiwyg" title="可视化编辑（直接编辑预览）" id="wysiwyg-toggle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+          </button>
           <button class="tool-btn" data-action="toggle-outline" title="文档大纲" id="outline-toggle">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
           </button>
@@ -1506,6 +1543,13 @@
     let mermaidLoaded = false;
     let mermaidLoading = false;
 
+    // ===== 可视化编辑（WYSIWYG）状态 =====
+    let wysiwygOn = false;
+    let mdxBlocks = {};          // data-mdx id → 原 Markdown（只读块还原用）
+    let mdxId = 0;
+    let turndownService = null;
+    let wysiwygSyncTimer = null;
+
     // ===== 默认文档 =====
     const DEFAULT_CONTENT = '# 👋 欢迎使用 Markdown 编辑器\n\n完全在**浏览器本地**运行，无需注册、无数据上传。点击工具栏 **📖 语法快查** 可随时查阅完整语法。\n\n[TOC]\n\n## 📝 标题\n\n# 一级标题 H1\n## 二级标题 H2\n### 三级标题 H3\n#### 四级标题 H4\n##### 五级标题 H5\n###### 六级标题 H6\n\n## 🔤 文本样式\n\n| 语法 | 效果 |\n|------|------|\n| `**粗体**` | **粗体** |\n| `*斜体*` | *斜体* |\n| `~~删除线~~` | ~~删除线~~ |\n| `==高亮==` | ==高亮标记== |\n\n还可以用 HTML：<u>下划线</u>、<sup>上标</sup>、<sub>下标</sub>\n\n## 🔗 链接与图片\n\n- 链接：[Markdown 官方教程](https://markdown.com.cn/)\n- 自动链接：<https://www.example.com>\n- 图片：\n\n![示例图片](https://markdown.com.cn/images/qrcode_for_gh_82cf87d482f0_258.jpg)\n\n## 💻 代码\n\n行内代码：`const greeting = "Hello World!"`\n\nJavaScript 代码块：\n\n```javascript\n/**\n * 斐波那契数列\n */\nfunction fibonacci(n) {\n  if (n <= 1) return n;\n  let a = 0, b = 1;\n  for (let i = 2; i <= n; i++) {\n    [a, b] = [b, a + b];\n  }\n  return b;\n}\n\nconsole.log(fibonacci(10)); // 55\n```\n\nPython 代码块：\n\n```python\ndef quick_sort(arr):\n    if len(arr) <= 1:\n        return arr\n    pivot = arr[len(arr) // 2]\n    left = [x for x in arr if x < pivot]\n    middle = [x for x in arr if x == pivot]\n    right = [x for x in arr if x > pivot]\n    return quick_sort(left) + middle + quick_sort(right)\n\nprint(quick_sort([3, 6, 8, 10, 1, 2, 1]))\n```\n\nCSS 代码块：\n\n```css\n:root {\n  --primary: #2563eb;\n  --radius: 8px;\n}\n\n.card {\n  background: var(--bg);\n  border-radius: var(--radius);\n  box-shadow: 0 4px 12px rgba(0,0,0,0.1);\n  transition: transform 0.2s ease;\n}\n\n.card:hover {\n  transform: translateY(-4px);\n}\n```\n\n## 💬 引用与提示框\n\n> 这是普通引用。Markdown 是一种轻量级标记语言，让你专注于写作本身。\n>\n> — 某位开发者\n\n> [!INFO]\n> 这是一个**信息**提示框，适合展示补充说明。\n\n> [!WARNING]\n> 这是一个**警告**提示框，提醒用户注意潜在问题。\n\n> [!DANGER]\n> 这是一个**危险**提示框，用于标注禁止或破坏性操作。\n\n> [!SUCCESS]\n> 这是一个**成功**提示框，用于展示好消息或完成状态。\n\n## 📋 列表\n\n### 无序列表\n\n- 前端开发\n  - React / Vue / Angular\n  - HTML5 / CSS3 / JavaScript\n- 后端开发\n  - Node.js / Python / Go\n  - MySQL / Redis / MongoDB\n- 运维部署\n  - Docker / K8s\n  - Nginx / CI/CD\n\n### 有序列表\n\n1. 创建项目\n2. 编写代码\n3. 测试验证\n4. 部署上线\n\n### 任务列表\n\n- [x] 完成 Markdown 语法学习\n- [x] 搭建项目框架\n- [ ] 编写单元测试\n- [ ] 编写集成测试\n- [ ] 部署到生产环境\n\n## 📊 表格\n\n| 功能 | 状态 | 优先级 | 负责人 |\n|:-----|:----:|:------:|-------:|\n| 用户登录 | ✅ 完成 | P0 | 张三 |\n| 数据看板 | 🔄 进行中 | P1 | 李四 |\n| 文件导出 | 📅 计划中 | P2 | 王五 |\n| 消息推送 | ❌ 未开始 | P3 | 赵六 |\n\n## 📌 脚注\n\nMarkdown 是一种轻量级标记语言[^1]，由 John Gruber 和 Aaron Swartz 创建[^2]。\n\n[^1]: 标记语言是一种用标记标签来描述文档格式的计算机语言。\n[^2]: John Gruber 和 Aaron Swartz 于 2004 年发布了 Markdown 的第一个版本。\n\n## 🧮 数学公式 (KaTeX)\n\n### 行内公式\n\n质能方程：$E = mc^2$；勾股定理：$a^2 + b^2 = c^2$。\n\n### 块级公式\n\n牛顿-莱布尼茨公式：\n\n$$\n\\int_{a}^{b} f(x) \\, dx = F(b) - F(a)\n$$\n\n二次方程求根公式：\n\n$$\nx = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}\n$$\n\n矩阵乘法：\n\n$$\n\\begin{pmatrix}\na & b \\\\\nc & d\n\\end{pmatrix}\n\\begin{pmatrix}\nx \\\\\ny\n\\end{pmatrix}\n=\n\\begin{pmatrix}\nax + by \\\\\ncx + dy\n\\end{pmatrix}\n$$\n\n## 📈 Mermaid 图表\n\n### 流程图\n\n```mermaid\ngraph TD\n    A[📥 用户请求] --> B{🔐 权限验证}\n    B -->|✅ 通过| C[📋 处理业务逻辑]\n    B -->|❌ 拒绝| D[🚫 返回 403]\n    C --> E{📊 数据校验}\n    E -->|通过| F[💾 写入数据库]\n    E -->|失败| G[⚠️ 返回错误]\n    F --> H[✅ 返回成功]\n```\n\n### 时序图\n\n```mermaid\nsequenceDiagram\n    participant U as 👤 用户\n    participant F as 🖥️ 前端\n    participant B as ⚙️ 后端\n    participant D as 🗄️ 数据库\n\n    U->>F: 点击提交按钮\n    F->>B: POST /api/order\n    B->>D: INSERT INTO orders\n    D-->>B: 返回记录 ID\n    B-->>F: { code: 200, data: {...} }\n    F-->>U: ✅ 订单创建成功\n```\n\n### 甘特图\n\n```mermaid\ngantt\n    title 📅 项目开发计划\n    dateFormat  YYYY-MM-DD\n    section 需求阶段\n    需求调研      :a1, 2025-01-01, 5d\n    需求评审      :a2, after a1, 2d\n    section 开发阶段\n    UI 设计       :b1, after a2, 5d\n    前端开发      :b2, after b1, 10d\n    后端开发      :b3, after a2, 12d\n    section 测试阶段\n    集成测试      :c1, after b2, 5d\n    上线发布      :c2, after c1, 2d\n```\n\n---\n\n> 💡 **提示：** 点击工具栏 **📖 语法快查** 可随时查看完整语法速查表。内容自动保存在浏览器本地，关闭页面不会丢失。\n\n**开始你的写作之旅吧！** ✨\n';
 
@@ -1591,6 +1635,26 @@
       });
     }
 
+    // ===== Turndown 配置（HTML → Markdown）=====
+    function setupTurndown() {
+      if (!window.TurndownService) return;
+      turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', bulletListMarker: '-' });
+      if (window.turndownPluginGfm && turndownPluginGfm.gfm) {
+        turndownService.use(turndownPluginGfm.gfm);
+      }
+      // 高亮 ==文本==
+      turndownService.addRule('mark', { filter: 'mark', replacement: function (content) { return '==' + content + '=='; } });
+      // 下划线 / 上标 / 下标：Markdown 无标准语法，保留为 HTML
+      turndownService.addRule('underline', { filter: 'u', replacement: function (content) { return '<u>' + content + '</u>'; } });
+      turndownService.addRule('superscript', { filter: 'sup', replacement: function (content) { return '<sup>' + content + '</sup>'; } });
+      turndownService.addRule('subscript', { filter: 'sub', replacement: function (content) { return '<sub>' + content + '</sub>'; } });
+      // 只读块占位符 → 还原为原 Markdown
+      turndownService.addRule('mdx', {
+        filter: function (node) { return node.nodeType === 1 && node.hasAttribute && node.hasAttribute('data-mdx'); },
+        replacement: function (content, node) { return mdxBlocks[node.getAttribute('data-mdx')] || ''; }
+      });
+    }
+
     // ===== 脚注处理 =====
     function extractFootnotes(raw) {
       var defs = {};
@@ -1639,11 +1703,50 @@
       return html.replace(/<p>\[TOC\]<\/p>/gi, tocHtml).replace(/<p>\[toc\]<\/p>/gi, tocHtml);
     }
 
+    // ===== 保护高级块（可视化模式下替换为只读占位符）=====
+    function protectMarkdown(raw) {
+      mdxBlocks = {};
+      mdxId = 0;
+      var src = raw;
+      var LABELS = { mermaid: '📈 图表', code: '💻 代码', math: '🧮 公式', callout: '💬 提示框', footnote: '📌 脚注', toc: '📑 目录' };
+
+      function block(type, original) {
+        var id = 'mdx' + (mdxId++);
+        mdxBlocks[id] = original;
+        return '\n<div class="mdx-chip" data-mdx="' + id + '">' + LABELS[type] + '</div>\n';
+      }
+      function inline(type, original) {
+        var id = 'mdx' + (mdxId++);
+        mdxBlocks[id] = original;
+        return '<span class="mdx-chip" data-mdx="' + id + '">' + LABELS[type] + '</span>';
+      }
+
+      // 1) 围栏代码块（含 mermaid）整体保护，避免内部 $ / [^] 被后续正则误扫
+      src = src.replace(/```[\s\S]*?```/g, function (fence) {
+        return block(/^```\s*mermaid/m.test(fence) ? 'mermaid' : 'code', fence);
+      });
+      // 2) 块级公式 $$...$$
+      src = src.replace(/\$\$[\s\S]+?\$\$/g, function (m) { return block('math', m); });
+      // 3) callout 块（> [!TYPE] ...）
+      src = src.replace(/>\s*\[![A-Z]+\][^\n]*(?:\n\s*>[^\n]*)*/g, function (m) { return block('callout', m); });
+      // 4) 脚注定义（单行 [^x]: ...）
+      src = src.replace(/^\[\^[^\]]+\]:[^\n]*$/gm, function (m) { return block('footnote', m); });
+      // 5) [TOC]
+      src = src.replace(/\[toc\]/gi, function (m) { return block('toc', m); });
+      // 6) 行内公式 $...$
+      src = src.replace(/\$([^$\n]+)\$/g, function (m) { return inline('math', m); });
+      // 7) 脚注引用 [^x]
+      src = src.replace(/\[\^[^\]]+\]/g, function (m) { return inline('footnote', m); });
+
+      return src;
+    }
+
     // ===== 渲染预览 =====
-    function renderPreview() {
+    function renderPreview(wysiwyg) {
       if (!window.marked) return;
       var raw = editor.value;
-      var extracted = extractFootnotes(raw);
+      var working = wysiwyg ? protectMarkdown(raw) : raw;
+      var extracted = extractFootnotes(working);
       var html = marked.parse(extracted.cleaned);
       html = processTOC(html, extracted.cleaned);
       html = applyFootnotes(html, extracted.defs);
@@ -1651,6 +1754,12 @@
         html = DOMPurify.sanitize(html, { ADD_TAGS: ['iframe'], ADD_ATTR: ['target', 'id'] });
       }
       preview.innerHTML = html;
+
+      // 可视化模式：占位符设为只读（contenteditable=false）
+      if (wysiwyg) {
+        var chips = preview.querySelectorAll('.mdx-chip');
+        for (var ci0 = 0; ci0 < chips.length; ci0++) chips[ci0].setAttribute('contenteditable', 'false');
+      }
 
       // 启用预览区任务复选框交互
       var cbs = preview.querySelectorAll('.task-list-item input[type="checkbox"]');
@@ -1901,13 +2010,110 @@
           ? 'https://fastly.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/styles/github-dark.min.css'
           : 'https://cdn.bootcdn.net/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
       }
-      if (mermaidLoaded) renderPreview();
+      if (mermaidLoaded) renderPreview(wysiwygOn);
     }
 
     // ===== 仅预览 =====
     function togglePreviewOnly() {
       var on = document.querySelector('.app').classList.toggle('preview-only');
       document.getElementById('preview-toggle').classList.toggle('active', on);
+    }
+
+    // ===== 可视化编辑（WYSIWYG）=====
+    function setWysiwyg(on) {
+      if (!on && wysiwygOn && turndownService) {
+        // 关闭前先把未同步的预览改动回写源码
+        clearTimeout(wysiwygSyncTimer);
+        syncSourceFromPreview();
+      }
+      wysiwygOn = on;
+      document.getElementById('wysiwyg-toggle').classList.toggle('active', on);
+      if (on) {
+        preview.contentEditable = 'true';
+        renderPreview(true);
+      } else {
+        preview.contentEditable = 'false';
+        renderPreview(false);
+      }
+    }
+
+    function toggleWysiwyg() { setWysiwyg(!wysiwygOn); }
+
+    function saveSelection() {
+      var sel = window.getSelection();
+      if (sel.rangeCount) return sel.getRangeAt(0).cloneRange();
+      return null;
+    }
+
+    function restoreSelection(range) {
+      if (!range) return;
+      try { preview.focus(); } catch (e) {}
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    function applyFormatCommand(action) {
+      if (!wysiwygOn) return;
+      var range = saveSelection();
+      var cmdMap = {
+        bold: ['bold'], italic: ['italic'], underline: ['underline'], strikethrough: ['strikeThrough'],
+        'heading-1': ['formatBlock', 'H1'], 'heading-2': ['formatBlock', 'H2'], 'heading-3': ['formatBlock', 'H3'],
+        'heading-4': ['formatBlock', 'H4'], 'heading-5': ['formatBlock', 'H5'], 'heading-6': ['formatBlock', 'H6'],
+        sup: ['superscript'], sub: ['subscript'], quote: ['formatBlock', 'BLOCKQUOTE'], code: ['formatBlock', 'PRE'],
+        list: ['insertUnorderedList'], 'ordered-list': ['insertOrderedList'], hr: ['insertHorizontalRule']
+      };
+      try { preview.focus(); } catch (e) {}
+
+      if (cmdMap[action]) {
+        document.execCommand(cmdMap[action][0], false, cmdMap[action][1] || null);
+      } else if (action === 'link') {
+        var url = prompt('请输入链接地址', 'https://');
+        if (url) { restoreSelection(range); document.execCommand('createLink', false, url); }
+      } else if (action === 'image') {
+        var imgUrl = prompt('请输入图片地址', 'https://');
+        if (imgUrl) { restoreSelection(range); document.execCommand('insertImage', false, imgUrl); }
+      } else if (action === 'table') {
+        var dims = prompt('请输入表格尺寸（行x列，如 3x4）', '3x3');
+        if (dims) {
+          var parts = dims.trim().toLowerCase().split(/[\sx×*]+/).filter(Boolean);
+          var rows = parseInt(parts[0], 10) || 3;
+          var cols = parseInt(parts[1], 10) || 3;
+          var t = '<table style="border-collapse: collapse; width: 100%;"><tbody>';
+          for (var r = 0; r < rows; r++) {
+            t += '<tr>';
+            for (var c = 0; c < cols; c++) t += '<td style="border: 1px solid #999; padding: 6px;">&nbsp;</td>';
+            t += '</tr>';
+          }
+          t += '</tbody></table>';
+          restoreSelection(range);
+          document.execCommand('insertHTML', false, t);
+        }
+      } else if (action === 'task-list') {
+        document.execCommand('insertHTML', false, '<ul><li><input type="checkbox"> 任务</li></ul>');
+      } else if (action === 'toc') {
+        document.execCommand('insertText', false, '[TOC]');
+      }
+      scheduleSave();
+      syncSourceFromPreview();
+    }
+
+    function syncSourceFromPreview() {
+      if (!wysiwygOn || !turndownService) return;
+      var clone = preview.cloneNode(true);
+      var copyBtns = clone.querySelectorAll('.hljs-copy-btn');
+      for (var i = 0; i < copyBtns.length; i++) copyBtns[i].parentNode.removeChild(copyBtns[i]);
+      var md = turndownService.turndown(clone.innerHTML);
+      editor.value = md;   // 程序赋值不触发 input，避免回环重渲染
+      updateLineNumbers();
+      updateWordCount();
+      scheduleSave();
+    }
+
+    function onPreviewInput() {
+      if (!wysiwygOn) return;
+      clearTimeout(wysiwygSyncTimer);
+      wysiwygSyncTimer = setTimeout(syncSourceFromPreview, 300);
     }
 
     // ===== 下载 =====
@@ -2154,7 +2360,7 @@
 
     // ===== 内容变更 =====
     function onContentChange() {
-      renderPreview();
+      renderPreview(wysiwygOn);
       updateLineNumbers();
       updateCursorPos();
       scheduleSave();
@@ -2176,6 +2382,9 @@
         updateActiveOutline();
       });
 
+      // 可视化模式下：预览直接编辑 → 防抖回写源码
+      preview.addEventListener('input', onPreviewInput);
+
       syncScrollCheck.checked = syncScroll;
       syncScrollCheck.addEventListener('change', function() {
         syncScroll = syncScrollCheck.checked;
@@ -2194,6 +2403,7 @@
             case 'theme': toggleTheme(); break;
             case 'line-numbers': toggleLineNumbers(); break;
             case 'preview-only': togglePreviewOnly(); break;
+            case 'wysiwyg': toggleWysiwyg(); break;
             case 'import-md': importFile.click(); break;
             case 'download-md': downloadMd(); break;
             case 'download-html': downloadHtml(); break;
@@ -2205,8 +2415,17 @@
               break;
             case 'help': openModal('help-modal'); break;
             case 'syntax-ref': openModal('syntax-modal'); break;
-            default: insertMarkdown(action);
+            default:
+              if (wysiwygOn) applyFormatCommand(action);
+              else insertMarkdown(action);
           }
+        });
+      });
+
+      // 可视化模式下：格式化按钮 mousedown 阻止默认，保住预览选区
+      document.querySelectorAll('.toolbar-left [data-action]').forEach(function(btn) {
+        btn.addEventListener('mousedown', function(e) {
+          if (wysiwygOn && actions[btn.dataset.action]) e.preventDefault();
         });
       });
 
@@ -2261,6 +2480,7 @@
 
       // 预览区任务列表勾选：同步回 Markdown 源
       preview.addEventListener('change', function(e) {
+        if (wysiwygOn) return; // 可视化模式下由 input 防抖统一序列化
         var cb = e.target.closest('.task-list-item input[type="checkbox"]');
         if (!cb) return;
         var allCbs = preview.querySelectorAll('.task-list-item input[type="checkbox"]');
@@ -2286,6 +2506,7 @@
 
       // 预览区点击：代码复制 / 图片放大
       preview.addEventListener('click', function(e) {
+        if (wysiwygOn) return; // 可视化模式下点击用于定位光标
         var copyBtn = e.target.closest('.hljs-copy-btn');
         if (copyBtn) {
           var code = copyBtn.parentElement.querySelector('code');
@@ -2358,6 +2579,7 @@
     function init() {
       initFiles();
       setupMarked();
+      setupTurndown();
 
       var files = getFiles();
       var file = files.find(function(f) { return f.id === getCurrentFileId(); });
@@ -2387,9 +2609,9 @@
 
     // 等待 CDN 依赖加载后初始化
     function waitForDeps(cb) {
-      if (window.marked) { cb(); return; }
+      if (window.marked && window.TurndownService) { cb(); return; }
       var check = setInterval(function() {
-        if (window.marked) { clearInterval(check); cb(); }
+        if (window.marked && window.TurndownService) { clearInterval(check); cb(); }
       }, 50);
       // 超时保护（5秒后强制初始化）
       setTimeout(function() { clearInterval(check); cb(); }, 5000);

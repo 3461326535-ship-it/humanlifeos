@@ -184,11 +184,67 @@
         .preview-wrapper {
             flex: 1;
             min-width: 100px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== Word 式排版工具栏 ===== */
+        #format-toolbar {
+            display: none;
+            flex-wrap: wrap;
+            gap: 2px;
+            padding: 6px 8px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+            align-items: center;
+        }
+        #format-toolbar.visible { display: flex; }
+        #format-toolbar button {
+            padding: 4px 8px;
+            margin: 0;
+            border: none;
+            background: transparent;
+            color: #333;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: "Courier New", monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            min-width: 26px;
+        }
+        #format-toolbar button:hover { background: #e6e6e6; }
+        #format-toolbar .tb-sep {
+            width: 1px;
+            height: 18px;
+            background: #ccc;
+            margin: 0 4px;
+            display: inline-block;
+        }
+        #format-toolbar .tb-color {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 12px;
+            color: #333;
+            padding: 0 4px;
+            cursor: pointer;
+        }
+        #format-toolbar .tb-color input[type="color"] {
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: none;
+            cursor: pointer;
         }
 
         #preview {
+            flex: 1;
             width: 100%;
-            height: 100%;
+            min-height: 0;
             border: none;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
@@ -266,6 +322,152 @@
         .dropdown:hover .dropdown-content {
             display: block;
         }
+
+        /* ===== 可视化编辑（点选预览元素） ===== */
+        #inspect-panel {
+            position: fixed;
+            z-index: 1000;
+            display: none;
+            width: 280px;
+            max-height: 85vh;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+            padding: 14px;
+            font-family: "Courier New", monospace;
+            color: #333;
+        }
+        #inspect-panel .panel-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 2px;
+            color: #3F689E;
+            word-break: break-all;
+            cursor: move;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #inspect-panel .panel-grip {
+            opacity: 0.45;
+            font-size: 15px;
+            letter-spacing: 1px;
+            cursor: move;
+            flex: 0 0 auto;
+            margin-left: 8px;
+        }
+        #inspect-panel label {
+            display: block;
+            font-size: 12px;
+            margin-top: 10px;
+            color: #555;
+        }
+        #inspect-panel input,
+        #inspect-panel textarea {
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 4px;
+            padding: 7px;
+            border: 1px solid #ccc;
+            border-radius: 7px;
+            font-size: 13px;
+            font-family: "Courier New", monospace;
+        }
+        #inspect-panel textarea { resize: vertical; }
+        #inspect-panel .panel-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        #inspect-panel .panel-actions button {
+            flex: 1;
+            padding: 8px;
+            margin: 0;
+            font-size: 13px;
+        }
+        #panel-close { background-color: #999; }
+
+        /* 源码定位高亮（CodeMirror 行） */
+        .cm-source-locate { background: rgba(255, 74, 253, 0.22) !important; }
+
+        /* 通用属性键值对编辑器 */
+        #inspect-panel .panel-section-title {
+            display: block;
+            font-size: 12px;
+            margin-top: 10px;
+            color: #555;
+        }
+        #inspect-panel .attr-row {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+            align-items: center;
+        }
+        #inspect-panel .attr-row input {
+            width: auto;
+            margin-top: 0;
+        }
+        #inspect-panel .attr-row .attr-name { flex: 0 0 84px; }
+        #inspect-panel .attr-row .attr-val { flex: 1; }
+        #inspect-panel .attr-row .attr-del {
+            flex: 0 0 auto;
+            padding: 2px 9px;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.2;
+            background: #e88383;
+        }
+        #inspect-panel #panel-add-attr {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 4px 12px;
+            font-size: 12px;
+            background: #3F689E;
+        }
+
+        /* 结构操作（插入 / 删除） */
+        #inspect-panel .panel-ops {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        #inspect-panel .panel-ops button {
+            padding: 6px 4px;
+            margin: 0;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        #inspect-panel .danger { background: #e88383; }
+
+        /* 预览右键上下文菜单 */
+        #context-menu {
+            position: fixed;
+            z-index: 1001;
+            min-width: 140px;
+            display: none;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+            padding: 4px;
+            font-family: "Courier New", monospace;
+            font-size: 13px;
+        }
+        #context-menu .cm-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #333;
+            white-space: nowrap;
+        }
+        #context-menu .cm-item:hover { background: #f0f0f0; }
+        #context-menu .cm-danger { color: #d33; }
+        #context-menu .cm-danger:hover { background: #fbeaea; }
     </style>
 
     <!-- 百度统计 & Google Analytics (保留原有) -->
@@ -298,13 +500,56 @@
         </div>
         <div class="resizer" id="resizer"></div>
         <div class="preview-wrapper" id="preview-wrapper">
+            <div id="format-toolbar">
+                <button type="button" data-cmd="bold" title="加粗"><b>B</b></button>
+                <button type="button" data-cmd="italic" title="斜体"><i>I</i></button>
+                <button type="button" data-cmd="underline" title="下划线"><u>U</u></button>
+                <button type="button" data-cmd="strikeThrough" title="删除线"><s>S</s></button>
+                <span class="tb-sep"></span>
+                <button type="button" data-cmd="formatBlock" data-value="P" title="正文">¶</button>
+                <button type="button" data-cmd="formatBlock" data-value="H1" title="标题1">H1</button>
+                <button type="button" data-cmd="formatBlock" data-value="H2" title="标题2">H2</button>
+                <button type="button" data-cmd="formatBlock" data-value="H3" title="标题3">H3</button>
+                <button type="button" data-cmd="formatBlock" data-value="BLOCKQUOTE" title="引用">❝</button>
+                <span class="tb-sep"></span>
+                <button type="button" data-cmd="insertUnorderedList" title="无序列表">• 列表</button>
+                <button type="button" data-cmd="insertOrderedList" title="有序列表">1. 列表</button>
+                <span class="tb-sep"></span>
+                <button type="button" data-cmd="createLink" title="链接">🔗</button>
+                <button type="button" data-cmd="removeFormat" title="清除格式">清除格式</button>
+                <span class="tb-sep"></span>
+                <button type="button" data-cmd="justifyLeft" title="左对齐">左</button>
+                <button type="button" data-cmd="justifyCenter" title="居中">中</button>
+                <button type="button" data-cmd="justifyRight" title="右对齐">右</button>
+                <span class="tb-sep"></span>
+                <button type="button" data-cmd="insertHorizontalRule" title="水平线">―</button>
+                <button type="button" data-cmd="insertTable" title="表格">表格</button>
+                <button type="button" data-cmd="insertImage" title="图片">🖼</button>
+                <span class="tb-sep"></span>
+                <button type="button" data-cmd="formatBlock" data-value="PRE" title="代码块">代码</button>
+                <button type="button" data-cmd="superscript" title="上标">x²</button>
+                <button type="button" data-cmd="subscript" title="下标">x₂</button>
+                <span class="tb-sep"></span>
+                <button type="button" data-cmd="indent" title="增加缩进">→</button>
+                <button type="button" data-cmd="outdent" title="减少缩进">←</button>
+                <span class="tb-sep"></span>
+                <label class="tb-color" title="文字颜色">A<input type="color" id="tb-forecolor" value="#000000"></label>
+                <label class="tb-color" title="高亮">高亮<input type="color" id="tb-hilitecolor" value="#ffff00"></label>
+                <span class="tb-sep"></span>
+                <button type="button" data-cmd="undo" title="撤销">↶</button>
+                <button type="button" data-cmd="redo" title="重做">↷</button>
+            </div>
             <iframe id="preview"></iframe>
         </div>
     </div>
     <div class="button-container">
         <button onclick="updatePreview()">更新预览</button>
+        <button id="inspect-toggle">可视化编辑：开</button>
+        <button id="keep-scripts-toggle">保留脚本：关</button>
         <button onclick="setFileName()">设置文件名</button>
         <button onclick="exportHTML()">导出 HTML</button>
+        <button onclick="undoAndPreview()">撤销</button>
+        <button onclick="redoAndPreview()">重做</button>
         <div class="dropdown">
             <button>主题</button>
             <div class="dropdown-content">
@@ -318,6 +563,57 @@
         </div>
         <input type="file" id="fileInput" style="display: none;" accept=".html">
         <button onclick="document.getElementById('fileInput').click()">上传 HTML 文件</button>
+    </div>
+
+    <div style="text-align: center; font-size: 13px; color: #666; margin-top: -8px;">
+        提示：开启「可视化编辑」后，直接在预览里点击定位光标、输入文字，选中文字用顶部工具栏排版；右键弹出插入/删除/编辑属性菜单。
+    </div>
+
+    <!-- 可视化编辑属性面板 -->
+    <div id="inspect-panel">
+        <div class="panel-title" id="panel-title-bar">
+            <span id="panel-tag-path">元素</span>
+            <span class="panel-grip">⠿</span>
+        </div>
+        <label>标签名
+            <input id="panel-tag" placeholder="div">
+        </label>
+        <label>class
+            <input id="panel-class" placeholder="class 名称">
+        </label>
+        <label>style
+            <textarea id="panel-style" rows="3" placeholder="color: red; font-size: 14px;"></textarea>
+        </label>
+        <label>文本内容
+            <textarea id="panel-text" rows="2" placeholder="文本"></textarea>
+        </label>
+        <div class="panel-section">
+            <span class="panel-section-title">其他属性</span>
+            <div id="panel-attrs"></div>
+            <button id="panel-add-attr" type="button">+ 添加属性</button>
+        </div>
+        <div class="panel-section">
+            <span class="panel-section-title">结构操作</span>
+            <div class="panel-ops">
+                <button id="panel-insert-child" type="button">＋子元素</button>
+                <button id="panel-insert-before" type="button">↑上方插入</button>
+                <button id="panel-insert-after" type="button">↓下方插入</button>
+                <button id="panel-delete" type="button" class="danger">删除元素</button>
+            </div>
+        </div>
+        <div class="panel-actions">
+            <button id="panel-apply">应用</button>
+            <button id="panel-close">取消</button>
+        </div>
+    </div>
+
+    <!-- 预览右键上下文菜单 -->
+    <div id="context-menu">
+        <div class="cm-item" data-action="attr">编辑属性</div>
+        <div class="cm-item" data-action="insert-child">＋插入子元素</div>
+        <div class="cm-item" data-action="insert-before">↑上方插入</div>
+        <div class="cm-item" data-action="insert-after">↓下方插入</div>
+        <div class="cm-item cm-danger" data-action="delete">删除元素</div>
     </div>
 
     <!-- 引入 CodeMirror 核心库及必需的模式 -->
@@ -348,9 +644,11 @@
 
         let fileName = 'exported_page.html';
 
-        // 更新预览：从编辑器获取代码，设置 iframe 的 srcdoc
+        // 更新预览：从编辑器获取代码并设置 iframe 的 srcdoc（预览 DOM 即编辑的唯一来源）
         function updatePreview() {
             const code = editor.getValue();
+            sourceIsFullDocument = /<html[\s>]/i.test(code); // 判断是完整文档还是片段
+            console.log('[DEBUG 更新预览] getValue 前 150 字:', code.slice(0, 150));
             const preview = document.getElementById('preview');
             preview.srcdoc = code;
         }
@@ -438,13 +736,559 @@
                 reader.onload = function (event) {
                     const code = event.target.result;
                     editor.setValue(code);               // 设置编辑器内容
-                    document.getElementById('preview').srcdoc = code; // 立即预览
+                    updatePreview();                     // 立即预览（含解析与注入检查器）
                 };
                 reader.readAsText(file);
             }
             // 重置 input，以便再次上传同一文件时仍触发 change
             this.value = '';
         });
+
+        // ===== 可视化 → 代码：点选预览元素进行编辑 =====
+        let inspectEnabled = true;
+        let previewKeepScripts = false; // 预览是否保留页面脚本；默认剥离，冻结渲染结果
+        let selectedEl = null;      // 预览中当前选中的元素
+        let selectedPath = null;    // 该元素在 DOM 树中的 childNodes 路径索引
+        let highlightedLine = null; // 源码中当前高亮的行（用于定位）
+        let sourceIsFullDocument = true; // 源码是否为完整 HTML 文档（含 <html>）；片段只序列化 body
+
+        // 获取预览 iframe 的文档（作为唯一的编辑 DOM，避免与源码解析结果分叉）
+        function getPreviewDoc() {
+            return document.getElementById('preview').contentDocument;
+        }
+
+        // 序列化预览 DOM 回源码字符串（克隆后剔除注入的样式/指示条/临时类）
+        function serializePreview() {
+            const doc = getPreviewDoc();
+            if (!doc) return '';
+            // 片段：只序列化 body 内容，避免被包一层 <html>/<head>/<body> 造成左右不一致
+            if (!sourceIsFullDocument) {
+                const bodyClone = doc.body.cloneNode(true);
+                const indicator = bodyClone.querySelector('[data-inspect-indicator]');
+                if (indicator) indicator.parentNode.removeChild(indicator);
+                bodyClone.querySelectorAll('.inspect-hover, .inspect-selected, .inspect-dragging').forEach(function (el) {
+                    el.classList.remove('inspect-hover', 'inspect-selected', 'inspect-dragging');
+                });
+                return bodyClone.innerHTML;
+            }
+            const clone = doc.documentElement.cloneNode(true);
+            const injectedStyle = clone.querySelector('style[data-inspect]');
+            if (injectedStyle) injectedStyle.parentNode.removeChild(injectedStyle);
+            const indicator = clone.querySelector('[data-inspect-indicator]');
+            if (indicator) indicator.parentNode.removeChild(indicator);
+            clone.querySelectorAll('.inspect-hover, .inspect-selected, .inspect-dragging').forEach(function (el) {
+                el.classList.remove('inspect-hover', 'inspect-selected', 'inspect-dragging');
+            });
+            let html = clone.outerHTML;
+            if (doc.doctype) html = '<!DOCTYPE ' + doc.doctype.name + '>\n' + html;
+            return html;
+        }
+
+        // 计算元素从根节点开始的 childNodes 路径索引
+        function getElementPath(el, root) {
+            const path = [];
+            let node = el;
+            while (node && node !== root) {
+                const parent = node.parentNode;
+                if (!parent) break;
+                path.unshift(Array.prototype.indexOf.call(parent.childNodes, node));
+                node = parent;
+            }
+            return path;
+        }
+
+        // 依据路径索引在源码树中找回对应节点
+        function getElementByPath(root, path) {
+            let node = root;
+            for (let i = 0; i < path.length; i++) {
+                node = node.childNodes[path[i]];
+                if (!node) return null;
+            }
+            return node;
+        }
+
+        // 用 replaceRange 整体替换文档，使其作为“一步”进入撤销历史（setValue 会清空历史）
+        function setEditorContentUndoable(html) {
+            console.log('[DEBUG 回写] 内容前 150 字:', html.slice(0, 150));
+            const doc = editor.getDoc();
+            const lastLine = doc.lastLine();
+            doc.replaceRange(html, { line: 0, ch: 0 }, { line: lastLine, ch: doc.getLine(lastLine).length });
+        }
+
+        // 在 CodeMirror 中高亮指定行
+        function highlightEditorLine(line) {
+            clearEditorHighlight();
+            editor.addLineClass(line, 'background', 'cm-source-locate');
+            highlightedLine = line;
+            editor.scrollIntoView({ line: line, ch: 0 }, 60);
+            editor.setCursor({ line: line, ch: 0 });
+        }
+
+        function clearEditorHighlight() {
+            if (highlightedLine !== null) {
+                editor.removeLineClass(highlightedLine, 'background', 'cm-source-locate');
+                highlightedLine = null;
+            }
+        }
+
+        // 定位源码：根据选中元素在同名元素中的文档序，匹配源码中第 N 个开标签所在行
+        function locateSourceLine() {
+            const doc = getPreviewDoc();
+            if (!doc || !selectedPath) return;
+            const node = getElementByPath(doc.documentElement, selectedPath);
+            if (!node || node.nodeType !== 1) return;
+            const tag = node.tagName.toLowerCase();
+            const all = doc.getElementsByTagName(tag);
+            const idx = Array.prototype.indexOf.call(all, node);
+            if (idx < 0) return;
+            const code = editor.getValue();
+            const re = new RegExp('<\\s*' + tag + '\\b[^>]*>', 'gi');
+            let m, n = -1, targetIndex = -1;
+            while ((m = re.exec(code)) !== null) {
+                n++;
+                if (n === idx) { targetIndex = m.index; break; }
+            }
+            if (targetIndex < 0) return;
+            const pos = editor.posFromIndex(targetIndex);
+            highlightEditorLine(pos.line);
+        }
+
+        // 在属性面板里添加一行“属性名 = 值”
+        function addAttrRow(name, value) {
+            const container = document.getElementById('panel-attrs');
+            const row = document.createElement('div');
+            row.className = 'attr-row';
+            const nameInput = document.createElement('input');
+            nameInput.className = 'attr-name';
+            nameInput.placeholder = '属性名';
+            nameInput.value = name || '';
+            const eq = document.createElement('span');
+            eq.textContent = '=';
+            const valInput = document.createElement('input');
+            valInput.className = 'attr-val';
+            valInput.placeholder = '值';
+            valInput.value = value || '';
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'attr-del';
+            del.textContent = '×';
+            del.addEventListener('click', function () { row.remove(); });
+            row.appendChild(nameInput);
+            row.appendChild(eq);
+            row.appendChild(valInput);
+            row.appendChild(del);
+            container.appendChild(row);
+        }
+
+        // 在预览中插入新元素：where = 'child' | 'before' | 'after'
+        function insertElement(where) {
+            const doc = getPreviewDoc();
+            if (!doc || !selectedPath) { alert('请先在预览中点击一个元素作为插入位置'); return; }
+            const node = getElementByPath(doc.documentElement, selectedPath);
+            if (!node || node.nodeType !== 1) { alert('未找到对应源码节点，请重新选择'); return; }
+
+            const tag = prompt('请输入要插入的标签名（如 div、p、button、img）', 'div');
+            if (!tag) return;
+            const cleanTag = tag.trim().toLowerCase();
+            if (!/^[a-z][a-z0-9-]*$/.test(cleanTag)) { alert('标签名不合法'); return; }
+
+            const newEl = doc.createElement(cleanTag);
+            const VOID_TAGS = { img: 1, br: 1, hr: 1, input: 1, meta: 1, link: 1, area: 1, base: 1, col: 1, embed: 1, source: 1, track: 1, wbr: 1 };
+            if (!VOID_TAGS[cleanTag]) newEl.textContent = '新元素';
+
+            if (where === 'child') {
+                node.appendChild(newEl);
+            } else if (where === 'before') {
+                node.parentNode.insertBefore(newEl, node);
+            } else if (where === 'after') {
+                node.parentNode.insertBefore(newEl, node.nextSibling);
+            }
+
+            setEditorContentUndoable(serializePreview());
+            closePanel();
+            setSelected(newEl, doc);
+        }
+
+        // 删除选中的元素
+        function deleteSelectedElement() {
+            const doc = getPreviewDoc();
+            if (!doc || !selectedPath) return;
+            const node = getElementByPath(doc.documentElement, selectedPath);
+            if (!node || node.nodeType !== 1) return;
+            if (node === doc.documentElement || node === doc.body || node === doc.head) {
+                alert('不能删除 <html> / <head> / <body>');
+                return;
+            }
+            if (!confirm('确定删除该元素及其全部子元素？')) return;
+            node.parentNode.removeChild(node);
+            setEditorContentUndoable(serializePreview());
+            closePanel();
+        }
+
+        // 预览加载完成后，注入选中高亮、Word 式直接编辑与右键菜单逻辑
+        function enableInspect() {
+            const iframe = document.getElementById('preview');
+            const doc = iframe.contentDocument;
+            if (!doc) return;
+
+            // 注入选中高亮样式（右键/属性面板定位用）
+            const style = doc.createElement('style');
+            style.textContent = [
+                '.inspect-selected { outline: 3px solid #FF4AFD !important; outline-offset: 2px; }'
+            ].join('\n');
+            style.setAttribute('data-inspect', '1');
+            (doc.head || doc.documentElement).appendChild(style);
+
+            // 冻结渲染结果：默认剥离页面自身脚本，避免重载时脚本重新渲染覆盖编辑。
+            // 脚本此时已同步执行过（如 visual_report 的 render()），内容已生成。
+            if (!previewKeepScripts) {
+                doc.querySelectorAll('script').forEach(function (s) { s.parentNode.removeChild(s); });
+            }
+
+            // Word 式直接编辑：整篇可点击定位光标、直接输入（designMode 不进入序列化）
+            if (inspectEnabled) {
+                try { doc.designMode = 'on'; } catch (e) {}
+            }
+
+            // 实时同步回左侧源码（防抖，避免每次按键都触发序列化）
+            let syncTimer = null;
+            doc.addEventListener('input', function () {
+                if (!inspectEnabled) return;
+                clearTimeout(syncTimer);
+                syncTimer = setTimeout(function () {
+                    setEditorContentUndoable(serializePreview());
+                }, 300);
+            }, true);
+
+            doc.addEventListener('click', function (e) {
+                hideContextMenu();
+            }, true);
+
+            doc.addEventListener('contextmenu', function (e) {
+                if (!inspectEnabled) return;
+                e.preventDefault();
+                const el = e.target;
+                if (!el || el.nodeType !== 1 || el === doc.documentElement) return;
+                setSelected(el, doc);
+                const iframeRect = iframe.getBoundingClientRect();
+                showContextMenu(iframeRect.left + e.clientX, iframeRect.top + e.clientY);
+            }, true);
+        }
+
+        // 仅设置选中态（高亮 + 记录路径 + 定位源码），不弹面板
+        function setSelected(el, doc) {
+            if (selectedEl && selectedEl.classList) selectedEl.classList.remove('inspect-selected');
+            selectedEl = el;
+            el.classList.add('inspect-selected');
+            selectedPath = getElementPath(el, doc.documentElement);
+            locateSourceLine();
+        }
+
+        function selectElement(el, doc) {
+            setSelected(el, doc);
+            openPanel(el);
+        }
+
+        function openPanel(el) {
+            document.getElementById('panel-tag').value = el.tagName.toLowerCase();
+            document.getElementById('panel-class').value = el.getAttribute('class') || '';
+            document.getElementById('panel-style').value = el.getAttribute('style') || '';
+            const textField = document.getElementById('panel-text');
+            const hasElementChildren = el.children && el.children.length > 0;
+            textField.disabled = hasElementChildren;
+            textField.value = el.textContent || '';
+            textField.placeholder = hasElementChildren ? '该元素含子元素，无法直接编辑文本' : '文本';
+            document.getElementById('panel-tag-path').textContent = '<' + el.tagName.toLowerCase() + '>';
+
+            // 填充通用属性列表（class / style 已有专用字段，故跳过）
+            const attrsContainer = document.getElementById('panel-attrs');
+            attrsContainer.innerHTML = '';
+            for (const attr of Array.from(el.attributes)) {
+                if (attr.name === 'class' || attr.name === 'style') continue;
+                addAttrRow(attr.name, attr.value);
+            }
+
+            const panel = document.getElementById('inspect-panel');
+            panel.style.display = 'block';
+            const iframe = document.getElementById('preview');
+            const iframeRect = iframe.getBoundingClientRect();
+            const rect = el.getBoundingClientRect();
+            let left = iframeRect.left + rect.right + 12;
+            let top = iframeRect.top + rect.top;
+            if (left + 300 > window.innerWidth) left = iframeRect.left + rect.left - 300 - 12;
+            top = Math.max(8, Math.min(top, window.innerHeight - 360));
+            left = Math.max(8, left);
+            panel.style.left = left + 'px';
+            panel.style.top = top + 'px';
+        }
+
+        function closePanel() {
+            document.getElementById('inspect-panel').style.display = 'none';
+            if (selectedEl && selectedEl.classList) selectedEl.classList.remove('inspect-selected');
+            selectedEl = null;
+            selectedPath = null;
+            clearEditorHighlight();
+        }
+
+        // 右键菜单显示 / 隐藏
+        function showContextMenu(x, y) {
+            const menu = document.getElementById('context-menu');
+            menu.style.display = 'block';
+            const rect = menu.getBoundingClientRect();
+            let left = x;
+            let top = y;
+            if (left + rect.width > window.innerWidth) left = window.innerWidth - rect.width - 8;
+            if (top + rect.height > window.innerHeight) top = window.innerHeight - rect.height - 8;
+            left = Math.max(8, left);
+            top = Math.max(8, top);
+            menu.style.left = left + 'px';
+            menu.style.top = top + 'px';
+        }
+
+        function hideContextMenu() {
+            document.getElementById('context-menu').style.display = 'none';
+        }
+
+        // 让属性面板可拖动（按住标题栏移动）
+        function initPanelDrag() {
+            const panel = document.getElementById('inspect-panel');
+            const handle = document.getElementById('panel-title-bar');
+            if (!panel || !handle) return;
+            let dragging = false, offsetX = 0, offsetY = 0;
+            handle.addEventListener('mousedown', function (e) {
+                if (e.button !== 0) return;
+                dragging = true;
+                const rect = panel.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function (e) {
+                if (!dragging) return;
+                let left = e.clientX - offsetX;
+                let top = e.clientY - offsetY;
+                left = Math.max(0, Math.min(left, window.innerWidth - 40));
+                top = Math.max(0, Math.min(top, window.innerHeight - 40));
+                panel.style.left = left + 'px';
+                panel.style.top = top + 'px';
+            });
+            document.addEventListener('mouseup', function () {
+                if (!dragging) return;
+                dragging = false;
+                document.body.style.userSelect = '';
+            });
+        }
+
+        // 把面板中的修改应用到预览 DOM，并序列化回写编辑器
+        function applyPanelChanges() {
+            const doc = getPreviewDoc();
+            if (!doc || !selectedPath) return;
+            const root = doc.documentElement;
+            let node = getElementByPath(root, selectedPath);
+            if (!node || node.nodeType !== 1) {
+                alert('未找到对应源码节点（页面可能已变化），请重新点击选择。');
+                closePanel();
+                return;
+            }
+
+            // 1) 标签名
+            const newTag = document.getElementById('panel-tag').value.trim().toLowerCase();
+            if (newTag && /^[a-z][a-z0-9-]*$/.test(newTag) && newTag !== node.tagName.toLowerCase()) {
+                const newEl = doc.createElement(newTag);
+                for (const attr of Array.from(node.attributes)) newEl.setAttribute(attr.name, attr.value);
+                while (node.firstChild) newEl.appendChild(node.firstChild);
+                node.parentNode.replaceChild(newEl, node);
+                node = newEl;
+            }
+
+            // 2) class
+            const cls = document.getElementById('panel-class').value.trim();
+            if (cls) node.setAttribute('class', cls); else node.removeAttribute('class');
+
+            // 3) style
+            const st = document.getElementById('panel-style').value.trim();
+            if (st) node.setAttribute('style', st); else node.removeAttribute('style');
+
+            // 3.5) 其他属性（通用键值对）
+            const originalAttrs = new Set();
+            for (const a of Array.from(node.attributes)) {
+                if (a.name === 'class' || a.name === 'style') continue;
+                originalAttrs.add(a.name);
+            }
+            const seenNames = new Set();
+            const rows = document.querySelectorAll('#panel-attrs .attr-row');
+            for (const row of rows) {
+                const name = row.querySelector('.attr-name').value.trim();
+                const value = row.querySelector('.attr-val').value;
+                if (!name) continue;
+                seenNames.add(name);
+                node.setAttribute(name, value);
+            }
+            for (const name of originalAttrs) {
+                if (!seenNames.has(name)) node.removeAttribute(name);
+            }
+
+            // 4) 文本内容（仅无子元素的叶子节点）
+            const textField = document.getElementById('panel-text');
+            if (!textField.disabled && textField.value !== node.textContent) {
+                node.textContent = textField.value;
+            }
+            console.log('[DEBUG apply] 节点 <' + node.tagName.toLowerCase() + '> 文本现在是:', JSON.stringify(node.textContent));
+
+            // 序列化回写（作为可撤销的一步；不重载预览，改动已直接反映在右侧）
+            const htmlOut = serializePreview();
+            console.log('[DEBUG apply] 回写内容是否包含该文本:', textField.disabled ? '(文本框禁用)' : (htmlOut.indexOf(textField.value) >= 0));
+            setEditorContentUndoable(htmlOut);
+            closePanel();
+        }
+
+        // 预览每次加载完成时注入检查器
+        document.getElementById('preview').onload = enableInspect;
+
+        document.getElementById('panel-apply').addEventListener('click', applyPanelChanges);
+        document.getElementById('panel-close').addEventListener('click', closePanel);
+        document.getElementById('panel-add-attr').addEventListener('click', function () { addAttrRow('', ''); });
+        document.getElementById('panel-insert-child').addEventListener('click', function () { insertElement('child'); });
+        document.getElementById('panel-insert-before').addEventListener('click', function () { insertElement('before'); });
+        document.getElementById('panel-insert-after').addEventListener('click', function () { insertElement('after'); });
+        document.getElementById('panel-delete').addEventListener('click', deleteSelectedElement);
+
+        // 右键菜单：委托点击处理
+        document.getElementById('context-menu').addEventListener('click', function (e) {
+            const item = e.target.closest('.cm-item');
+            if (!item) return;
+            const action = item.getAttribute('data-action');
+            hideContextMenu();
+            if (action === 'attr') { if (selectedEl) openPanel(selectedEl); }
+            else if (action === 'insert-child') insertElement('child');
+            else if (action === 'insert-before') insertElement('before');
+            else if (action === 'insert-after') insertElement('after');
+            else if (action === 'delete') deleteSelectedElement();
+        });
+
+        // 点击菜单之外时关闭右键菜单
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#context-menu')) hideContextMenu();
+        });
+
+        // 面板可拖动
+        initPanelDrag();
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePanel(); hideContextMenu(); } });
+
+        // 撤销 / 重做后同步刷新预览
+        function undoAndPreview() { editor.undo(); updatePreview(); }
+        function redoAndPreview() { editor.redo(); updatePreview(); }
+
+        const inspectToggle = document.getElementById('inspect-toggle');
+        const formatToolbar = document.getElementById('format-toolbar');
+        function updateInspectToggleLabel() {
+            inspectToggle.textContent = inspectEnabled ? '可视化编辑：开' : '可视化编辑：关';
+        }
+        // 同步可视化状态：标签、工具栏显隐、预览 designMode
+        function applyInspectState() {
+            updateInspectToggleLabel();
+            formatToolbar.classList.toggle('visible', inspectEnabled);
+            const doc = getPreviewDoc();
+            if (doc) {
+                try { doc.designMode = inspectEnabled ? 'on' : 'off'; } catch (e) {}
+            }
+        }
+        inspectToggle.addEventListener('click', function () {
+            inspectEnabled = !inspectEnabled;
+            if (!inspectEnabled) closePanel();
+            applyInspectState();
+        });
+        applyInspectState();
+
+        // 排版工具栏：在 iframe 可编辑文档上执行 execCommand
+        function applyFormatCommand(cmd, value) {
+            const doc = getPreviewDoc();
+            if (!doc || !inspectEnabled) return;
+            const iframe = document.getElementById('preview');
+            try { iframe.contentWindow.focus(); } catch (e) {}
+            if (cmd === 'createLink') {
+                const url = prompt('请输入链接地址', 'https://');
+                if (!url) return;
+                doc.execCommand(cmd, false, url);
+            } else if (cmd === 'insertImage') {
+                const url = prompt('请输入图片地址', 'https://');
+                if (!url) return;
+                doc.execCommand('insertImage', false, url);
+            } else if (cmd === 'insertTable') {
+                const dims = prompt('请输入表格尺寸（行x列，如 3x4）', '3x3');
+                if (!dims) return;
+                const parts = dims.trim().toLowerCase().split(/[\sx×*]+/).filter(Boolean);
+                const rows = parseInt(parts[0], 10) || 3;
+                const cols = parseInt(parts[1], 10) || 3;
+                let html = '<table style="border-collapse: collapse; width: 100%;"><tbody>';
+                for (let r = 0; r < rows; r++) {
+                    html += '<tr>';
+                    for (let c = 0; c < cols; c++) {
+                        html += '<td style="border: 1px solid #999; padding: 6px;">&nbsp;</td>';
+                    }
+                    html += '</tr>';
+                }
+                html += '</tbody></table>';
+                doc.execCommand('insertHTML', false, html);
+            } else {
+                doc.execCommand(cmd, false, value || null);
+            }
+            setEditorContentUndoable(serializePreview());
+        }
+
+        // 工具栏按钮：mousedown 阻止默认，避免 iframe 选区丢失；click 执行命令
+        // （颜色选择器 input 除外，需要保留默认行为打开取色器）
+        formatToolbar.addEventListener('mousedown', function (e) {
+            if (e.target.closest('input[type="color"]')) return;
+            e.preventDefault();
+        });
+        formatToolbar.addEventListener('click', function (e) {
+            const btn = e.target.closest('button[data-cmd]');
+            if (!btn) return;
+            applyFormatCommand(btn.getAttribute('data-cmd'), btn.getAttribute('data-value'));
+        });
+
+        // 保存/恢复 iframe 内选区（颜色选择器等会抢占焦点的控件用）
+        function getPreviewSelection() {
+            const win = document.getElementById('preview').contentWindow;
+            const sel = win.getSelection();
+            if (!sel || sel.rangeCount === 0) return null;
+            return sel.getRangeAt(0).cloneRange();
+        }
+        function restorePreviewSelection(range) {
+            if (!range) return;
+            const win = document.getElementById('preview').contentWindow;
+            const sel = win.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        // 颜色选择器：mousedown 先记住选区，change 恢复选区后执行 foreColor/hiliteColor
+        let savedRange = null;
+        const foreColorInput = document.getElementById('tb-forecolor');
+        const hiliteColorInput = document.getElementById('tb-hilitecolor');
+        [foreColorInput, hiliteColorInput].forEach(function (input) {
+            input.addEventListener('mousedown', function () {
+                savedRange = getPreviewSelection();
+            });
+            input.addEventListener('change', function () {
+                restorePreviewSelection(savedRange);
+                applyFormatCommand(input === foreColorInput ? 'foreColor' : 'hiliteColor', this.value);
+            });
+        });
+
+        // 保留脚本开关：默认剥离页面脚本（冻结渲染结果），切换后重渲染预览
+        const keepScriptsToggle = document.getElementById('keep-scripts-toggle');
+        function updateKeepScriptsLabel() {
+            keepScriptsToggle.textContent = previewKeepScripts ? '保留脚本：开' : '保留脚本：关';
+        }
+        keepScriptsToggle.addEventListener('click', function () {
+            previewKeepScripts = !previewKeepScripts;
+            updateKeepScriptsLabel();
+            updatePreview();
+        });
+        updateKeepScriptsLabel();
 
         // 可选：初始化时自动预览一次（显示示例）
         window.onload = function() {

@@ -199,41 +199,142 @@ function updateTaskPointStats(completedPoints, totalPoints) {
     }
 }
 
+// ============================================================
+// 分类管理（用户可配置）
+// ============================================================
+const DEFAULT_CATEGORIES = ['工作', '生活', '其他'];
+
+function getUserCategories() {
+    try { return JSON.parse(localStorage.getItem('todo_categories')) || [...DEFAULT_CATEGORIES]; }
+    catch (e) { return [...DEFAULT_CATEGORIES]; }
+}
+function saveUserCategories(cats) { localStorage.setItem('todo_categories', JSON.stringify(cats)); }
+
+function getAllCategories() {
+    const cats = getUserCategories();
+    const set = new Set(cats);
+    events.forEach(e => { if (e.category) set.add(e.category); });
+    return [...set];
+}
+
+function populateCategoryDropdown() {
+    const sel = document.getElementById('event-category');
+    if (!sel) return;
+    const current = sel.value;
+    const cats = getUserCategories();
+    sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (cats.includes(current)) sel.value = current;
+}
+
+async function deleteCategory(catName) {
+    if (catName === '工作' || catName === '生活' || catName === '其他') {
+        showToast('默认分类不可删除');
+        return;
+    }
+    if (!confirm(`确定删除分类「${catName}」吗？\n\n该分类下的所有日程将移至「其他」。`)) return;
+
+    const toUpdate = events.filter(e => e.category === catName);
+    for (const ev of toUpdate) {
+        ev.category = '其他';
+        try {
+            await fetch(`/api/events/${ev.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: ev.title, date: ev.date, time: ev.time, category: '其他', description: ev.description, completed: ev.completed, reminder: ev.reminder, recurrence: ev.recurrence, recurrence_end_date: ev.recurrence_end_date })
+            });
+        } catch (e) { console.error('更新分类失败', e); }
+    }
+
+    const cats = getUserCategories().filter(c => c !== catName);
+    saveUserCategories(cats);
+
+    populateCategoryDropdown();
+    renderFilterButtons();
+    renderEventList();
+    if (store.currentFilter === catName) store.currentFilter = '全部';
+    showToast(`分类「${catName}」已删除，${toUpdate.length} 个日程移至「其他」`);
+}
+
+function addCategory() {
+    const name = prompt('新建分类名称：');
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    const cats = getUserCategories();
+    if (cats.includes(trimmed)) { showToast('该分类已存在'); return; }
+    cats.push(trimmed);
+    saveUserCategories(cats);
+    populateCategoryDropdown();
+    renderFilterButtons();
+    showToast(`分类「${trimmed}」已添加`);
+}
+
 // 动态生成分类筛选按钮
 function renderFilterButtons() {
     const container = document.getElementById('filter-buttons-container');
     if (!container) return;
 
-    // 保留"全部"按钮，清除其余
+    // 保留"全部"按钮，清除其余（包括旧分类按钮和+按钮）
     const allBtn = container.querySelector('[data-filter="全部"]');
     container.querySelectorAll('.filter-btn:not([data-filter="全部"])').forEach(b => b.remove());
+    // 清除旧的添加按钮
+    const oldAdd = container.querySelector('.cat-add-btn');
+    if (oldAdd) oldAdd.remove();
 
-    // 收集实际使用的类别
-    const catSet = new Set();
-    events.forEach(e => { if (e.category) catSet.add(e.category); });
+    // 使用用户配置的分类列表
+    const cats = getUserCategories();
 
-    // 按固定顺序：工作 → 生活 → 其他
-    const catOrder = ['工作', '生活', '其他'];
-    [...catSet].sort((a, b) => {
-        const ai = catOrder.indexOf(a), bi = catOrder.indexOf(b);
-        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-    }).forEach(cat => {
+    cats.forEach(cat => {
+        const wrap = document.createElement('span');
+        wrap.className = 'cat-filter-wrap';
+        wrap.style.cssText = 'display:inline-flex;align-items:center;gap:2px;';
+
         const btn = document.createElement('button');
         btn.className = 'filter-btn px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600';
         btn.setAttribute('data-filter', cat);
         btn.textContent = cat;
-        // highlight active
         if (store.currentFilter === cat) {
             btn.classList.remove('bg-gray-100', 'text-gray-600');
             btn.classList.add('active', 'bg-primary/10', 'text-primary');
         }
-        container.appendChild(btn);
+        wrap.appendChild(btn);
+
+        // 删除按钮
+        const del = document.createElement('span');
+        del.className = 'cat-del-btn';
+        del.textContent = '×';
+        del.title = '删除分类';
+        del.style.cssText = 'display:none;cursor:pointer;color:#999;font-size:14px;padding:0 4px;line-height:1;';
+        del.setAttribute('data-cat', cat);
+        del.addEventListener('click', function(e) {
+            e.stopPropagation();
+            deleteCategory(cat);
+        });
+
+        // hover 时显示删除按钮
+        wrap.addEventListener('mouseenter', function() { del.style.display = ''; });
+        wrap.addEventListener('mouseleave', function() { del.style.display = 'none'; });
+
+        wrap.appendChild(del);
+        container.appendChild(wrap);
     });
+
+    // "+" 添加分类按钮
+    const addBtn = document.createElement('button');
+    addBtn.className = 'cat-add-btn';
+    addBtn.textContent = '+';
+    addBtn.title = '添加分类';
+    addBtn.style.cssText = 'padding:2px 8px;border:1px dashed #ccc;border-radius:50%;background:none;color:#999;cursor:pointer;font-size:14px;line-height:1.4;';
+    addBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        addCategory();
+    });
+    container.appendChild(addBtn);
 }
 
 // 初始化
 async function init() {
     setupEventListeners();
+    populateCategoryDropdown();  // 动态填充分类下拉
     renderCalendar();           // 第1次：先渲染日历框架（避免空白）
     updateSelectedDateInfo();
     await loadEventsFromAPI();  // 加载后端数据
@@ -1148,6 +1249,7 @@ function openAddEventModal() {
     eventTitle.value = '';
     eventDate.value = formatDate(selectedDate);
     eventTime.value = '10:00';
+    populateCategoryDropdown();
     eventCategory.value = '工作';
     eventDescription.value = '';
     eventReminder.checked = false;
