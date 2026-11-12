@@ -3,10 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Todo · React</title>
+    <title>Todo · 日程管理</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+    <!-- 站点公共导航：nav.css / nav-loader.js / nav.html 由站点根提供，全站同一份 -->
+    <!-- 放在源文件而不是 dist 里，任何一次 npm run build 都不会再丢 -->
+    <link rel="stylesheet" href="/css/nav.css" />
+    <link rel="stylesheet" href="/css/font-awesome.min.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- 公共导航容器：nav-loader.js 会 fetch /nav.html 注入到这里 -->
+    <div id="sidebar" class="sidebar"></div>
+
+    <!-- 内容区：nav.css 用 .main-content 的 margin-left 给折叠侧栏让位，悬停/图钉展开时自动跟随 -->
+    <div class="main-content">
+      <div id="root"></div>
+    </div>
+
+    <!-- 公共导航脚本（非 module，必须独立于 React bundle） -->
+    <script src="/js/nav-loader.js"></script>
+    <script>
+      // /app 专属适配，只改本页 DOM，不改公共组件文件：
+      // 公共导航里「实验排期」原本指向旧版 /todo.html，在新版页面改为指向 /app/ 并高亮。
+      // nav-loader.js 是异步 fetch 注入，所以用 MutationObserver 等它落地。
+      (function () {
+        function patch() {
+          var sb = document.getElementById('sidebar');
+          var link = sb && sb.querySelector('a[href="/todo.html"]');
+          if (!link) return false;
+          link.setAttribute('href', '/app/');
+          link.classList.add('active');
+          return true;
+        }
+        if (!patch()) {
+          var host = document.getElementById('sidebar') || document.body;
+          var ob = new MutationObserver(function () { if (patch()) ob.disconnect(); });
+          ob.observe(host, { childList: true, subtree: true });
+          setTimeout(function () { ob.disconnect(); }, 10000);
+        }
+      })();
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
