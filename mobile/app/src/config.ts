@@ -8,3 +8,6 @@
 // 生产环境用域名（有有效 SSL 证书）
 // 本地开发用 http://localhost:3000/api
 export const API_BASE = 'https://humanlifeos.art/api';
+
+/** 应用版本，与 package.json 保持同步 */
+export const APP_VERSION = '2.0.0';

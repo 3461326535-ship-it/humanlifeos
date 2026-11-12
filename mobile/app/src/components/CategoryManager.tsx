@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Plus, Pencil, Trash2, Check } from 'lucide-react';
+import { SketchIcon } from '@/components/icons/SketchIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Category } from '@/types';
 
@@ -45,7 +45,6 @@ export default function CategoryManager({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -53,26 +52,23 @@ export default function CategoryManager({
             onClick={onClose}
             className="absolute inset-0 bg-black/40 z-[60]"
           />
-          {/* Panel */}
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="absolute bottom-0 left-0 right-0 bg-[var(--bg-primary)] rounded-t-2xl z-[70] max-h-[70%] flex flex-col"
+            className="absolute bottom-0 left-0 right-0 bg-[var(--bg-card)] rounded-t-2xl z-[70] max-h-[70%] flex flex-col"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--divider)]">
-              <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">分类管理</h2>
+            <div className="flex items-center justify-between px-4 py-3 border-b-2 border-dashed border-[var(--ink-soft)]">
+              <h2 className="font-head text-[17px] text-[var(--ink)]">分类管理</h2>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center active:scale-95 transition-transform"
+                className="w-8 h-8 rounded-full bg-[var(--fill-quaternary)] flex items-center justify-center active:scale-95 transition-transform"
               >
-                <X size={18} className="text-[var(--text-secondary)]" />
+                <SketchIcon name="x" size={18} strokeWidth={2.5} className="text-[var(--ink-soft)]" />
               </button>
             </div>
 
-            {/* Add new */}
             <div className="px-4 py-3 flex gap-2">
               <input
                 type="text"
@@ -80,35 +76,24 @@ export default function CategoryManager({
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 placeholder="输入新分类名称"
-                className="flex-1 h-10 px-3 rounded-lg bg-white border border-[var(--divider)] text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--primary-blue)] transition-colors"
+                className="sketch-input flex-1 h-10 px-3 text-[15px] text-[var(--ink)] placeholder:text-[var(--text-tertiary)] outline-none"
               />
               <button
                 onClick={handleAdd}
                 disabled={!newName.trim()}
-                className="h-10 px-4 rounded-lg bg-[var(--primary-blue)] text-white text-[14px] font-medium flex items-center gap-1 disabled:opacity-40 active:scale-95 transition-all"
+                className="h-10 px-4 rounded-xl bg-[var(--red)] text-white text-[14px] font-head font-medium flex items-center gap-1 disabled:opacity-40 active:scale-95 transition-all border-2 border-[var(--ink)] sketch-wobble-sm"
               >
-                <Plus size={16} />
+                <SketchIcon name="plus" size={16} strokeWidth={2.5} stroke="white" />
                 添加
               </button>
             </div>
 
-            {/* Category list */}
             <div className="flex-1 overflow-y-auto px-4 pb-6">
-              <div className="bg-white rounded-xl overflow-hidden">
-                {categories.map((cat, idx) => (
-                  <div
-                    key={cat.id}
-                    className={`flex items-center px-4 py-3.5 ${
-                      idx < categories.length - 1 ? 'border-b border-[var(--divider)]' : ''
-                    }`}
-                  >
-                    {/* Color dot */}
-                    <div
-                      className="w-3 h-3 rounded-full mr-3 shrink-0"
-                      style={{ backgroundColor: cat.color }}
-                    />
+              <div className="flex flex-col gap-[11px]">
+                {categories.map((cat) => (
+                  <div key={cat.id} className="sketch-card p-[13px_14px] flex items-center">
+                    <div className="w-3 h-3 rounded-full mr-3 shrink-0" style={{ backgroundColor: cat.color }} />
 
-                    {/* Name */}
                     {editingId === cat.id ? (
                       <div className="flex-1 flex items-center gap-2">
                         <input
@@ -117,45 +102,37 @@ export default function CategoryManager({
                           onChange={(e) => setEditName(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleUpdate(cat.id)}
                           autoFocus
-                          className="flex-1 h-8 px-2 rounded bg-[var(--bg-primary)] border border-[var(--divider)] text-[15px] outline-none focus:border-[var(--primary-blue)]"
+                          className="sketch-input flex-1 h-8 px-2 text-[15px] outline-none"
                         />
                         <button
                           onClick={() => handleUpdate(cat.id)}
-                          className="w-7 h-7 rounded-full bg-[var(--green)] flex items-center justify-center active:scale-90 transition-transform"
+                          className="w-7 h-7 rounded-full bg-[var(--green)] flex items-center justify-center active:scale-90 transition-transform border-2 border-[var(--ink)] sketch-wobble-sm"
                         >
-                          <Check size={14} className="text-white" />
+                          <SketchIcon name="check" size={14} strokeWidth={3} stroke="white" />
                         </button>
                       </div>
                     ) : (
                       <>
-                        <span className="flex-1 text-[15px] text-[var(--text-primary)]">
-                          {cat.name}
-                        </span>
+                        <span className="flex-1 font-head text-[15px] text-[var(--ink)]">{cat.name}</span>
                         {!defaultCategoryIds.includes(cat.id) && (
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => {
-                                setEditingId(cat.id);
-                                setEditName(cat.name);
-                              }}
-                              className="w-8 h-8 rounded-full flex items-center justify-center active:bg-gray-100 transition-colors"
+                              onClick={() => { setEditingId(cat.id); setEditName(cat.name); }}
+                              className="w-8 h-8 rounded-full flex items-center justify-center active:bg-[var(--fill-quaternary)] transition-colors"
                             >
-                              <Pencil size={15} className="text-[var(--text-tertiary)]" />
+                              <SketchIcon name="pen" size={15} strokeWidth={2} className="text-[var(--ink-soft)]" />
                             </button>
                             {deleteConfirm === cat.id ? (
                               <div className="flex items-center gap-1">
                                 <button
-                                  onClick={() => {
-                                    onDelete(cat.id);
-                                    setDeleteConfirm(null);
-                                  }}
-                                  className="px-2 h-7 rounded bg-[var(--red)] text-white text-[12px] font-medium active:scale-95 transition-transform"
+                                  onClick={() => { onDelete(cat.id); setDeleteConfirm(null); }}
+                                  className="px-2 h-7 rounded bg-[var(--red)] text-white text-[12px] font-head font-medium active:scale-95 transition-transform border-2 border-[var(--ink)]"
                                 >
                                   确认
                                 </button>
                                 <button
                                   onClick={() => setDeleteConfirm(null)}
-                                  className="px-2 h-7 rounded bg-[var(--bg-primary)] text-[var(--text-secondary)] text-[12px] active:scale-95 transition-transform"
+                                  className="px-2 h-7 rounded bg-[var(--fill-quaternary)] text-[var(--ink-soft)] text-[12px] font-head active:scale-95 transition-transform"
                                 >
                                   取消
                                 </button>
@@ -163,9 +140,9 @@ export default function CategoryManager({
                             ) : (
                               <button
                                 onClick={() => setDeleteConfirm(cat.id)}
-                                className="w-8 h-8 rounded-full flex items-center justify-center active:bg-gray-100 transition-colors"
+                                className="w-8 h-8 rounded-full flex items-center justify-center active:bg-[var(--fill-quaternary)] transition-colors"
                               >
-                                <Trash2 size={15} className="text-[var(--red)]" />
+                                <SketchIcon name="trash" size={15} strokeWidth={2} className="text-[var(--red)]" />
                               </button>
                             )}
                           </div>
@@ -177,9 +154,7 @@ export default function CategoryManager({
               </div>
 
               {categories.length === 0 && (
-                <p className="text-center text-[var(--text-tertiary)] text-[14px] py-8">
-                  暂无分类，请添加
-                </p>
+                <p className="text-center text-[var(--ink-soft)] font-head text-[14px] py-8">暂无分类，请添加</p>
               )}
             </div>
           </motion.div>

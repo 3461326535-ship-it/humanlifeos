@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { App as CapacitorApp } from '@capacitor/app';
+import { SketchIcon } from '@/components/icons/SketchIcon';
+import { SketchRing } from '@/components/sketch/SketchRing';
 import TaskCard from '@/components/TaskCard';
 import AddTaskModal from '@/components/AddTaskModal';
 import EditTaskModal from '@/components/EditTaskModal';
@@ -63,7 +64,6 @@ const poems: { verse: string; author: string }[] = [
   { verse: '吹尽狂沙始到金', author: '刘禹锡' },
 ];
 
-/** 按当天在一年中的序号选一句诗（同一天始终同一句） */
 function todayPoem(): { verse: string; author: string } {
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 1);
@@ -101,12 +101,10 @@ interface TodayPageProps {
   getCategoryName: (categoryId: string) => string;
 }
 
-type FilterType = 'all' | 'upcoming' | 'overdue' | 'completed';
+type FilterType = 'all' | 'completed';
 
 const filters: { key: FilterType; label: string }[] = [
   { key: 'all', label: '全部' },
-  { key: 'upcoming', label: '即将' },
-  { key: 'overdue', label: '逾期' },
   { key: 'completed', label: '已完成' },
 ];
 
@@ -115,6 +113,8 @@ function formatDateKey(d: Date): string {
 }
 
 const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+
+const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 
 export default function TodayPage({
   tasks,
@@ -132,16 +132,17 @@ export default function TodayPage({
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  // Today's date (stable for session lifetime)
   const today = useMemo(() => {
     const d = new Date();
     return {
       key: formatDateKey(d),
       dayOfWeek: weekDays[d.getDay()],
+      month: months[d.getMonth()],
+      dayNum: d.getDate(),
     };
   }, []);
 
-  // ── 监听来自桌面 Widget 的任务点击（通过 App.tsx 转发的 open-task 事件）──
+  // ── 监听来自桌面 Widget 的任务点击 ──
   useEffect(() => {
     const handler = (e: Event) => {
       const taskId = (e as CustomEvent).detail as string;
@@ -155,13 +156,12 @@ export default function TodayPage({
     return () => window.removeEventListener('open-task', handler);
   }, [tasks]);
 
-  // ── Android 手势返回拦截：有浮层时关浮层，不退出 App ──
+  // ── Android 手势返回拦截 ──
   const overlayRef = useRef({ selectedTask, showAddModal, editingTask });
   overlayRef.current = { selectedTask, showAddModal, editingTask };
 
   useEffect(() => {
     let handle: { remove: () => void } | null = null;
-
     (async () => {
       handle = await CapacitorApp.addListener('backButton', () => {
         const s = overlayRef.current;
@@ -176,17 +176,14 @@ export default function TodayPage({
         }
       });
     })();
-
     return () => { handle?.remove(); };
   }, []);
 
-  // Tasks for today
   const todayTasks = useMemo(
     () => tasks.filter((t) => t.date === today.key),
     [tasks, today.key]
   );
 
-  // Stats
   const stats = useMemo(() => {
     const total = todayTasks.length;
     const completed = todayTasks.filter((t) => t.completed).length;
@@ -195,56 +192,30 @@ export default function TodayPage({
     return { total, completed, pending, rate };
   }, [todayTasks]);
 
-  // 按时间线排序：有时间 → 按时间升序；无时间 → 排到最后
   const sortByTimeline = (taskList: Task[]): Task[] => {
     return [...taskList].sort((a, b) => {
-      // 有时间排前，无时间排后
       if (a.time && !b.time) return -1;
       if (!a.time && b.time) return 1;
       if (!a.time && !b.time) return 0;
-      // 都有时间则按时间升序
       return a.time.localeCompare(b.time);
     });
   };
 
-  // Filtered tasks
   const filteredTasks = useMemo(() => {
-    const now = new Date();
-    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    let result: Task[];
     switch (activeFilter) {
       case 'all':
-        result = todayTasks;
-        break;
-      case 'upcoming':
-        result = todayTasks.filter(
-          (t) => !t.completed && (t.time === '' || t.time >= nowTime)
-        );
-        break;
-      case 'overdue':
-        result = todayTasks.filter(
-          (t) => !t.completed && t.time !== '' && t.time < nowTime
-        );
-        break;
+        return sortByTimeline(todayTasks);
       case 'completed':
-        result = todayTasks.filter((t) => t.completed);
-        break;
+        return sortByTimeline(todayTasks.filter((t) => t.completed));
       default:
-        result = todayTasks;
+        return sortByTimeline(todayTasks);
     }
-    // 按时间线排序，让任务看起来像一天的时间轴
-    return sortByTimeline(result);
   }, [todayTasks, activeFilter]);
 
   const emptyMessage = () => {
     if (todayTasks.length === 0) return { title: '今天没有日程', sub: '点击右下角添加新任务' };
-    switch (activeFilter) {
-      case 'all': return { title: '今天没有日程', sub: '点击右下角添加新任务' };
-      case 'upcoming': return { title: '没有即将开始的任务', sub: '全部任务已过期或已完成' };
-      case 'overdue': return { title: '没有逾期的任务', sub: '所有任务都已按时完成' };
-      case 'completed': return { title: '还没有完成的任务', sub: '完成任务后将显示在这里' };
-    }
+    if (activeFilter === 'completed') return { title: '还没有完成的任务', sub: '完成任务后将显示在这里' };
+    return { title: '今天没有日程', sub: '点击右下角添加新任务' };
   };
 
   const handleAddTask = (task: {
@@ -263,138 +234,131 @@ export default function TodayPage({
   const empty = emptyMessage();
   const poem = todayPoem();
 
+  // Compute "Next" card: first uncompleted, timed, non-overdue task
+  const nextTask = useMemo(() => {
+    const now = new Date();
+    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return sortByTimeline(
+      todayTasks.filter(t => !t.completed && t.time && t.time >= nowTime)
+    )[0];
+  }, [todayTasks]);
+
   return (
     <div className="flex flex-col h-full relative">
       {/* Scrollable Content */}
-      <div className="content-scrollable px-4 pt-5 pb-24">
-        {/* Header */}
-        <div className="flex items-end justify-between mb-5">
-          <div>
-            <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight">
-              今天
-            </h1>
-            <p className="text-[15px] text-[var(--text-tertiary)] mt-0.5">
-              {today.dayOfWeek}
-            </p>
+      <div className="content-scrollable px-0 pt-4 pb-24">
+        {/* Hero Card */}
+        <div className="sketch-hero">
+          <div className="sketch-tape" />
+          <div className="font-caveat text-[16px] text-[var(--ink-soft)]">
+            {today.month}{today.dayNum}日 · {today.dayOfWeek}
           </div>
-          <div className="text-right pb-0.5">
-            <p className="text-[14px] text-[var(--text-tertiary)] leading-relaxed italic"
-               style={{ fontFamily: "'STKaiti', 'KaiTi', 'Noto Serif SC', serif" }}>
-              {poem.verse}
-            </p>
-            <p className="text-[11px] text-[var(--text-tertiary)]/60 mt-0.5">
-              — {poem.author}
-            </p>
+          <div className="font-head text-[27px] mt-[-2px] flex items-center gap-[6px] text-[var(--ink)]">
+            今天
+            <SketchIcon name="pen" size={20} strokeWidth={2.2} />
+          </div>
+          <div className="font-body text-[13px] text-[var(--ink-soft)] mt-[6px] italic">
+            "{poem.verse}" — {poem.author}
+          </div>
+          <div className="flex items-center gap-[14px] mt-[12px]">
+            <SketchRing
+              percentage={stats.rate}
+              size={56}
+              strokeColor="var(--red)"
+              label={`${stats.rate}%`}
+            />
+            <div>
+              <div className="font-head text-[15px] text-[var(--ink)]">
+                {stats.completed} / {stats.total} 已完成
+              </div>
+              <div className="text-[12px] text-[var(--ink-soft)] mt-[2px]">
+                {stats.pending > 0
+                  ? `还有 ${stats.pending} 项待办 · 加油 ⚡`
+                  : stats.total > 0
+                    ? '全部完成，太棒了 🎉'
+                    : '今天还没有计划'}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Stats Card */}
-        <motion.div
-          layout
-          className="bg-white rounded-2xl card-shadow px-4 py-3 mb-4"
-        >
-          <p className="text-[12px] text-[var(--text-tertiary)] text-center mb-0.5">
-            今日完成度
-          </p>
-          <div className="text-center">
-            <span className="text-[40px] font-bold text-[var(--text-primary)] leading-none">
-              {stats.rate}%
-            </span>
-          </div>
-          <p className="text-[12px] text-[var(--text-tertiary)] text-center mb-3">
-            {stats.completed}/{stats.total} 任务点
-          </p>
-
-          {/* 3-column stats row */}
-          <div className="flex items-center justify-between border-t border-[var(--divider)] pt-3">
-            <div className="flex-1 text-center">
-              <p className="text-[20px] font-bold text-[var(--text-primary)]">
-                {stats.total}
-              </p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">总日程</p>
-            </div>
-            <div className="flex-1 text-center">
-              <p className="text-[20px] font-bold text-[var(--green)]">
-                {stats.completed}
-              </p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">已完成</p>
-            </div>
-            <div className="flex-1 text-center">
-              <p className="text-[20px] font-bold text-[#FF9500]">
-                {stats.pending}
-              </p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">待完成</p>
-            </div>
-          </div>
-        </motion.div>
-
         {/* Filter Tabs */}
-        <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
+        <div className="flex gap-[8px] px-[16px] pt-[15px] pb-[4px] overflow-x-auto no-scrollbar">
           {filters.map((f) => (
             <button
               key={f.key}
               onClick={() => setActiveFilter(f.key)}
-              className={`shrink-0 px-4 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 ${
-                activeFilter === f.key
-                  ? 'bg-[var(--primary-blue)] text-white'
-                  : 'bg-white text-[var(--text-secondary)] border border-[var(--divider)]'
-              }`}
+              className={`sketch-chip ${activeFilter === f.key ? 'on' : ''}`}
             >
               {f.label}
             </button>
           ))}
         </div>
 
+        {/* Next Card */}
+        {nextTask && (
+          <div className="sketch-card mx-[16px] mt-[8px] p-[13px_15px] bg-[#E7F6F0]">
+            <div className="font-caveat text-[14px] text-[var(--teal)] font-bold">
+              Next · 接下来
+            </div>
+            <div className="font-head text-[16px] mt-[2px] text-[var(--ink)]">
+              {nextTask.title}
+            </div>
+            <div className="text-[12px] text-[var(--ink-soft)] mt-[3px]">
+              {getCategoryName(nextTask.categoryId)} · {nextTask.time || '全天'} · 还没做
+            </div>
+          </div>
+        )}
+
         {/* Task List or Empty State */}
-        <AnimatePresence mode="wait">
-          {filteredTasks.length === 0 ? (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="flex flex-col items-center justify-center py-16"
-            >
-              <Calendar
-                size={64}
-                strokeWidth={1}
-                className="text-[var(--icon-gray)] mb-4 opacity-40"
-              />
-              <p className="text-[15px] text-[var(--text-secondary)] font-medium">
-                {empty.title}
-              </p>
-              <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
-                {empty.sub}
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="list"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="space-y-2"
-            >
-              {filteredTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onToggle={onToggleTask}
-                  onToggleSubtask={onToggleSubtask}
-                  categoryColor={getCategoryColor(task.categoryId)}
-                  categoryName={getCategoryName(task.categoryId)}
-                  onPress={(t) => setSelectedTask(t)}
-                  onLongPress={(t) => setEditingTask(t)}
-                  onDelete={(t) => {
-                    if (confirm(`确定删除「${t.title}」？`)) {
-                      onDeleteTask(t.id);
-                    }
-                  }}
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div className="px-[16px] pt-[14px] flex flex-col gap-[12px]">
+          <AnimatePresence mode="wait">
+            {filteredTasks.length === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="flex flex-col items-center justify-center py-16"
+              >
+                <SketchIcon name="calendar" size={64} strokeWidth={1.5} className="text-[var(--icon-gray)] mb-4 opacity-40" />
+                <p className="font-head text-[15px] text-[var(--ink-soft)]">
+                  {empty.title}
+                </p>
+                <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
+                  {empty.sub}
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="list"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className="flex flex-col gap-[12px]"
+              >
+                {filteredTasks.map((task, idx) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onToggle={onToggleTask}
+                    onToggleSubtask={onToggleSubtask}
+                    categoryColor={getCategoryColor(task.categoryId)}
+                    categoryName={getCategoryName(task.categoryId)}
+                    onPress={(t) => setSelectedTask(t)}
+                    onLongPress={(t) => setEditingTask(t)}
+                    onDelete={(t) => {
+                      if (confirm(`确定删除「${t.title}」？`)) {
+                        onDeleteTask(t.id);
+                      }
+                    }}
+                    rot={idx}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* FAB */}

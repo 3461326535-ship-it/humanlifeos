@@ -1,4 +1,4 @@
-import { X, Bell, BellOff } from 'lucide-react';
+import { SketchIcon } from '@/components/icons/SketchIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { NotificationSettings } from '@/hooks/useNotifications';
 
@@ -47,46 +47,40 @@ export default function ReminderModal({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="absolute bottom-0 left-0 right-0 bg-[var(--bg-primary)] rounded-t-2xl z-[70]"
+            className="absolute bottom-0 left-0 right-0 bg-[var(--bg-card)] rounded-t-2xl z-[70]"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--divider)]">
-              <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">提醒设置</h2>
+            <div className="flex items-center justify-between px-4 py-3 border-b-2 border-dashed border-[var(--ink-soft)]">
+              <h2 className="font-head text-[17px] text-[var(--ink)]">提醒设置</h2>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center active:scale-95 transition-transform"
+                className="w-8 h-8 rounded-full bg-[var(--fill-quaternary)] flex items-center justify-center active:scale-95 transition-transform"
               >
-                <X size={18} className="text-[var(--text-secondary)]" />
+                <SketchIcon name="x" size={18} strokeWidth={2.5} className="text-[var(--ink-soft)]" />
               </button>
             </div>
 
-            {/* Permission Banner */}
             {!granted && (
               <div className="px-4 pt-3">
-                <div
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl ${
-                    denied ? 'bg-red-50' : 'bg-[var(--primary-blue)]/10'
-                  }`}
-                >
+                <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl sketch-wobble-sm border-2 ${
+                  denied ? 'bg-red-50 border-[var(--red)]' : 'bg-[var(--red)]/10 border-[var(--red)]'
+                }`}>
                   {denied ? (
-                    <BellOff size={18} className="text-[var(--red)] shrink-0" />
+                    <SketchIcon name="bell-off" size={18} strokeWidth={2} className="text-[var(--red)] shrink-0" />
                   ) : (
-                    <Bell size={18} className="text-[var(--primary-blue)] shrink-0" />
+                    <SketchIcon name="bell" size={18} strokeWidth={2} className="text-[var(--red)] shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className={`text-[13px] font-medium ${denied ? 'text-[var(--red)]' : 'text-[var(--primary-blue)]'}`}>
+                    <p className={`font-head text-[13px] ${denied ? 'text-[var(--red)]' : 'text-[var(--red)]'}`}>
                       {denied ? '通知权限被拒绝' : '需要通知权限'}
                     </p>
-                    <p className="text-[11px] text-[var(--text-tertiary)]">
-                      {denied
-                        ? '请在浏览器设置中允许通知'
-                        : '开启后才能收到任务提醒'}
+                    <p className="text-[11px] text-[var(--ink-soft)] font-body">
+                      {denied ? '请在浏览器设置中允许通知' : '开启后才能收到任务提醒'}
                     </p>
                   </div>
                   {!denied && (
                     <button
                       onClick={onRequestPermission}
-                      className="px-3 py-1.5 rounded-lg bg-[var(--primary-blue)] text-white text-[12px] font-medium shrink-0 active:scale-95 transition-transform"
+                      className="px-3 py-1.5 rounded-lg bg-[var(--red)] text-white text-[12px] font-head font-medium shrink-0 active:scale-95 transition-transform border-2 border-[var(--ink)] sketch-wobble-sm"
                     >
                       授权
                     </button>
@@ -95,39 +89,27 @@ export default function ReminderModal({
               </div>
             )}
 
-            {/* Settings List */}
             <div className="px-4 py-3">
-              <div className="bg-white rounded-xl overflow-hidden">
-                {items.map((item, idx) => {
+              <div className="flex flex-col gap-[11px]">
+                {items.map((item) => {
                   const enabled = settings[item.key];
                   return (
-                    <div
-                      key={item.key}
-                      className={`flex items-center justify-between px-4 py-3.5 ${
-                        idx < items.length - 1 ? 'border-b border-[var(--divider)]' : ''
-                      }`}
-                    >
+                    <div key={item.key} className="sketch-card flex items-center justify-between px-4 py-3.5">
                       <div className="flex-1 min-w-0 mr-4">
-                        <p className="text-[15px] text-[var(--text-primary)]">{item.label}</p>
-                        <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">{item.desc}</p>
+                        <p className="font-head text-[15px] text-[var(--ink)]">{item.label}</p>
+                        <p className="text-[12px] text-[var(--ink-soft)] mt-0.5 font-body">{item.desc}</p>
                       </div>
                       <button
                         onClick={() => onToggle(item.key)}
                         disabled={!granted}
-                        className={`w-12 h-7 rounded-full transition-colors duration-200 relative shrink-0 ${
-                          enabled && granted
-                            ? 'bg-[var(--green)]'
-                            : 'bg-[var(--icon-gray)]'
+                        className={`w-12 h-7 rounded-full transition-colors duration-200 relative shrink-0 border-2 border-[var(--ink)] sketch-wobble-sm ${
+                          enabled && granted ? 'bg-[var(--green)]' : 'bg-[var(--icon-gray)]'
                         }`}
                       >
                         <motion.div
-                          className="w-5 h-5 rounded-full bg-white absolute top-1"
-                          animate={{
-                            left: enabled && granted ? 26 : 4,
-                            opacity: granted ? 1 : 0.6,
-                          }}
+                          className="w-5 h-5 rounded-full bg-white absolute top-0.5"
+                          animate={{ left: enabled && granted ? 26 : 4, opacity: granted ? 1 : 0.6 }}
                           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
                         />
                       </button>
                     </div>
@@ -136,12 +118,11 @@ export default function ReminderModal({
               </div>
             </div>
 
-            {/* Test Button */}
             {granted && (
               <div className="px-4 pb-4">
                 <button
                   onClick={onTest}
-                  className="w-full h-11 rounded-xl bg-white border border-[var(--divider)] text-[14px] text-[var(--primary-blue)] font-medium active:bg-[var(--bg-primary)] transition-colors"
+                  className="w-full h-11 rounded-xl bg-[var(--bg-card)] border-2 border-[var(--ink)] text-[14px] text-[var(--red)] font-head font-medium active:bg-[var(--fill-quaternary)] transition-colors sketch-wobble-sm"
                 >
                   发送测试通知
                 </button>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Repeat } from 'lucide-react';
+import { SketchIcon } from '@/components/icons/SketchIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Task, Category } from '@/types';
 
@@ -21,7 +21,7 @@ interface EditTaskModalProps {
 }
 
 const colorOptions = [
-  { value: 'blue', label: '红' },
+  { value: 'blue', label: '蓝' },
   { value: 'green', label: '绿' },
   { value: 'red', label: '红' },
   { value: 'purple', label: '紫' },
@@ -55,15 +55,14 @@ export default function EditTaskModal({
   const [subtasks, setSubtasks] = useState<{ title: string; completed: boolean }[]>([]);
 
   const colorMap: Record<string, string> = {
-    blue: '#E8887E',  // macaron coral red
-    green: '#34C759',
-    red: '#FF3B30',
-    purple: '#AF52DE',
-    yellow: '#FFCC00',
-    gray: '#8E8E93',
+    blue: '#5FB8E8',
+    green: '#8CC152',
+    red: '#F4746B',
+    purple: '#B58BE0',
+    yellow: '#FFC93C',
+    gray: '#C9BEA3',
   };
 
-  // Pre-fill when task changes
   useEffect(() => {
     if (task) {
       setTitle(task.title);
@@ -120,79 +119,67 @@ export default function EditTaskModal({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 bg-[var(--bg-primary)] rounded-t-2xl z-[70] max-h-[85vh] overflow-y-auto"
+            className="fixed bottom-0 left-0 right-0 bg-[var(--bg-card)] rounded-t-2xl z-[70] max-h-[85vh] overflow-y-auto"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--divider)] sticky top-0 bg-[var(--bg-primary)]">
-              <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">编辑任务</h2>
+            <div className="flex items-center justify-between px-4 py-3 border-b-2 border-dashed border-[var(--ink-soft)] sticky top-0 bg-[var(--bg-card)]">
+              <h2 className="font-head text-[17px] text-[var(--ink)]">编辑任务</h2>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center active:scale-95 transition-transform"
+                className="w-8 h-8 rounded-full bg-[var(--fill-quaternary)] flex items-center justify-center active:scale-95 transition-transform"
               >
-                <X size={18} className="text-[var(--text-secondary)]" />
+                <SketchIcon name="x" size={18} className="text-[var(--ink-soft)]" />
               </button>
             </div>
 
             <div className="px-4 py-4 space-y-4">
               {/* Task Title */}
               <div>
-                <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">
-                  任务名称
-                </label>
+                <label className="text-[13px] text-[var(--ink-soft)] mb-1.5 block">任务名称</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="输入任务名称"
-                  className="w-full h-11 px-3 rounded-lg bg-white border border-[var(--divider)] text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--primary-blue)] transition-colors"
+                  className="sketch-input w-full h-11 px-3 text-[15px] text-[var(--ink)] placeholder:text-[var(--text-tertiary)] outline-none"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">
-                  描述
-                </label>
+                <label className="text-[13px] text-[var(--ink-soft)] mb-1.5 block">描述</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="添加任务描述（可选）"
                   rows={2}
-                  className="w-full px-3 py-2 rounded-lg bg-white border border-[var(--divider)] text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--primary-blue)] transition-colors resize-none"
+                  className="sketch-input w-full px-3 py-2 text-[14px] text-[var(--ink)] placeholder:text-[var(--text-tertiary)] outline-none resize-none"
                 />
               </div>
 
               {/* Time */}
               <div>
-                <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">
-                  时间
-                </label>
+                <label className="text-[13px] text-[var(--ink-soft)] mb-1.5 block">时间</label>
                 <input
                   type="time"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
-                  className="w-full h-11 px-3 rounded-lg bg-white border border-[var(--divider)] text-[15px] text-[var(--text-primary)] outline-none focus:border-[var(--primary-blue)] transition-colors"
+                  className="sketch-input w-full h-11 px-3 text-[15px] text-[var(--ink)] outline-none"
                 />
               </div>
 
               {/* Category */}
               <div>
-                <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">
-                  分类
-                </label>
+                <label className="text-[13px] text-[var(--ink-soft)] mb-1.5 block">分类</label>
                 <div className="flex flex-wrap gap-2">
                   {categories.map((cat) => (
                     <button
                       key={cat.id}
                       onClick={() => setCategoryId(cat.id)}
-                      className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-all ${
-                        categoryId === cat.id
-                          ? 'text-white'
-                          : 'bg-white text-[var(--text-secondary)] border border-[var(--divider)]'
-                      }`}
+                      className={`sketch-chip ${categoryId === cat.id ? 'on' : ''}`}
                       style={
                         categoryId === cat.id
-                          ? { backgroundColor: cat.color }
+                          ? { backgroundColor: cat.color, borderColor: 'var(--ink)', color: '#fff' }
                           : undefined
                       }
                     >
@@ -204,8 +191,8 @@ export default function EditTaskModal({
 
               {/* Recurrence */}
               <div>
-                <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 flex items-center gap-1">
-                  <Repeat size={13} />
+                <label className="text-[13px] text-[var(--ink-soft)] mb-1.5 flex items-center gap-1">
+                  <SketchIcon name="repeat" size={13} strokeWidth={2} />
                   重复
                 </label>
                 <div className="flex flex-wrap gap-2 mb-2">
@@ -213,11 +200,12 @@ export default function EditTaskModal({
                     <button
                       key={opt.value}
                       onClick={() => setRecurrence(opt.value)}
-                      className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-all ${
+                      className={`sketch-chip ${recurrence === opt.value ? 'on' : ''}`}
+                      style={
                         recurrence === opt.value
-                          ? 'bg-[var(--primary-blue)] text-white'
-                          : 'bg-white text-[var(--text-secondary)] border border-[var(--divider)]'
-                      }`}
+                          ? { backgroundColor: 'var(--red)', borderColor: 'var(--ink)', color: '#fff' }
+                          : undefined
+                      }
                     >
                       {opt.label}
                     </button>
@@ -229,14 +217,14 @@ export default function EditTaskModal({
                     animate={{ opacity: 1, height: 'auto' }}
                     className="pl-1"
                   >
-                    <label className="text-[12px] text-[var(--text-tertiary)] mb-1 block">
+                    <label className="text-[12px] text-[var(--ink-soft)] mb-1 block">
                       结束日期（可选，留空则无限重复）
                     </label>
                     <input
                       type="date"
                       value={recurrenceEndDate}
                       onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                      className="w-full h-10 px-3 rounded-lg bg-white border border-[var(--divider)] text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--primary-blue)] transition-colors"
+                      className="sketch-input w-full h-10 px-3 text-[14px] text-[var(--ink)] outline-none"
                     />
                   </motion.div>
                 )}
@@ -244,19 +232,17 @@ export default function EditTaskModal({
 
               {/* Subtasks */}
               <div>
-                <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">
-                  子任务
-                </label>
+                <label className="text-[13px] text-[var(--ink-soft)] mb-1.5 block">子任务</label>
                 {subtasks.length > 0 && (
                   <div className="space-y-2 mb-2">
                     {subtasks.map((st, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-[var(--divider)]">
-                        <span className={`flex-1 text-[14px] ${st.completed ? 'line-through text-[var(--text-tertiary)]' : 'text-[var(--text-primary)]'}`}>
+                      <div key={idx} className="sketch-input flex items-center gap-2 px-3 py-2">
+                        <span className={`flex-1 text-[14px] ${st.completed ? 'line-through text-[var(--ink-soft)]' : 'text-[var(--ink)]'}`}>
                           {st.title}
                         </span>
                         <button
                           onClick={() => removeSubtask(idx)}
-                          className="text-[var(--red)] text-[12px] px-2 py-0.5 active:scale-90"
+                          className="text-[var(--red)] text-[12px] px-2 py-0.5 active:scale-90 font-head"
                         >
                           删除
                         </button>
@@ -271,12 +257,12 @@ export default function EditTaskModal({
                     onChange={(e) => setNewSubtaskTitle(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addSubtask()}
                     placeholder="添加子任务"
-                    className="flex-1 h-10 px-3 rounded-lg bg-white border border-[var(--divider)] text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--primary-blue)] transition-colors"
+                    className="sketch-input flex-1 h-10 px-3 text-[14px] text-[var(--ink)] placeholder:text-[var(--text-tertiary)] outline-none"
                   />
                   <button
                     onClick={addSubtask}
                     disabled={!newSubtaskTitle.trim()}
-                    className="px-3 h-10 rounded-lg bg-[var(--primary-blue)] text-white text-[13px] font-medium disabled:opacity-40 active:scale-95 transition-all"
+                    className="px-3 h-10 rounded-xl bg-[var(--red)] text-white text-[13px] font-head font-medium disabled:opacity-40 active:scale-95 transition-all border-2 border-[var(--ink)] sketch-wobble-sm"
                   >
                     添加
                   </button>
@@ -285,16 +271,14 @@ export default function EditTaskModal({
 
               {/* Color */}
               <div>
-                <label className="text-[13px] text-[var(--text-tertiary)] mb-1.5 block">
-                  标记颜色
-                </label>
+                <label className="text-[13px] text-[var(--ink-soft)] mb-1.5 block">标记颜色</label>
                 <div className="flex gap-3">
                   {colorOptions.map((c) => (
                     <button
                       key={c.value}
                       onClick={() => setColor(c.value)}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] text-white font-medium transition-all active:scale-90 ${
-                        color === c.value ? 'ring-2 ring-offset-2 ring-[var(--primary-blue)]' : ''
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] text-white font-head font-medium transition-all active:scale-90 border-2 border-[var(--ink)] sketch-wobble-sm ${
+                        color === c.value ? 'ring-2 ring-offset-2 ring-[var(--red)]' : ''
                       }`}
                       style={{ backgroundColor: colorMap[c.value] }}
                     >
@@ -308,7 +292,7 @@ export default function EditTaskModal({
               <button
                 onClick={handleSubmit}
                 disabled={!title.trim()}
-                className="w-full h-12 rounded-xl bg-[var(--primary-blue)] text-white text-[16px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-all"
+                className="w-full h-12 rounded-xl bg-[var(--red)] text-white text-[16px] font-head font-semibold disabled:opacity-40 active:scale-[0.98] transition-all border-2 border-[var(--ink)] sketch-wobble-sm"
               >
                 保存
               </button>

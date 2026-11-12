@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Check, ChevronRight, AlertCircle, Clock } from 'lucide-react';
+import { SketchIcon } from '@/components/icons/SketchIcon';
 import { motion, AnimatePresence } from 'framer-motion';
-import CategoryCard from '@/components/CategoryCard';
 import CategoryDetailPage from '@/pages/CategoryDetailPage';
 import TaskDetailPage from '@/pages/TaskDetailPage';
 import { useTimeRange, getOverdueDays, overdueLabel, getTodayStr } from '@/hooks/useTimeRange';
@@ -33,15 +32,16 @@ function ProgressRing({ percentage }: { percentage: number }) {
     <div className="relative flex items-center justify-center" style={{ width: radius * 2, height: radius * 2 }}>
       <svg width={radius * 2} height={radius * 2} className="-rotate-90">
         <circle
-          stroke="#E5E5EA"
+          stroke="var(--ink)"
           strokeWidth={strokeWidth}
           fill="transparent"
           r={normalizedRadius}
           cx={radius}
           cy={radius}
+          filter="url(#wobble)"
         />
         <motion.circle
-          stroke="#4A90D9"
+          stroke="var(--yellow)"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           fill="transparent"
@@ -52,29 +52,27 @@ function ProgressRing({ percentage }: { percentage: number }) {
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset }}
           transition={{ duration: 1, ease: 'easeOut' }}
+          filter="url(#wobble)"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="flex items-baseline">
-          <span className="text-[36px] font-bold text-[var(--text-primary)] leading-none">
-            {percentage}
-          </span>
-          <span className="text-[20px] text-[var(--text-primary)] ml-0.5">%</span>
+          <span className="font-head text-[36px] text-[var(--ink)] leading-none">{percentage}</span>
+          <span className="font-head text-[20px] text-[var(--ink)] ml-0.5">%</span>
         </div>
-        <span className="text-[12px] text-[var(--text-tertiary)] mt-1">完成率</span>
+        <span className="text-[12px] text-[var(--ink-soft)] mt-1 font-caveat">完成率</span>
       </div>
     </div>
   );
 }
 
-/** 逾期概览条：按严重程度分组统计 */
 function OverdueBar({ tasks }: { tasks: Task[] }) {
   const todayStr = getTodayStr();
 
   const breakdown = useMemo(() => {
     const overdue = tasks.filter((t) => !t.completed && t.date < todayStr);
-    let severe = 0;   // ≥7 天
-    let moderate = 0; // 1-7 天
+    let severe = 0;
+    let moderate = 0;
 
     for (const t of overdue) {
       const days = getOverdueDays(t.date);
@@ -82,9 +80,7 @@ function OverdueBar({ tasks }: { tasks: Task[] }) {
       else if (days >= 1) moderate++;
     }
 
-    // 今天到期的未完成任务
     const dueToday = tasks.filter((t) => !t.completed && t.date === todayStr).length;
-
     return { severe, moderate, dueToday };
   }, [tasks, todayStr]);
 
@@ -93,28 +89,28 @@ function OverdueBar({ tasks }: { tasks: Task[] }) {
 
   return (
     <div className="mt-4 mx-4">
-      <div className="bg-white rounded-xl card-shadow px-4 py-3 flex items-center justify-around">
+      <div className="sketch-card px-4 py-3 flex items-center justify-around">
         <div className="flex flex-col items-center gap-0.5">
-          <span className="text-[20px] font-bold text-[var(--red)]">{breakdown.severe}</span>
+          <span className="font-head text-[20px] text-[var(--red)]">{breakdown.severe}</span>
           <div className="flex items-center gap-1">
-            <AlertCircle size={12} className="text-[var(--red)]" />
-            <span className="text-[11px] text-[var(--text-tertiary)]">严重逾期</span>
+            <SketchIcon name="alert" size={12} strokeWidth={2} className="text-[var(--red)]" />
+            <span className="text-[11px] text-[var(--ink-soft)]">严重逾期</span>
           </div>
         </div>
         <div className="w-px h-8 bg-[var(--divider)]" />
         <div className="flex flex-col items-center gap-0.5">
-          <span className="text-[20px] font-bold" style={{ color: '#FF9500' }}>{breakdown.moderate}</span>
+          <span className="font-head text-[20px] text-[var(--yellow)]">{breakdown.moderate}</span>
           <div className="flex items-center gap-1">
-            <Clock size={12} style={{ color: '#FF9500' }} />
-            <span className="text-[11px] text-[var(--text-tertiary)]">近期逾期</span>
+            <SketchIcon name="clock" size={12} strokeWidth={2} className="text-[var(--yellow)]" />
+            <span className="text-[11px] text-[var(--ink-soft)]">近期逾期</span>
           </div>
         </div>
         <div className="w-px h-8 bg-[var(--divider)]" />
         <div className="flex flex-col items-center gap-0.5">
-          <span className="text-[20px] font-bold" style={{ color: '#FF9500' }}>{breakdown.dueToday}</span>
+          <span className="font-head text-[20px] text-[var(--yellow)]">{breakdown.dueToday}</span>
           <div className="flex items-center gap-1">
-            <Clock size={12} style={{ color: '#FF9500' }} />
-            <span className="text-[11px] text-[var(--text-tertiary)]">今天到期</span>
+            <SketchIcon name="clock" size={12} strokeWidth={2} className="text-[var(--yellow)]" />
+            <span className="text-[11px] text-[var(--ink-soft)]">今天到期</span>
           </div>
         </div>
       </div>
@@ -138,39 +134,39 @@ export default function StatsPage({
   const { filterByRange, filterByCategory } = useTimeRange(timeRange);
   const todayStr = getTodayStr();
 
-  // ── 时间范围内的任务 ──
   const filteredTasks = useMemo(() => filterByRange(tasks), [tasks, filterByRange]);
 
-  // ── 分类统计 ──
+  // ── 只统计到今天为止的任务（未来任务不参与完成率计算，避免拉低百分比）──
+  const tasksUpToToday = useMemo(
+    () => filteredTasks.filter((t) => t.date <= todayStr),
+    [filteredTasks, todayStr]
+  );
+
   const filteredCategoryStats = useMemo((): CategoryStat[] =>
     categoryStats.map((stat) => {
-      const catTasks = filterByCategory(tasks, stat.category.id);
+      const catTasks = filterByCategory(tasks, stat.category.id).filter(t => t.date <= todayStr);
       return {
         category: stat.category,
         completedCount: catTasks.filter((t) => t.completed).length,
         totalCount: catTasks.length,
       };
-    }), [tasks, categoryStats, filterByCategory]);
+    }), [tasks, categoryStats, filterByCategory, todayStr]);
 
-  // ── 完成率 ──
   const completionRate =
-    filteredTasks.length > 0
-      ? Math.round((filteredTasks.filter((t) => t.completed).length / filteredTasks.length) * 100)
+    tasksUpToToday.length > 0
+      ? Math.round((tasksUpToToday.filter((t) => t.completed).length / tasksUpToToday.length) * 100)
       : 0;
 
-  // ── 逾期未完成任务（日期 < 今天 且 未完成，最早过期排前面）──
   const overdueTasks = useMemo(() =>
     filteredTasks
       .filter((t) => !t.completed && t.date < todayStr)
       .sort((a, b) => a.date.localeCompare(b.date)),
   [filteredTasks, todayStr]);
 
-  // ── 所有任务（用于逾期概览条，不限于时间范围）──
   const allOverdueTasks = useMemo(() =>
     tasks.filter((t) => !t.completed && t.date <= todayStr),
   [tasks, todayStr]);
 
-  // Drill down handlers
   const handleCategoryClick = (category: Category) => {
     setSelectedCategory(category);
     setDrillDown('category');
@@ -201,135 +197,144 @@ export default function StatsPage({
     setSelectedTask(null);
   };
 
+  const rangeLabel = timeRange === 'week' ? '本周' : timeRange === 'month' ? '本月' : '本年';
+
+  // ── 动态日期副标题 ──
+  const subtitle = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    if (timeRange === 'month') {
+      const days = new Date(y, m + 1, 0).getDate();
+      return `${y}年${m + 1}月 · 共 ${days} 天`;
+    }
+    if (timeRange === 'week') {
+      const day = now.getDay();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      return `${monday.getMonth() + 1}/${monday.getDate()} - ${sunday.getMonth() + 1}/${sunday.getDate()}`;
+    }
+    return `${y}年`;
+  }, [timeRange]);
+
+  // ── 动态洞察文案（随 timeRange / completionRate 变化）──
+  const insight = useMemo(() => {
+    const catsWithTasks = filteredCategoryStats.filter(s => s.totalCount > 0);
+    if (catsWithTasks.length === 0) return `${rangeLabel}还没有任务数据，开始计划吧～`;
+
+    const lowest = catsWithTasks.reduce((a, b) => {
+      const aPct = a.totalCount > 0 ? a.completedCount / a.totalCount : 1;
+      const bPct = b.totalCount > 0 ? b.completedCount / b.totalCount : 1;
+      return aPct < bPct ? a : b;
+    });
+
+    const lowestPct = Math.round((lowest.completedCount / lowest.totalCount) * 100);
+    const totalTasks = catsWithTasks.reduce((s, c) => s + c.totalCount, 0);
+
+    if (completionRate >= 80) return `${rangeLabel}完成${completionRate}%，共 ${totalTasks} 项任务，继续保持 🎉`;
+    if (completionRate >= 50) return `${rangeLabel}「${lowest.category.name}」只完成 ${lowestPct}%，加把劲～`;
+    if (completionRate > 0) return `${rangeLabel}完成率 ${completionRate}%，从「${lowest.category.name}」开始吧`;
+    return `${rangeLabel}还没有完成任务，从一个小目标开始 ⚡`;
+  }, [filteredCategoryStats, completionRate, rangeLabel]);
+
   return (
     <div className="flex flex-col h-full relative">
       <div className="content-scrollable">
-        {/* Time Range Selector */}
-        <div className="bg-white px-4 py-4">
-          <div className="flex items-center justify-center">
-            <div className="inline-flex bg-[var(--bg-primary)] rounded-lg p-0.5">
-              {timeRanges.map((range) => (
-                <button
-                  key={range.key}
-                  onClick={() => setTimeRange(range.key)}
-                  className={`px-6 py-1.5 rounded-md text-[14px] font-medium transition-all duration-200 ${
-                    timeRange === range.key
-                      ? 'bg-[var(--primary-blue)] text-white'
-                      : 'text-[var(--text-secondary)]'
-                  }`}
-                >
-                  {range.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Title */}
-        <div className="bg-white px-4 pb-3">
-          <p className="text-[14px] text-[var(--text-secondary)]">
-            {timeRange === 'week' ? '本周' : timeRange === 'month' ? '本月' : '本年'}完成率
+        {/* Section Head */}
+        <div className="sketch-section-head">
+          <h2 className="sketch-underline sketch-underline-yellow">统计</h2>
+          <p className="text-[12px] text-[var(--ink-soft)] mt-[7px] font-caveat">
+            {subtitle}
           </p>
         </div>
 
-        {/* Progress Ring */}
-        <div className="bg-white px-4 pb-6 flex justify-center">
-          <ProgressRing percentage={completionRate} />
-        </div>
-
-        {/* ── 逾期概览条 ── */}
-        <OverdueBar tasks={allOverdueTasks} />
-
-        {/* Category Section */}
-        <div className="mt-3 px-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[16px] font-semibold text-[var(--text-primary)]">
-              分类完成情况
-            </span>
-            <span className="text-[13px] text-[var(--text-tertiary)]">
-              {categoryStats.length} 个分类
-            </span>
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
-            {filteredCategoryStats.map((stat, idx) => (
+        {/* Time Range Selector */}
+        <div className="px-4 py-3">
+          <div className="inline-flex gap-[8px]">
+            {timeRanges.map((range) => (
               <button
-                key={stat.category.id}
-                onClick={() => handleCategoryClick(stat.category)}
-                className="snap-start flex-shrink-0 w-[calc(33.333%-8px)] text-left"
+                key={range.key}
+                onClick={() => setTimeRange(range.key)}
+                className={`sketch-chip ${timeRange === range.key ? 'on' : ''}`}
               >
-                <CategoryCard stat={stat} index={idx} />
+                {range.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Overdue Tasks */}
-        <div className="mt-4 px-4 pb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[16px] font-semibold text-[var(--text-primary)]">
-              逾期未完成
-            </h3>
-            {overdueTasks.length > 0 && (
-              <span className="text-[13px] text-[var(--red)] font-medium">
-                {overdueTasks.length} 项逾期
-              </span>
-            )}
+        {/* Progress Ring Card */}
+        <div className="sketch-card sketch-card-rot1 mx-[16px] mt-[12px] p-[20px] flex items-center gap-[16px] bg-[var(--bg-card)]">
+          <ProgressRing percentage={completionRate} />
+          <div className="flex-1">
+            <div className="font-head text-[15px] text-[var(--ink)]">{rangeLabel}完成率</div>
+            <div className="font-body text-[12.5px] text-[var(--ink)] mt-[6px] leading-[1.55]">
+              {insight}
+            </div>
           </div>
-          <div className="bg-white rounded-xl card-shadow overflow-hidden">
-            {overdueTasks.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--green)]/10 flex items-center justify-center">
-                  <Check size={24} strokeWidth={2} className="text-[var(--green)]" />
+        </div>
+
+        {/* Category Bars */}
+        <div className="px-[16px] pt-[14px] flex flex-col gap-[11px]">
+          {filteredCategoryStats.map((stat) => {
+            const pct = stat.totalCount > 0 ? Math.round((stat.completedCount / stat.totalCount) * 100) : 0;
+            return (
+              <button
+                key={stat.category.id}
+                onClick={() => handleCategoryClick(stat.category)}
+                className="sketch-card p-[12px_14px] text-left"
+              >
+                <div className="flex justify-between font-head text-[14px] text-[var(--ink)]">
+                  <span>{stat.category.name}</span>
+                  <span className="font-caveat text-[16px] text-[var(--ink-soft)]">{pct}%</span>
                 </div>
-                <p className="text-[15px] text-[var(--text-primary)] font-medium">
-                  没有逾期任务
-                </p>
-                <p className="text-[13px] text-[var(--text-tertiary)] mt-1">
-                  所有任务都在计划时间内
-                </p>
-              </div>
-            ) : (
-              overdueTasks.map((task, idx) => {
-                const days = getOverdueDays(task.date);
-                const isUrgent = days >= 7;
-                return (
-                  <motion.button
-                    key={task.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05, duration: 0.25 }}
-                    onClick={() => handleTaskClick(task)}
-                    className={`w-full flex items-center px-4 py-3.5 text-left active:bg-[var(--bg-primary)] transition-colors ${
-                      idx < overdueTasks.length - 1 ? 'border-b border-[var(--divider)]' : ''
-                    }`}
-                  >
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center mr-3 shrink-0"
-                      style={{ backgroundColor: isUrgent ? 'var(--red)' : '#FF9500' }}
-                    >
-                      {isUrgent ? (
-                        <AlertCircle size={16} strokeWidth={2.5} className="text-white" />
-                      ) : (
-                        <Clock size={16} strokeWidth={2.5} className="text-white" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[15px] text-[var(--text-primary)] truncate">{task.title}</p>
-                    </div>
-                    <span
-                      className="text-[12px] font-medium mr-2 shrink-0"
-                      style={{ color: isUrgent ? 'var(--red)' : '#FF9500' }}
-                    >
-                      {overdueLabel(days)}
-                    </span>
-                    <span className="text-[12px] text-[var(--text-tertiary)] mr-1">{task.time}</span>
-                    <ChevronRight size={16} className="text-[var(--icon-gray)] shrink-0" />
-                  </motion.button>
-                );
-              })
-            )}
+                <div className="sketch-bar">
+                  <span
+                    className="sketch-bar-fill"
+                    style={{ width: `${pct}%`, backgroundColor: stat.category.color }}
+                  />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── 逾期概览条 ── */}
+        <OverdueBar tasks={allOverdueTasks} />
+
+        {/* Overdue Tasks */}
+        <div className="sketch-overdue mx-[16px] mt-[12px] mb-[12px]">
+          <div className="font-head text-[14px] text-[var(--red)] flex items-center gap-[5px]">
+            <SketchIcon name="alert" size={16} strokeWidth={2.4} />
+            逾期未完成 · {overdueTasks.length} 项
           </div>
+          {overdueTasks.length === 0 ? (
+            <div className="text-center py-6">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-[var(--green)]/10 flex items-center justify-center sketch-wobble-sm">
+                <SketchIcon name="check" size={20} strokeWidth={2.5} className="text-[var(--green)]" />
+              </div>
+              <p className="font-head text-[14px] text-[var(--ink)]">没有逾期任务</p>
+            </div>
+          ) : (
+            overdueTasks.map((task, idx) => {
+              const days = getOverdueDays(task.date);
+              return (
+                <motion.button
+                  key={task.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05, duration: 0.25 }}
+                  onClick={() => handleTaskClick(task)}
+                  className="w-full flex items-center justify-between text-left mt-[8px] font-body text-[12.5px] text-[var(--ink)]"
+                >
+                  <span className="truncate flex-1">{task.title}</span>
+                  <span className="text-[var(--ink-soft)] shrink-0 ml-2">{overdueLabel(days)}</span>
+                </motion.button>
+              );
+            })
+          )}
         </div>
       </div>
 

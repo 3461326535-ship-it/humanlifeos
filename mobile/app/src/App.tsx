@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import SketchDefs from '@/components/sketch/SketchDefs';
 import TabBar from '@/components/TabBar';
 import TodayPage from '@/pages/TodayPage';
 import CalendarPage from '@/pages/CalendarPage';
@@ -391,6 +392,7 @@ function App() {
 
   return (
     <div className="w-full h-screen bg-[var(--bg-primary)] flex justify-center p-0 md:p-4">
+      <SketchDefs />
       <div className="app-container">
         <main className="flex-1 overflow-hidden flex flex-col relative">
           {renderPage()}

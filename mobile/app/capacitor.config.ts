@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'art.humanlifeos.todo',
-  appName: 'LifeOs',
+  appName: '小日志',
   webDir: 'dist',
   server: {
     // 开发时用本地服务器，构建 APK 时注释掉 server.url

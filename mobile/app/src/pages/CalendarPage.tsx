@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { SketchIcon } from '@/components/icons/SketchIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCard from '@/components/TaskCard';
 import AddTaskModal from '@/components/AddTaskModal';
@@ -15,14 +15,13 @@ interface CalendarPageProps {
 
 const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
-// 8 色事件条背景（与 Web 端 cat-light-0~7 一致，inline 方式避免 Tailwind purge）
 const EVENT_BG_COLORS = [
-  'rgba(0,122,255,0.20)',
-  'rgba(175,82,222,0.20)',
-  'rgba(255,45,85,0.20)',
-  'rgba(255,149,0,0.20)',
-  'rgba(52,199,89,0.20)',
-  'rgba(90,200,250,0.20)',
+  'rgba(95,184,232,0.20)',
+  'rgba(181,139,224,0.20)',
+  'rgba(244,116,107,0.20)',
+  'rgba(255,201,60,0.20)',
+  'rgba(140,193,82,0.20)',
+  'rgba(57,192,166,0.20)',
   'rgba(255,59,48,0.20)',
   'rgba(88,86,214,0.20)',
 ];
@@ -46,12 +45,12 @@ function calculateTaskPoints(task: Task): { totalPoints: number; completedPoints
 }
 
 const colorDotMap: Record<string, string> = {
-  blue: '#E8887E',  // macaron coral red (was primary blue)
-  green: '#34C759',
-  red: '#FF3B30',
-  purple: '#AF52DE',
-  yellow: '#FFCC00',
-  gray: '#8E8E93',
+  blue: '#5FB8E8',
+  green: '#8CC152',
+  red: '#F4746B',
+  purple: '#B58BE0',
+  yellow: '#FFC93C',
+  gray: '#C9BEA3',
 };
 
 function formatDateKey(d: Date): string {
@@ -76,20 +75,12 @@ function getMonthData(year: number, month: number) {
   }
 
   for (let i = 1; i <= daysInMonth; i++) {
-    cells.push({
-      date: i,
-      isCurrentMonth: true,
-      fullDate: new Date(year, month, i),
-    });
+    cells.push({ date: i, isCurrentMonth: true, fullDate: new Date(year, month, i) });
   }
 
   const remaining = (7 - (cells.length % 7)) % 7;
   for (let i = 1; i <= remaining; i++) {
-    cells.push({
-      date: i,
-      isCurrentMonth: false,
-      fullDate: new Date(year, month + 1, i),
-    });
+    cells.push({ date: i, isCurrentMonth: false, fullDate: new Date(year, month + 1, i) });
   }
 
   return cells;
@@ -127,7 +118,6 @@ export default function CalendarPage({
 
   const weekDays2 = useMemo(() => getWeekData(selectedDate), [selectedDate]);
 
-  // 按时间线排序：有时间 → 按时间升序；无时间 → 排到最后
   const selectedTasks = tasks
     .filter((t) => t.date === formatDateKey(selectedDate))
     .sort((a, b) => {
@@ -137,7 +127,6 @@ export default function CalendarPage({
       return a.time.localeCompare(b.time);
     });
 
-  // 本月分类汇总（与 Web 端 renderMonthCategorySummary 一致）
   const monthCategorySummary = useMemo(() => {
     const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
     const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
@@ -198,67 +187,57 @@ export default function CalendarPage({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Section Head */}
+      <div className="sketch-section-head">
+        <h2 className="sketch-underline sketch-underline-yellow">视图</h2>
+        <p className="text-[12px] text-[var(--ink-soft)] mt-[7px] font-caveat">
+          {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月 · {new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate()}天
+        </p>
+      </div>
+
       {/* View Toggle */}
-      <div className="bg-white px-4 pb-3 pt-1">
-        <div className="flex items-center justify-center">
-          <div className="inline-flex bg-[var(--bg-primary)] rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode('week')}
-              className={`px-6 py-1.5 rounded-md text-[14px] font-medium transition-all duration-200 ${
-                viewMode === 'week'
-                  ? 'bg-[var(--primary-blue)] text-white'
-                  : 'text-[var(--text-secondary)]'
-              }`}
-            >
-              周视图
-            </button>
-            <button
-              onClick={() => setViewMode('month')}
-              className={`px-6 py-1.5 rounded-md text-[14px] font-medium transition-all duration-200 ${
-                viewMode === 'month'
-                  ? 'bg-[var(--primary-blue)] text-white'
-                  : 'text-[var(--text-secondary)]'
-              }`}
-            >
-              月视图
-            </button>
-          </div>
+      <div className="px-4 pb-3 pt-1">
+        <div className="flex gap-[8px]">
+          <button
+            onClick={() => setViewMode('week')}
+            className={`sketch-chip ${viewMode === 'week' ? 'on' : ''}`}
+          >
+            周视图
+          </button>
+          <button
+            onClick={() => setViewMode('month')}
+            className={`sketch-chip ${viewMode === 'month' ? 'on' : ''}`}
+          >
+            月视图
+          </button>
         </div>
       </div>
 
       <div className="content-scrollable">
         {/* Month Navigation */}
-        <div className="bg-white px-4 pb-3 flex items-center justify-between">
-          <button
-            onClick={goPrev}
-            className="p-2 -ml-2 active:bg-gray-100 rounded-full transition-colors"
-          >
-            <ChevronLeft size={20} className="text-[var(--text-secondary)]" />
+        <div className="px-4 pb-3 flex items-center justify-between">
+          <button onClick={goPrev} className="p-2 active:opacity-60 transition-opacity">
+            <SketchIcon name="chevron-left" size={20} strokeWidth={2.5} className="text-[var(--ink-soft)]" />
           </button>
-          <span className="text-[18px] font-semibold text-[var(--text-primary)]">
+          <span className="font-head text-[18px] text-[var(--ink)]">
             {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
           </span>
-          <button
-            onClick={goNext}
-            className="p-2 -mr-2 active:bg-gray-100 rounded-full transition-colors"
-          >
-            <ChevronRight size={20} className="text-[var(--text-secondary)]" />
+          <button onClick={goNext} className="p-2 active:opacity-60 transition-opacity">
+            <SketchIcon name="chevron-right" size={20} strokeWidth={2.5} className="text-[var(--ink-soft)]" />
           </button>
         </div>
 
         {viewMode === 'month' ? (
           /* Month Calendar Grid */
-          <div className="bg-white px-3 pb-4">
-            {/* Week headers */}
-            <div className="grid grid-cols-7 mb-2">
+          <div className="sketch-calwrap sketch-card mx-[16px]">
+            <div className="grid grid-cols-7 mb-1">
               {weekDays.map((day) => (
-                <div key={day} className="text-center text-[12px] text-[var(--text-tertiary)] py-2">
+                <div key={day} className="text-center text-[11px] text-[var(--ink-soft)] py-2 font-head">
                   {day}
                 </div>
               ))}
             </div>
 
-            {/* Days — 卡片式日格（与 Web 端一致） */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={`${currentMonth.getFullYear()}-${currentMonth.getMonth()}`}
@@ -266,14 +245,13 @@ export default function CalendarPage({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
-                className="grid grid-cols-7 gap-0.5"
+                className="grid grid-cols-7 gap-[2px]"
               >
                 {monthCells.map((cell, idx) => {
                   const cellKey = formatDateKey(cell.fullDate);
                   const isSelected = cellKey === selectedKey;
                   const isToday = cellKey === todayKey;
-                  const dayTasks = tasks
-                    .filter((t) => t.date === cellKey)
+                  const dayTasks = tasks.filter((t) => t.date === cellKey)
                     .sort((a, b) => {
                       if (a.time && !b.time) return -1;
                       if (!a.time && b.time) return 1;
@@ -289,25 +267,24 @@ export default function CalendarPage({
                       whileTap={{ scale: 0.97 }}
                       onClick={() => cell.isCurrentMonth && setSelectedDate(cell.fullDate)}
                       className={`month-day-cell ${
-                        isSelected
-                          ? 'ring-2 ring-[var(--primary-blue)]'
-                          : isToday
-                          ? 'border-2 border-[var(--primary-blue)]'
-                          : ''
+                        isSelected ? 'ring-2 ring-[var(--red)]' : ''
                       } ${!cell.isCurrentMonth ? 'opacity-40' : ''}`}
+                      style={
+                        isToday && !isSelected
+                          ? { border: '2px solid var(--red)' }
+                          : undefined
+                      }
                     >
-                      {/* 日期头：仅数字 */}
                       <div className="mb-0.5">
                         <span
-                          className={`text-[11px] font-medium ${
-                            isSelected ? 'text-[var(--primary-blue)]' : 'text-[var(--text-primary)]'
-                          }`}
+                          className={`font-caveat text-[14px] ${
+                            isSelected ? 'text-[var(--red)]' : isToday ? 'text-[var(--red)]' : 'text-[var(--ink)]'
+                          } ${!cell.isCurrentMonth ? 'opacity-30' : ''}`}
                         >
                           {cell.date}
                         </span>
                       </div>
 
-                      {/* 任务列表 */}
                       <div className="flex-1 overflow-y-auto no-scrollbar">
                         {dayTasks.length > 0 ? (
                           <>
@@ -330,13 +307,13 @@ export default function CalendarPage({
                               );
                             })}
                             {remaining > 0 && (
-                              <div className="text-[10px] text-[var(--primary-blue)] cursor-pointer mt-0.5 pl-1">
+                              <div className="text-[10px] text-[var(--red)] cursor-pointer mt-0.5 pl-1 font-head">
                                 +{remaining} 更多
                               </div>
                             )}
                           </>
                         ) : (
-                          <div className="text-[10px] text-[var(--text-tertiary)] italic flex-1 flex items-center justify-center">
+                          <div className="text-[10px] text-[var(--ink-soft)] italic flex-1 flex items-center justify-center">
                             无日程
                           </div>
                         )}
@@ -349,10 +326,10 @@ export default function CalendarPage({
           </div>
         ) : (
           /* Week View */
-          <div className="bg-white px-3 pb-4">
+          <div className="px-3 pb-4">
             <div className="grid grid-cols-7">
               {weekDays.map((day) => (
-                <div key={day} className="text-center text-[12px] text-[var(--text-tertiary)] py-2">
+                <div key={day} className="text-center text-[12px] text-[var(--ink-soft)] py-2 font-head">
                   {day}
                 </div>
               ))}
@@ -369,17 +346,17 @@ export default function CalendarPage({
                     key={idx}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => handleWeekDayClick(date)}
-                    className={`flex flex-col items-center justify-center h-14 rounded-xl cursor-pointer relative ${
+                    className={`flex flex-col items-center justify-center h-14 rounded-xl cursor-pointer relative sketch-wobble-sm ${
                       isSelected
-                        ? 'bg-[var(--primary-blue)]'
+                        ? 'bg-[var(--red)]'
                         : isToday
-                        ? 'border-2 border-[var(--primary-blue)]'
-                        : 'bg-[var(--bg-primary)]'
+                        ? 'border-2 border-[var(--red)]'
+                        : 'bg-[var(--bg-card)]'
                     }`}
                   >
                     <span
-                      className={`text-[16px] font-semibold ${
-                        isSelected ? 'text-white' : 'text-[var(--text-primary)]'
+                      className={`font-head text-[16px] ${
+                        isSelected ? 'text-white' : 'text-[var(--ink)]'
                       }`}
                     >
                       {date.getDate()}
@@ -390,7 +367,7 @@ export default function CalendarPage({
                           <div
                             key={i}
                             className="w-1.5 h-1.5 rounded-full"
-                            style={{ backgroundColor: colorDotMap[t.color] || '#E8887E' }}
+                            style={{ backgroundColor: colorDotMap[t.color] || '#F4746B' }}
                           />
                         ))}
                       </div>
@@ -402,81 +379,64 @@ export default function CalendarPage({
           </div>
         )}
 
-        {/* Month Category Summary — 与 Web 端 renderMonthCategorySummary 一致 */}
+        {/* Month Category Summary */}
         {viewMode === 'month' && monthCategorySummary.length > 0 && (
-          <div className="mt-4 px-4">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">本月分类汇总</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {monthCategorySummary.map((cat) => {
-                const colorIdx = hashCategoryIndex(cat.category);
-                const bgColor = EVENT_BG_COLORS[colorIdx];
-                return (
-                  <div
-                    key={cat.category}
-                    className="category-summary-card bg-white border border-gray-100 rounded-xl shadow-sm p-3"
-                  >
-                    {/* 分类头 */}
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: bgColor }} />
-                        <span className="text-xs font-medium text-[var(--text-primary)]">
-                          {cat.category}
-                        </span>
-                      </div>
-                      <span className="text-[11px] font-medium text-[var(--text-tertiary)] bg-gray-50 px-1.5 py-0.5 rounded-full">
-                        {cat.total}
-                      </span>
-                    </div>
-                    {/* 进度条 */}
-                    <div className="flex justify-between text-[10px] text-[var(--text-tertiary)] mb-1">
-                      <span>完成率: {cat.completionRate}%</span>
-                      <span>{cat.completedPoints}/{cat.totalPoints} 任务点</span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
-                      <div
-                        className={`h-1.5 rounded-full transition-all ${
-                          cat.completionRate === 100 ? 'bg-[var(--green)]' : 'bg-[var(--primary-blue)]'
-                        }`}
-                        style={{ width: `${cat.completionRate}%` }}
-                      />
-                    </div>
+          <div className="px-[16px] pt-[14px] flex flex-col gap-[11px]">
+            {monthCategorySummary.map((cat) => {
+              const colorIdx = hashCategoryIndex(cat.category);
+              const bgColor = EVENT_BG_COLORS[colorIdx];
+              return (
+                <div key={cat.category} className="sketch-card p-[12px_14px]">
+                  <div className="flex justify-between font-head text-[14px] text-[var(--ink)]">
+                    <span>{cat.category}</span>
+                    <span className="font-caveat text-[16px] text-[var(--ink-soft)]">{cat.completionRate}%</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="sketch-bar">
+                    <span
+                      className="sketch-bar-fill"
+                      style={{ width: `${cat.completionRate}%`, backgroundColor: bgColor }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-[var(--ink-soft)] mt-1">
+                    <span>{cat.completedPoints}/{cat.totalPoints} 任务点</span>
+                    <span>{cat.total}项</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
         {/* Bottom Sheet - Tasks for selected date */}
         <div className="mt-3 px-4 pb-6">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[14px] text-[var(--text-tertiary)]">
+            <span className="text-[14px] text-[var(--ink-soft)] font-caveat">
               {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日{' '}
-              {weekDays[selectedDate.getDay()]} {' '}
-              <span className="ml-1">{selectedTasks.length}项日程</span>
+              {weekDays[selectedDate.getDay()]} · {selectedTasks.length}项日程
             </span>
             <button
               onClick={() => setShowAddModal(true)}
-              className="w-7 h-7 rounded-full bg-[var(--primary-blue)] flex items-center justify-center active:scale-90 transition-transform"
+              className="w-7 h-7 rounded-full bg-[var(--red)] flex items-center justify-center active:scale-90 transition-transform sketch-wobble-sm border-2 border-[var(--ink)]"
             >
-              <Plus size={14} className="text-white" />
+              <SketchIcon name="plus" size={14} strokeWidth={3} className="text-white" stroke="white" />
             </button>
           </div>
           <div className="space-y-2">
-            {selectedTasks.map((task) => (
+            {selectedTasks.map((task, idx) => (
               <TaskCard
                 key={task.id}
                 task={task}
                 onToggle={onToggleTask}
                 onToggleSubtask={onToggleSubtask}
+                rot={idx}
               />
             ))}
             {selectedTasks.length === 0 && (
-              <div className="flex flex-col items-center py-8 text-[var(--text-tertiary)]">
-                <p className="text-[14px]">暂无日程</p>
+              <div className="flex flex-col items-center py-8 text-[var(--ink-soft)]">
+                <p className="font-head text-[14px]">暂无日程</p>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="mt-2 text-[13px] text-[var(--primary-blue)] active:opacity-70"
+                  className="mt-2 text-[13px] text-[var(--red)] active:opacity-70 font-head"
                 >
                   点击添加
                 </button>
@@ -486,7 +446,6 @@ export default function CalendarPage({
         </div>
       </div>
 
-      {/* Add Task Modal */}
       <AddTaskModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}

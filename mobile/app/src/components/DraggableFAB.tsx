@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Plus } from 'lucide-react';
+import { SketchIcon } from '@/components/icons/SketchIcon';
 import { motion } from 'framer-motion';
 
 interface DraggableFABProps {
@@ -64,17 +64,19 @@ export default function DraggableFAB({ onClick }: DraggableFABProps) {
         initial={{ x: 0, y: 0 }}
         style={{
           position: 'absolute',
-          right: 16,
+          right: 18,
           bottom: 16,
           touchAction: 'none',
           pointerEvents: 'auto',
         }}
         whileTap={{ scale: 0.9 }}
-        className={`w-12 h-12 rounded-full bg-[var(--primary-blue)] flex items-center justify-center fab-shadow ${
-          isDragging ? 'cursor-grabbing opacity-90' : 'cursor-grab'
+        className={`w-[52px] h-[52px] rounded-full bg-[var(--red)] flex items-center justify-center text-white text-[30px] font-bold border-[2.5px] border-[var(--ink)] sketch-wobble-sm fab-shadow ${
+          isDragging
+            ? 'cursor-grabbing opacity-90'
+            : 'cursor-grab sketch-fab-wiggle'
         }`}
       >
-        <Plus size={22} strokeWidth={2.5} className="text-white pointer-events-none" />
+        <SketchIcon name="plus" size={24} strokeWidth={2.5} className="text-white pointer-events-none" stroke="white" />
       </motion.button>
     </div>
   );

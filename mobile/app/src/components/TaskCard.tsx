@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
-import { Check, ChevronDown, ChevronUp, Repeat, Pencil, Trash2 } from 'lucide-react';
+import { SketchIcon } from '@/components/icons/SketchIcon';
+import { SketchCheckbox } from '@/components/sketch/SketchCheckbox';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Task } from '@/types';
 
@@ -12,15 +13,17 @@ interface TaskCardProps {
   onPress?: (task: Task) => void;
   onLongPress?: (task: Task) => void;
   onDelete?: (task: Task) => void;
+  /** Alternating card rotation index (0 = rot1, 1 = rot2, etc.) */
+  rot?: number;
 }
 
 const colorMap: Record<string, string> = {
-  blue: '#E8887E',  // macaron coral red
-  green: '#34C759',
-  red: '#FF3B30',
-  purple: '#AF52DE',
-  yellow: '#FFCC00',
-  gray: '#8E8E93',
+  blue: '#5FB8E8',   // sky
+  green: '#8CC152',
+  red: '#F4746B',
+  purple: '#B58BE0',  // lav
+  yellow: '#FFC93C',
+  gray: '#C9BEA3',
 };
 
 const recurrenceLabels: Record<string, string> = {
@@ -30,8 +33,10 @@ const recurrenceLabels: Record<string, string> = {
   yearly: '每年',
 };
 
-const SWIPE_BTN_W = 72; // 每个操作按钮宽度
-const SWIPE_TOTAL = SWIPE_BTN_W * 2; // 编辑 + 删除 = 144px
+const SWIPE_BTN_W = 72;
+const SWIPE_TOTAL = SWIPE_BTN_W * 2;
+
+const rotClasses = ['sketch-card-rot1', 'sketch-card-rot2'];
 
 export default function TaskCard({
   task,
@@ -42,6 +47,7 @@ export default function TaskCard({
   onPress,
   onLongPress,
   onDelete,
+  rot,
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [swipedOpen, setSwipedOpen] = useState(false);
@@ -110,30 +116,34 @@ export default function TaskCard({
     if (onDelete) onDelete(task);
   };
 
+  const rotClass = rot !== undefined ? rotClasses[rot % rotClasses.length] : '';
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
-      className="bg-white rounded-xl card-shadow overflow-hidden"
+      className={`sketch-card ${rotClass}`}
     >
       {/* ── Swipe-to-Reveal Row ── */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden rounded-[14px]">
         {/* Action buttons (behind the card) */}
         <div className="absolute inset-y-0 right-0 flex">
           <button
             onClick={handleEdit}
-            className="w-[72px] h-full flex items-center justify-center bg-[var(--primary-blue)] text-white text-[13px] font-medium active:opacity-80 transition-opacity"
+            className="w-[72px] h-full flex items-center justify-center bg-[var(--red)] text-white text-[13px] font-medium active:opacity-80 transition-opacity"
+            style={{ fontFamily: "'ZCOOL KuaiLe', sans-serif" }}
           >
-            <Pencil size={16} className="mr-1" />
+            <SketchIcon name="pen" size={16} strokeWidth={2.5} className="mr-1" stroke="white" />
             编辑
           </button>
           <button
             onClick={handleDelete}
-            className="w-[72px] h-full flex items-center justify-center bg-[var(--red)] text-white text-[13px] font-medium active:opacity-80 transition-opacity"
+            className="w-[72px] h-full flex items-center justify-center bg-[var(--ink-soft)] text-white text-[13px] font-medium active:opacity-80 transition-opacity"
+            style={{ fontFamily: "'ZCOOL KuaiLe', sans-serif" }}
           >
-            <Trash2 size={16} className="mr-1" />
+            <SketchIcon name="trash" size={16} strokeWidth={2.5} className="mr-1" stroke="white" />
             删除
           </button>
         </div>
@@ -149,13 +159,11 @@ export default function TaskCard({
           onDragEnd={(_, info) => {
             const absOffset = Math.abs(info.offset.x);
             const absVelocity = Math.abs(info.velocity.x);
-            // 忽略微动（<10px 且速度慢）—— 防止点击按钮时被误判为滑动
             if (absOffset < 10 && absVelocity < 500) return;
-            // 有意识的滑动才切换状态
             if (info.offset.x < -60) setSwipedOpen(true);
             else setSwipedOpen(false);
           }}
-          className="bg-white relative cursor-pointer active:bg-gray-50 transition-colors select-none"
+          className="bg-[var(--bg-card)] relative cursor-pointer active:bg-[#F5F0E0] transition-colors select-none"
           style={{ touchAction: 'pan-y' }}
           onClick={handlePress}
           onTouchStart={handleTouchStart}
@@ -164,53 +172,51 @@ export default function TaskCard({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
         >
-          <div className="flex items-center px-4 py-3.5">
-            {/* Color strip */}
+          <div className="flex items-center gap-[11px] px-[14px] py-[13px]">
+            {/* Color dot */}
             <div
-              className="w-1 h-10 rounded-full mr-3 shrink-0 self-center"
+              className="w-[9px] h-[9px] rounded-full shrink-0 self-center"
               style={{ backgroundColor: colorMap[task.color] || colorMap.gray }}
             />
 
-            {/* Checkbox */}
+            {/* Sketch checkbox */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggle(task.id);
               }}
-              className={`w-5 h-5 rounded-full border-2 mr-3 shrink-0 flex items-center justify-center transition-all duration-200 ${
-                task.completed
-                  ? 'bg-[var(--green)] border-[var(--green)]'
-                  : 'border-[var(--icon-gray)]'
-              }`}
+              className="shrink-0 flex"
             >
-              {task.completed && <Check size={12} strokeWidth={3} className="text-white" />}
+              <SketchCheckbox checked={task.completed} size={22} />
             </button>
 
             {/* Title + Category + Description */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span
-                  className={`text-[15px] leading-5 ${
+                  className={`font-body text-[15px] leading-5 font-bold ${
                     task.completed
-                      ? 'text-[var(--text-tertiary)] line-through'
-                      : 'text-[var(--text-primary)]'
+                      ? 'text-[var(--ink-soft)] line-through'
+                      : 'text-[var(--ink)]'
                   }`}
                 >
                   {task.title}
                 </span>
                 {task.recurrence && (
-                  <Repeat size={12} className="text-[var(--text-tertiary)] shrink-0" />
+                  <SketchIcon name="repeat" size={12} strokeWidth={2} className="text-[var(--ink-soft)] shrink-0" />
                 )}
               </div>
               {categoryName && (
-                <div className="flex items-center mt-0.5">
-                  <div
-                    className="w-1.5 h-1.5 rounded-full mr-1"
-                    style={{ backgroundColor: categoryColor || '#8E8E93' }}
-                  />
-                  <span className="text-[11px] text-[var(--text-tertiary)]">{categoryName}</span>
+                <div className="flex items-center mt-[3px] gap-[8px]">
+                  <div className="flex items-center gap-1">
+                    <div
+                      className="w-[9px] h-[9px] rounded-full"
+                      style={{ backgroundColor: categoryColor || '#C9BEA3' }}
+                    />
+                    <span className="text-[12px] text-[var(--ink-soft)]">{categoryName}</span>
+                  </div>
                   {task.recurrence && (
-                    <span className="text-[10px] text-[var(--text-tertiary)] ml-1">
+                    <span className="text-[10px] text-[var(--ink-soft)]">
                       · {recurrenceLabels[task.recurrence] || task.recurrence}
                     </span>
                   )}
@@ -218,10 +224,10 @@ export default function TaskCard({
               )}
               {hasDescription && !expanded && (
                 <p
-                  className={`text-[12px] mt-0.5 truncate ${
+                  className={`text-[12px] mt-[3px] truncate ${
                     task.completed
-                      ? 'text-[var(--text-tertiary)] line-through'
-                      : 'text-[var(--text-tertiary)]'
+                      ? 'text-[var(--ink-soft)] line-through'
+                      : 'text-[var(--ink-soft)]'
                   }`}
                 >
                   {task.description}
@@ -236,14 +242,18 @@ export default function TaskCard({
                   e.stopPropagation();
                   setExpanded(!expanded);
                 }}
-                className="ml-2 p-1 shrink-0 text-[var(--text-tertiary)] active:bg-gray-100 rounded-full transition-colors"
+                className="ml-auto p-1 shrink-0 text-[var(--ink-soft)] active:bg-[#F5F0E0] rounded-full transition-colors"
               >
-                {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                {expanded ? (
+                  <SketchIcon name="chevron-up" size={16} strokeWidth={2.5} />
+                ) : (
+                  <SketchIcon name="chevron-down" size={16} strokeWidth={2.5} />
+                )}
               </button>
             )}
 
             {/* Time */}
-            <span className="text-[13px] font-medium text-[var(--primary-blue)] ml-2 shrink-0">
+            <span className="text-[13px] font-medium text-[var(--red)] shrink-0">
               {task.time}
             </span>
           </div>
@@ -263,10 +273,10 @@ export default function TaskCard({
             <div className="pl-12 pr-4 pb-3 space-y-2">
               {hasDescription && (
                 <p
-                  className={`text-[13px] leading-relaxed ${
+                  className={`text-[13px] leading-relaxed font-body ${
                     task.completed
-                      ? 'text-[var(--text-tertiary)] line-through'
-                      : 'text-[var(--text-secondary)]'
+                      ? 'text-[var(--ink-soft)] line-through'
+                      : 'text-[var(--ink-soft)]'
                   }`}
                 >
                   {task.description}
@@ -278,30 +288,26 @@ export default function TaskCard({
                   {idx < task.subtasks!.length - 1 && (
                     <div className="absolute left-[7px] top-4 w-px h-[calc(100%+8px)] bg-[var(--divider)]" />
                   )}
-                  <div className="absolute left-[3px] top-2 w-2 h-2 rounded-full border border-[var(--divider)] bg-white z-10" />
+                  <div className="absolute left-[3px] top-2 w-2 h-2 rounded-full border border-[var(--divider)] bg-[var(--bg-card)] z-10" />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onToggleSubtask?.(task.id, sub.id);
                     }}
-                    className={`w-4 h-4 rounded-full border-2 ml-6 mr-3 shrink-0 flex items-center justify-center transition-all duration-200 ${
-                      sub.completed
-                        ? 'bg-[var(--green)] border-[var(--green)]'
-                        : 'border-[var(--icon-gray)]'
-                    }`}
+                    className="ml-6 mr-3 shrink-0 flex"
                   >
-                    {sub.completed && <Check size={10} strokeWidth={3} className="text-white" />}
+                    <SketchCheckbox checked={sub.completed} size={18} />
                   </button>
                   <span
-                    className={`text-[14px] ${
+                    className={`text-[14px] font-body ${
                       sub.completed
-                        ? 'text-[var(--text-tertiary)] line-through'
-                        : 'text-[var(--text-secondary)]'
+                        ? 'text-[var(--ink-soft)] line-through'
+                        : 'text-[var(--ink-soft)]'
                     }`}
                   >
                     {sub.title}
                   </span>
-                  <span className="text-[12px] text-[var(--primary-blue)] ml-auto">
+                  <span className="text-[12px] text-[var(--red)] ml-auto">
                     {task.time}
                   </span>
                 </div>

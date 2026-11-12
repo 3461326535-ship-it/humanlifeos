@@ -110,25 +110,25 @@ public class TodoWidgetProvider extends AppWidgetProvider {
         int bgClr, dateClr, wdayClr, divClr, lineClr, titleClr, doneClr, ovflClr, emptyClr;
 
         if (dark) {
-            bgClr    = 0xFF1A1728;
-            dateClr  = 0xFFE4E0F0;
-            wdayClr  = 0xFFA78BFA;
-            divClr   = 0xFF2D2945;
-            lineClr  = 0xFF3D3870;
-            titleClr = 0xFFDDD8F0;
-            doneClr  = 0xFF5C5870;
-            ovflClr  = 0xFF6B6780;
-            emptyClr = 0xFF6B6780;
+            bgClr    = 0xFF2B2822;
+            dateClr  = 0xFFE8E0D0;
+            wdayClr  = 0xFFF4746B;
+            divClr   = 0xFF3D3830;
+            lineClr  = 0xFF4A4538;
+            titleClr = 0xFFDDD5C0;
+            doneClr  = 0xFF5C5548;
+            ovflClr  = 0xFF6B6458;
+            emptyClr = 0xFF6B6458;
         } else {
-            bgClr    = 0xFFF5F3FF;
-            dateClr  = 0xFF1E1B4B;
-            wdayClr  = 0xFF7C3AED;
-            divClr   = 0xFFE0E7FF;
-            lineClr  = 0xFFC7D2FE;
-            titleClr = 0xFF1E1B4B;
-            doneClr  = 0xFFA5A0C0;
-            ovflClr  = 0xFF8B87A8;
-            emptyClr = 0xFF8B87A8;
+            bgClr    = 0xFFFBF4E6;   // paper
+            dateClr  = 0xFF3A352E;   // ink
+            wdayClr  = 0xFFF4746B;   // red accent
+            divClr   = 0xFFE2D6B8;   // border
+            lineClr  = 0xFFE2D6B8;   // divider
+            titleClr = 0xFF3A352E;   // ink
+            doneClr  = 0xFFC9BEA3;   // icon-gray
+            ovflClr  = 0xFF7A7264;   // ink-soft
+            emptyClr = 0xFF7A7264;   // ink-soft
         }
 
         float rad    = DP_CORNER * density;
@@ -408,46 +408,47 @@ public class TodoWidgetProvider extends AppWidgetProvider {
 
     // ── Color helpers ────────────────────────────────────────────────
 
-    /** Dot fill color from task hex */
+    /** Dot fill color from task hex — sketch palette */
     private int dotColorForHex(String hex) {
-        if (hex == null) return 0xFF9CA3AF;
+        if (hex == null) return 0xFFC9BEA3;
         switch (hex.toUpperCase()) {
-            case "#007AFF": return 0xFF3B82F6;
-            case "#34C759": return 0xFF22C55E;
-            case "#FF3B30": return 0xFFEF4444;
-            case "#AF52DE": return 0xFFA855F7;
-            case "#FFCC00": return 0xFFF59E0B;
-            default:        return 0xFF9CA3AF;
+            case "#5FB8E8": return 0xFF5FB8E8;   // sky
+            case "#8CC152": return 0xFF8CC152;   // green
+            case "#F4746B": return 0xFFF4746B;   // red
+            case "#B58BE0": return 0xFFB58BE0;   // purple
+            case "#FFC93C": return 0xFFFFC93C;   // yellow
+            case "#C9BEA3": return 0xFFC9BEA3;   // gray
+            default:        return 0xFFC9BEA3;
         }
     }
 
-    /** Returns [badgeBackground, badgeText] for a task color */
+    /** Returns [badgeBackground, badgeText] for a task color — sketch palette */
     private int[] badgeColorsForHex(String hex, boolean dark, boolean done) {
         if (done) {
             return dark
-                ? new int[]{0xFF2D2A3C, 0xFF6B6780}
-                : new int[]{0xFFEDE9F5, 0xFFA5A0C0};
+                ? new int[]{0xFF2D2A22, 0xFF6B6458}
+                : new int[]{0xFFF3E9D2, 0xFFC9BEA3};
         }
-        if (hex == null) hex = "#8E8E93";
+        if (hex == null) hex = "#C9BEA3";
         switch (hex.toUpperCase()) {
-            case "#007AFF": // Blue
-                return dark ? new int[]{0xFF1E3A5F, 0xFF93C5FD}
-                            : new int[]{0xFFDBEAFF, 0xFF1E5CD6};
-            case "#34C759": // Green
-                return dark ? new int[]{0xFF14532D, 0xFF86EFAC}
-                            : new int[]{0xFFDCFCE7, 0xFF16A34A};
-            case "#FF3B30": // Red
-                return dark ? new int[]{0xFF450A0A, 0xFFFCA5A5}
-                            : new int[]{0xFFFEE2E2, 0xFFDC2626};
-            case "#AF52DE": // Purple
-                return dark ? new int[]{0xFF3B0764, 0xFFD8B4FE}
-                            : new int[]{0xFFF3E8FF, 0xFF9333EA};
-            case "#FFCC00": // Yellow
-                return dark ? new int[]{0xFF451A03, 0xFFFDE68A}
-                            : new int[]{0xFFFEF3C7, 0xFFB45309};
+            case "#5FB8E8": // Sky
+                return dark ? new int[]{0xFF1A3A4A, 0xFF93D8F8}
+                            : new int[]{0xFFE0F2FE, 0xFF3B82C4};
+            case "#8CC152": // Green
+                return dark ? new int[]{0xFF1A3A1A, 0xFFA3D96A}
+                            : new int[]{0xFFE7F6E0, 0xFF6B9E38};
+            case "#F4746B": // Red
+                return dark ? new int[]{0xFF3A1515, 0xFFF4A098}
+                            : new int[]{0xFFFFE4E1, 0xFFD44944};
+            case "#B58BE0": // Purple
+                return dark ? new int[]{0xFF2A1540, 0xFFD4B8F0}
+                            : new int[]{0xFFF2E4FF, 0xFF8B5CC0};
+            case "#FFC93C": // Yellow
+                return dark ? new int[]{0xFF352A00, 0xFFFFE088}
+                            : new int[]{0xFFFFF4D0, 0xFFC89820};
             default: // Gray
-                return dark ? new int[]{0xFF374151, 0xFFD1D5DB}
-                            : new int[]{0xFFF3F4F6, 0xFF6B7280};
+                return dark ? new int[]{0xFF333028, 0xFFD1CBB8}
+                            : new int[]{0xFFF3E9D2, 0xFF8B8474};
         }
     }
 
