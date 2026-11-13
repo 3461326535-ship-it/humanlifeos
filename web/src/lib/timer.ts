@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 
 export type ActiveTimerInfo = {
@@ -62,4 +62,45 @@ export function fmtClock(sec: number): string {
   const s = sec % 60;
   const p = (n: number) => String(n).padStart(2, '0');
   return h > 0 ? `${p(h)}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+}
+
+/** 分钟数转「1h20m / 25m」，用于「今日已做」这种不跳动的地方 */
+export function fmtMinutes(min: number): string {
+  if (!min || min <= 0) return '0m';
+  // 不足 1 分钟别显示成 0m —— 刚暂停时看到 0m 会以为没记录
+  if (min < 1) return '<1m';
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  if (h <= 0) return `${m}m`;
+  return m > 0 ? `${h}h${m}m` : `${h}h`;
+}
+
+export type TimerSummary = {
+  from: string;
+  to: string;
+  total_minutes: number;
+  items: { event_id: number; minutes: number; last_at: string | null }[];
+  last_ended: { event_id: number; event_title: string; ended_at: string; minutes: number } | null;
+};
+
+/**
+ * 本地「今天」的起止，转成 DB 里存的 UTC 字符串。
+ * 前端算时区，后端只管比较，避免服务器时区与用户不一致。
+ */
+export function todayRange(): { from: string; to: string } {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start.getTime() + 86400000);
+  const toSql = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+  return { from: toSql(start), to: toSql(end) };
+}
+
+/** 今日按任务的累计（暂停后仍能看到已做多久） */
+export function useTimerSummary() {
+  const { from, to } = todayRange();
+  return useQuery({
+    queryKey: ['timerSummary', from, to],
+    queryFn: () => api.timerSummary(from, to),
+    refetchInterval: 10000,
+  });
 }

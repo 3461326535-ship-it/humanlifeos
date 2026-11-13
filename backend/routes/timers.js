@@ -24,4 +24,15 @@ router.get('/active', (req, res) => {
   });
 });
 
+// 某一时间窗内按任务的累计（前端按本地时区算出 from/to，再转成 UTC 字符串）
+// 暂停 = 结束当前段落；继续 = 新开一段；累计不清零。
+router.get('/summary', (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) return res.status(400).json({ error: 'from / to 必填（UTC 时间字符串）' });
+  EventModel.getTimerSummary(uid(req), String(from), String(to), (err, data) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(data);
+  });
+});
+
 module.exports = router;

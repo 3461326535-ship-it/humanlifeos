@@ -704,6 +704,62 @@ class EventModel {
     });
   }
 
+  // ===== 计时：某一时间窗内按任务的累计（暂停/继续依赖它，停止不再「清零」）=====
+  // from/to 由前端按本地时区算好并转成 UTC 字符串传入，避免服务器时区猜测。
+  static getTimerSummary(userId, from, to, callback) {
+    const userWhere = userId != null ? 'te.user_id = ?' : 'te.user_id IS NULL';
+    const params = userId != null ? [userId, from, to] : [from, to];
+
+    // 已结束的用 ended_at - started_at 精确算，避免 duration_min 的「至少 1 分钟」下限放大累计
+    const durExpr = `CASE WHEN te.ended_at IS NULL
+        THEN (strftime('%s','now') - strftime('%s', te.started_at)) / 60.0
+        ELSE (strftime('%s', te.ended_at) - strftime('%s', te.started_at)) / 60.0 END`;
+
+    db.all(
+      `SELECT te.event_id, SUM(${durExpr}) AS minutes, MAX(COALESCE(te.ended_at, te.started_at)) AS last_at
+       FROM time_entries te
+       WHERE ${userWhere} AND te.started_at >= ? AND te.started_at < ?
+       GROUP BY te.event_id`,
+      params,
+      (err, rows) => {
+        if (err) return callback(err, null);
+
+        const items = (rows || []).map(r => ({
+          event_id: r.event_id,
+          minutes: Math.round((r.minutes || 0) * 10) / 10,
+          last_at: r.last_at
+        }));
+
+        // 最近一条已结束的段落：浮标据此显示「已暂停 · 继续」
+        db.get(
+          `SELECT te.event_id, te.ended_at, e.title AS event_title
+           FROM time_entries te LEFT JOIN events e ON e.id = te.event_id
+           WHERE ${userWhere} AND te.ended_at IS NOT NULL
+             AND te.started_at >= ? AND te.started_at < ?
+           ORDER BY te.ended_at DESC LIMIT 1`,
+          params,
+          (err2, last) => {
+            if (err2) return callback(err2, null);
+            const lastItem = last ? items.find(i => i.event_id === last.event_id) : null;
+            callback(null, {
+              from,
+              to,
+              // 保留 1 位小数：整段都被四舍五入成 0 会让「今日累计」看起来没记录
+              total_minutes: Math.round(items.reduce((s, i) => s + i.minutes, 0) * 10) / 10,
+              items,
+              last_ended: last ? {
+                event_id: last.event_id,
+                event_title: last.event_title,
+                ended_at: last.ended_at,
+                minutes: lastItem ? lastItem.minutes : 0
+              } : null
+            });
+          }
+        );
+      }
+    );
+  }
+
   // ===== 计时：获取当前进行中的计时（顶栏实时计时器用）=====
   static getActiveTimer(userId, callback) {
     const where = userId != null ? 'WHERE te.user_id = ?' : 'WHERE te.user_id IS NULL';

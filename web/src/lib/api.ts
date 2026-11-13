@@ -108,6 +108,15 @@ export const api = {
       elapsed?: number;
     }>('/timers/active');
   },
+  timerSummary(from: string, to: string) {
+    return request<{
+      from: string;
+      to: string;
+      total_minutes: number;
+      items: { event_id: number; minutes: number; last_at: string | null }[];
+      last_ended: { event_id: number; event_title: string; ended_at: string; minutes: number } | null;
+    }>(`/timers/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+  },
 
   // ── 习惯打卡（零物化：只读 occurrences，不写 events）──
   getHabitOccurrences(from: string, to: string) {
