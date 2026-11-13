@@ -52,7 +52,7 @@ export default function EventTimer({ eventId }: { eventId: number }) {
     mutationFn: () => api.timerStart(eventId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['timeEntries', eventId] });
-      qc.invalidateQueries({ queryKey: ['activeTimer'] });
+      qc.invalidateQueries({ queryKey: ['runningTimers'] });
       qc.invalidateQueries({ queryKey: ['timerSummary'] });
     },
   });
@@ -60,7 +60,7 @@ export default function EventTimer({ eventId }: { eventId: number }) {
     mutationFn: () => api.timerStop(eventId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['timeEntries', eventId] });
-      qc.invalidateQueries({ queryKey: ['activeTimer'] });
+      qc.invalidateQueries({ queryKey: ['runningTimers'] });
       qc.invalidateQueries({ queryKey: ['timerSummary'] });
     },
   });

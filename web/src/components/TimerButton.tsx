@@ -1,24 +1,19 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../lib/api';
-import { fmtClock, fmtMinutes, runningSec, useTimerSummary, useTimerSwitch } from '../lib/timer';
+import { fmtClock, fmtMinutes, runningSec, useRunningTimers, useTimerSummary, useTimerSwitch } from '../lib/timer';
 
 /**
  * 任务行内的计时开关，三态：
  *   未开始 → ▶（hover 出现）
  *   进行中 → ■ + 今日累计走的表盘，点击 = 暂停（结束这一段，不清零）
  *   今日已做 → ▶ + 今日累计，点击 = 继续（新开一段，表盘接着之前的时长走）
- * 自己订阅 activeTimer / timerSummary，与右栏卡、全局浮标共享缓存。
+ * 多个任务可以同时计时，这里只看自己那一条；与右栏卡、全局浮标共享缓存。
  */
 export default function TimerButton({ eventId }: { eventId: number }) {
-  const { data: active } = useQuery({
-    queryKey: ['activeTimer'],
-    queryFn: api.getActiveTimer,
-    refetchInterval: 5000,
-  });
+  const { data: runningList } = useRunningTimers();
   const { data: summary } = useTimerSummary();
   const { start, stop } = useTimerSwitch();
-  const running = Boolean(active?.running && active.event_id === eventId);
+  const mine = runningList?.items.find((i) => i.event_id === eventId);
+  const running = Boolean(mine);
   const todayMin = summary?.items.find((i) => i.event_id === eventId)?.minutes ?? 0;
   const paused = !running && todayMin > 0;
   const [, setTick] = useState(0);
@@ -31,7 +26,7 @@ export default function TimerButton({ eventId }: { eventId: number }) {
 
   const busy = start.isPending || stop.isPending;
   // 连续表盘：已结束段落 + 当前段，继续计时不会从 0 重新数
-  const clock = fmtClock(runningSec(summary, eventId, active?.started_at));
+  const clock = fmtClock(runningSec(summary, eventId, mine?.started_at));
   const err = (start.error || stop.error) as Error | null;
   const label = err
     ? `计时失败：${err.message}`

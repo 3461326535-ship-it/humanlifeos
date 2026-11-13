@@ -108,6 +108,20 @@ export const api = {
       elapsed?: number;
     }>('/timers/active');
   },
+  runningTimers() {
+    return request<{
+      running: boolean;
+      count: number;
+      items: {
+        id: number;
+        event_id: number;
+        event_title: string;
+        event_status?: string;
+        started_at: string;
+        elapsed: number;
+      }[];
+    }>('/timers/running');
+  },
   timerSummary(from: string, to: string) {
     return request<{
       from: string;

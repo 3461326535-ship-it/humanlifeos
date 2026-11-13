@@ -24,6 +24,25 @@ router.get('/active', (req, res) => {
   });
 });
 
+// 所有进行中的计时：允许同时给多个任务开表，前端列表 / 浮标 / 右栏卡都用它
+router.get('/running', (req, res) => {
+  EventModel.getRunningTimers(uid(req), (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const items = (rows || []).map((row) => {
+      const startedMs = new Date(row.started_at.replace(' ', 'T') + 'Z').getTime();
+      return {
+        id: row.id,
+        event_id: row.event_id,
+        event_title: row.event_title,
+        event_status: row.event_status,
+        started_at: row.started_at,
+        elapsed: Math.max(0, Math.round((Date.now() - startedMs) / 1000)),
+      };
+    });
+    res.json({ running: items.length > 0, count: items.length, items });
+  });
+});
+
 // 某一时间窗内按任务的累计（前端按本地时区算出 from/to，再转成 UTC 字符串）
 // 暂停 = 结束当前段落；继续 = 新开一段；累计不清零。
 router.get('/summary', (req, res) => {

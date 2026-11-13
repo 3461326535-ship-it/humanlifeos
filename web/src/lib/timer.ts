@@ -11,16 +11,24 @@ export type ActiveTimerInfo = {
   elapsed?: number;
 };
 
+export type RunningTimer = {
+  id: number;
+  event_id: number;
+  event_title: string;
+  event_status?: string;
+  started_at: string;
+  elapsed: number;
+};
+
 /**
- * 计时器统一开关。
- *
- * 后端允许多个任务同时有进行中的 time_entries，但 /api/timers/active 只返回最新一条，
- * UI 也按「同一时间只专注一件事」呈现。因此在这里落实单专注语义：
- * 开始新任务前先结束别处正在进行的计时，避免出现「库里两条在跑、界面只显示一条」。
+ * 计时器开关。
+ * 允许多个任务同时计时（开会顺手记一笔、边写文档边等编译都常见），
+ * 开始新任务不会再打断别处正在跑的计时；同一任务仍然只有一段在跑。
  */
 export function useTimerSwitch() {
   const qc = useQueryClient();
   const refresh = () => {
+    qc.invalidateQueries({ queryKey: ['runningTimers'] });
     qc.invalidateQueries({ queryKey: ['activeTimer'] });
     qc.invalidateQueries({ queryKey: ['events'] });
     qc.invalidateQueries({ queryKey: ['timeEntries'] });
@@ -29,17 +37,7 @@ export function useTimerSwitch() {
   };
 
   const start = useMutation({
-    mutationFn: async (id: number) => {
-      const cur = await api.getActiveTimer();
-      if (cur.running && cur.event_id && cur.event_id !== id) {
-        try {
-          await api.timerStop(cur.event_id);
-        } catch {
-          // 旧计时可能刚被详情弹窗 / 别的页面结束，不该卡住新任务开始
-        }
-      }
-      return api.timerStart(id);
-    },
+    mutationFn: (id: number) => api.timerStart(id),
     onSuccess: refresh,
   });
 
@@ -49,6 +47,15 @@ export function useTimerSwitch() {
   });
 
   return { start, stop };
+}
+
+/** 所有进行中的计时（列表/浮标/右栏卡共用一份缓存） */
+export function useRunningTimers() {
+  return useQuery({
+    queryKey: ['runningTimers'],
+    queryFn: api.runningTimers,
+    refetchInterval: 5000,
+  });
 }
 
 /** DB 里的 'YYYY-MM-DD HH:MM:SS' 是 UTC，换算成已进行秒数 */

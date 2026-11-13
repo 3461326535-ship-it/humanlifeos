@@ -767,6 +767,22 @@ class EventModel {
     );
   }
 
+  // ===== 计时：所有进行中的计时（允许同时开多个任务，互不打断）=====
+  static getRunningTimers(userId, callback) {
+    const where = userId != null ? 'te.user_id = ?' : 'te.user_id IS NULL';
+    db.all(
+      `SELECT te.id, te.event_id, te.started_at, e.title AS event_title, e.status AS event_status
+       FROM time_entries te LEFT JOIN events e ON e.id = te.event_id
+       WHERE ${where} AND te.ended_at IS NULL
+       ORDER BY te.started_at ASC`,
+      userId != null ? [userId] : [],
+      (err, rows) => {
+        if (err) return callback(err, null);
+        callback(null, rows || []);
+      }
+    );
+  }
+
   // ===== 计时：获取当前进行中的计时（顶栏实时计时器用）=====
   static getActiveTimer(userId, callback) {
     const where = userId != null ? 'WHERE te.user_id = ?' : 'WHERE te.user_id IS NULL';

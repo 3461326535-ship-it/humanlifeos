@@ -1,20 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../lib/api';
-import { fmtClock, runningSec, useTimerSummary, useTimerSwitch } from '../lib/timer';
+import { fmtClock, runningSec, useRunningTimers, useTimerSummary, useTimerSwitch } from '../lib/timer';
 
 /**
- * 右栏「专注计时」卡：只负责显示与结束。
- * 表盘按「今日累计」连续走（暂停后继续不归零）。
- * 开始计时移到任务行内的 ▶（可对任意任务），不再默认给第一条待办起表。
- * 原「重置」按钮与「结束」调用同一个 stop 接口、语义重复，已去掉。
+ * 右栏「专注计时」卡：
+ *   大数字 = 今日累计（所有任务，含正在跑的段）
+ *   下面按任务列出正在计时的几条，各自带连续表盘与暂停按钮 —— 允许同时挂多个
+ * 开始计时在任务行内的 ▶（可对任意任务），这里只负责看与停。
  */
 export default function ActiveTimer() {
-  const { data } = useQuery({
-    queryKey: ['activeTimer'],
-    queryFn: api.getActiveTimer,
-    refetchInterval: 5000,
-  });
+  const { data: runningList } = useRunningTimers();
   const { data: summary } = useTimerSummary();
   const { stop } = useTimerSwitch();
   const [, setTick] = useState(0);
@@ -24,8 +18,9 @@ export default function ActiveTimer() {
     return () => clearInterval(t);
   }, []);
 
-  const running = Boolean(data?.running && data.started_at && data.event_id);
-  const elapsed = running ? runningSec(summary, data!.event_id, data!.started_at) : 0;
+  const items = runningList?.items ?? [];
+  const running = items.length > 0;
+  const todayClock = fmtClock(Math.round((summary?.total_minutes ?? 0) * 60));
 
   return (
     <div className="card p-4">
@@ -34,7 +29,7 @@ export default function ActiveTimer() {
         {running && (
           <span className="flex items-center gap-1.5 text-[11px] text-moss">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-moss" />
-            进行中
+            {items.length > 1 ? `${items.length} 个进行中` : '进行中'}
           </span>
         )}
       </div>
@@ -44,27 +39,39 @@ export default function ActiveTimer() {
           running ? 'text-ink' : 'text-ink-faint'
         }`}
       >
-        {fmtClock(elapsed)}
+        {todayClock}
       </div>
+      <p className="mt-1.5 text-[11px] text-ink-faint">今日累计（全部任务）</p>
 
-      <div className="mt-3 flex items-center gap-2">
-        {running ? (
-          <button
-            className="h-8 flex-1 rounded-lg bg-moss-deep text-[12.5px] font-medium text-white transition-colors hover:bg-moss disabled:opacity-50"
-            onClick={() => stop.mutate(data!.event_id!)}
-            disabled={stop.isPending}
-          >
-            结束
-          </button>
-        ) : (
-          <div className="flex h-8 flex-1 items-center rounded-lg border border-dashed border-line px-2.5 text-[11.5px] text-ink-soft">
-            点任务右侧 ▶ 开始计时
-          </div>
-        )}
-      </div>
+      {running ? (
+        <ul className="mt-3 space-y-1.5">
+          {items.map((it) => (
+            <li key={it.id} className="flex items-center gap-2 rounded-lg bg-paper-deep/70 px-2 py-1.5">
+              <span className="h-1.5 w-1.5 flex-none animate-pulse rounded-full bg-moss" />
+              <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink-mid">{it.event_title}</span>
+              <span className="flex-none text-[12px] tabular-nums text-ink">
+                {fmtClock(runningSec(summary, it.event_id, it.started_at))}
+              </span>
+              <button
+                type="button"
+                onClick={() => stop.mutate(it.event_id)}
+                disabled={stop.isPending}
+                className="flex h-6 flex-none items-center rounded-md bg-card px-1.5 text-[11px] text-ink-soft ring-1 ring-line transition-colors hover:text-coral hover:ring-coral/40 disabled:opacity-50"
+                title={`暂停「${it.event_title}」（今日累计保留）`}
+              >
+                暂停
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="mt-3 flex h-8 items-center rounded-lg border border-dashed border-line px-2.5 text-[11.5px] text-ink-soft">
+          点任务右侧 ▶ 开始计时
+        </div>
+      )}
 
-      <p className="mt-2.5 truncate text-[11.5px] text-ink-soft">
-        {running ? <>正在做：{data?.event_title}</> : <>换一条任务会自动结束当前计时</>}
+      <p className="mt-2.5 text-[11.5px] text-ink-soft">
+        {running ? '可以同时给多个任务计时，互不打断' : '暂停后累计保留，随时继续'}
       </p>
     </div>
   );
