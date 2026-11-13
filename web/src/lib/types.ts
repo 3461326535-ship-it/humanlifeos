@@ -118,6 +118,9 @@ export interface StatsOverview {
     createdInRange: number;
   };
   trend: { day: string; n: number }[];
+  /** 窗口内专注时长（按时间轴去重 / 未去重），后端新口径才有 */
+  focusMinutes?: number;
+  focusSumMinutes?: number;
   statusDistribution: Record<TaskStatus, number>;
   projectHours: { id: number; name: string; color: string | null; minutes: number; entries: number }[];
 }

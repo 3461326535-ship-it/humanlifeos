@@ -127,6 +127,8 @@ export const api = {
       from: string;
       to: string;
       total_minutes: number;
+      sum_minutes: number;
+      overlap_minutes: number;
       items: { event_id: number; minutes: number; finished_seconds: number; last_at: string | null }[];
       last_ended: { event_id: number; event_title: string; ended_at: string; minutes: number } | null;
     }>(`/timers/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);

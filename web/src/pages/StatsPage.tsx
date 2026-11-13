@@ -86,7 +86,9 @@ export default function StatsPage() {
     () => (stats ? stats.projectHours.reduce((s, p) => s + p.minutes, 0) : 0),
     [stats]
   );
-  const avgFocus = range > 0 ? Math.round(totalMinutes / range) : 0;
+  // 平均专注用「按时间轴去重」的时长（同时开多个计时不叠加），没有新字段时回落到项目工时之和
+  const focusMinutes = stats?.focusMinutes ?? totalMinutes;
+  const avgFocus = range > 0 ? Math.round(focusMinutes / range) : 0;
 
   // 连续完成天数：从今天（或昨天）往前数，每天至少完成过一条
   const streak = useMemo(() => {
@@ -128,7 +130,11 @@ export default function StatsPage() {
               sub={`本周期 ${stats.totals.all} 项任务`}
               accent
             />
-            <MetricCard label="平均专注" value={totalMinutes > 0 ? fmtDuration(avgFocus) : '—'} sub={totalMinutes > 0 ? '每天' : '暂无计时'} />
+            <MetricCard
+              label="平均专注"
+              value={focusMinutes > 0 ? fmtDuration(avgFocus) : '—'}
+              sub={focusMinutes > 0 ? '每天 · 已按时间轴去重' : '暂无计时'}
+            />
             <MetricCard label="连续完成" value={`${streak} 天`} sub="含今天" />
           </div>
 

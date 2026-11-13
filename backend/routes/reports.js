@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models/db');
 const { sanitizeError } = require('../../middleware/sanitizeError');
+const { unionSeconds } = require('../utils/timeWindow');
 
 function uid(req) { return req.user ? req.user.userId : null; }
 function scope(userId) {
@@ -39,13 +40,12 @@ router.get('/daily', (req, res) => {
         (err2, createdRow) => {
           if (err2) return res.status(500).json({ error: sanitizeError(err2) });
 
-          // 3) 当日计时汇总
-          db.get(
-            `SELECT COUNT(*) AS entries, COALESCE(SUM(duration_min), 0) AS minutes
-             FROM time_entries
+          // 3) 当日计时汇总（按时间轴去重：同时开多个计时时重叠段只算一次）
+          db.all(
+            `SELECT started_at, ended_at FROM time_entries
              WHERE user_id ${userId != null ? '= ?' : 'IS NULL'} AND started_at LIKE ?`,
             scopeParams(userId, [dayPrefix]),
-            (err3, timeRow) => {
+            (err3, segRows) => {
               if (err3) return res.status(500).json({ error: sanitizeError(err3) });
 
               // 4) 当日随手记
@@ -57,19 +57,20 @@ router.get('/daily', (req, res) => {
                 (err4, notes) => {
                   if (err4) return res.status(500).json({ error: sanitizeError(err4) });
 
-                  const minutes = timeRow ? timeRow.minutes : 0;
+                  const union = unionSeconds(segRows);
+                  const minutes = Math.round(union.seconds / 60);
                   res.json({
                     date,
                     completedCount: completed.length,
                     completed,
                     createdCount: createdRow ? createdRow.n : 0,
                     time: {
-                      entries: timeRow ? timeRow.entries : 0,
+                      entries: (segRows || []).length,
                       minutes,
-                      hours: Math.round(minutes / 60 * 10) / 10
+                      hours: Math.round((minutes / 60) * 10) / 10
                     },
                     notes,
-                    summary: `完成 ${completed.length} 项，新建 ${createdRow ? createdRow.n : 0} 项，计时 ${Math.round(minutes / 60 * 10) / 10} 小时，随手记 ${notes.length} 条。`
+                    summary: `完成 ${completed.length} 项，新建 ${createdRow ? createdRow.n : 0} 项，计时 ${Math.round((minutes / 60) * 10) / 10} 小时，随手记 ${notes.length} 条。`
                   });
                 }
               );

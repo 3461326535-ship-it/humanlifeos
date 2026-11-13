@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models/db');
 const { sanitizeError } = require('../../middleware/sanitizeError');
+const { unionSeconds } = require('../utils/timeWindow');
 
 function uid(req) { return req.user ? req.user.userId : null; }
 function scope(userId) {
@@ -94,19 +95,33 @@ router.get('/overview', (req, res) => {
                 (err4, projectRows) => {
                   if (err4) return res.status(500).json({ error: sanitizeError(err4) });
 
-                  res.json({
-                    range,
-                    window: { fromDay, toDay, fromTs, toTs },
-                    totals: {
-                      all: total,
-                      ...statusDistribution,
-                      completionRate: total > 0 ? Math.round(statusDistribution.done / total * 100) : 0,
-                      createdInRange: createdRow ? createdRow.n : 0
-                    },
-                    trend: trendRows,
-                    statusDistribution,
-                    projectHours: projectRows.map(p => ({ ...p, minutes: Math.round(p.minutes) }))
-                  });
+                  // 5) 窗口内的专注时长（按时间轴去重，同时开多个计时不叠加）
+                  db.all(
+                    `SELECT started_at, ended_at FROM time_entries
+                     WHERE ${scope(userId)} AND started_at >= ? AND started_at < ?`,
+                    scopeParams(userId, [fromTs, toTs]),
+                    (err5, segRows) => {
+                      if (err5) return res.status(500).json({ error: sanitizeError(err5) });
+
+                      const union = unionSeconds(segRows);
+                      res.json({
+                        range,
+                        window: { fromDay, toDay, fromTs, toTs },
+                        totals: {
+                          all: total,
+                          ...statusDistribution,
+                          completionRate: total > 0 ? Math.round(statusDistribution.done / total * 100) : 0,
+                          createdInRange: createdRow ? createdRow.n : 0
+                        },
+                        trend: trendRows,
+                        statusDistribution,
+                        // 专注时长：去重后（时间轴长度）与未去重之和
+                        focusMinutes: Math.round(union.seconds / 60),
+                        focusSumMinutes: Math.round(union.sumSeconds / 60),
+                        projectHours: projectRows.map(p => ({ ...p, minutes: Math.round(p.minutes) }))
+                      });
+                    }
+                  );
                 }
               );
             }

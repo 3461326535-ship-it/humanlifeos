@@ -21,6 +21,7 @@ export default function ActiveTimer() {
   const items = runningList?.items ?? [];
   const running = items.length > 0;
   const todayClock = fmtClock(Math.round((summary?.total_minutes ?? 0) * 60));
+  const overlap = Math.round(summary?.overlap_minutes ?? 0);
 
   return (
     <div className="card p-4">
@@ -41,7 +42,10 @@ export default function ActiveTimer() {
       >
         {todayClock}
       </div>
-      <p className="mt-1.5 text-[11px] text-ink-faint">今日累计（全部任务）</p>
+      <p className="mt-1.5 text-[11px] text-ink-faint">
+        今日累计（全部任务）
+        {overlap >= 1 && ` · 已按时间轴去重，重叠 ${overlap} 分钟只算一次`}
+      </p>
 
       {running ? (
         <ul className="mt-3 space-y-1.5">

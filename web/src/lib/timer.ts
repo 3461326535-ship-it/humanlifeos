@@ -96,7 +96,12 @@ export type TimerSummaryItem = {
 export type TimerSummary = {
   from: string;
   to: string;
+  /** 时间轴去重后的总时长（同时开多个计时，重叠只算一次） */
   total_minutes: number;
+  /** 各段简单相加（未去重） */
+  sum_minutes: number;
+  /** 重叠掉的分钟数 = sum_minutes - total_minutes */
+  overlap_minutes: number;
   items: TimerSummaryItem[];
   last_ended: { event_id: number; event_title: string; ended_at: string; minutes: number } | null;
 };
