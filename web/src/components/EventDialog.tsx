@@ -26,7 +26,8 @@ function toDraft(
   defaultStatus: TaskStatus = 'todo',
   defaultRecurrence: Recurrence | '' = '',
   defaultEndDate = '',
-  defaultMilestone = false
+  defaultMilestone = false,
+  defaultTime = ''
 ): Draft {
   if (event) {
     const milestone = !!event.is_milestone;
@@ -50,7 +51,7 @@ function toDraft(
     date: defaultDate,
     end_date: defaultMilestone ? '' : defaultEndDate,
     milestone: defaultMilestone,
-    time: '',
+    time: defaultTime,
     category: '',
     description: '',
     status: defaultStatus,
@@ -86,6 +87,7 @@ export default function EventDialog({
   defaultRecurrence = '',
   defaultEndDate = '',
   defaultMilestone = false,
+  defaultTime = '',
   onClose,
   onSaved,
 }: {
@@ -95,12 +97,14 @@ export default function EventDialog({
   defaultRecurrence?: Recurrence | '';
   defaultEndDate?: string;
   defaultMilestone?: boolean;
+  /** 新建时的默认时间 HH:MM（日历「实际」视图双击空白补记用） */
+  defaultTime?: string;
   onClose: () => void;
   /** 保存成功回调；新建时带回刚创建的任务，编辑时为 undefined */
   onSaved?: (created?: TodoEvent) => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() =>
-    toDraft(event, defaultDate, defaultStatus, defaultRecurrence, defaultEndDate, defaultMilestone)
+    toDraft(event, defaultDate, defaultStatus, defaultRecurrence, defaultEndDate, defaultMilestone, defaultTime)
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');

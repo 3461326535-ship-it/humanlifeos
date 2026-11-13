@@ -108,6 +108,16 @@ export const api = {
       elapsed?: number;
     }>('/timers/active');
   },
+  timelineActual(params: { fromTs: string; toTs: string; fromDay: string; toDay: string; tz: number }) {
+    const qs = new URLSearchParams({
+      from: params.fromTs,
+      to: params.toTs,
+      fromDay: params.fromDay,
+      toDay: params.toDay,
+      tz: String(params.tz),
+    });
+    return request<import('./actual').ActualLoad>(`/timeline/actual?${qs.toString()}`);
+  },
   runningTimers() {
     return request<{
       running: boolean;
@@ -204,7 +214,11 @@ export const api = {
   },
 
   // ── 统计 / 战报 ──
-  statsOverview(range = 7, win?: { fromDay: string; toDay: string; fromTs: string; toTs: string }) {
+  statsOverview(
+    range = 7,
+    win?: { fromDay: string; toDay: string; fromTs: string; toTs: string },
+    tz?: number
+  ) {
     const qs = new URLSearchParams({ range: String(range) });
     if (win) {
       qs.set('fromDay', win.fromDay);
@@ -212,10 +226,15 @@ export const api = {
       qs.set('fromTs', win.fromTs);
       qs.set('toTs', win.toTs);
     }
+    if (tz != null) qs.set('tz', String(tz));
     return request<StatsOverview>(`/stats/overview?${qs.toString()}`);
   },
-  dailyReport(date?: string) {
-    return request<DailyReport>(`/reports/daily${date ? `?date=${date}` : ''}`);
+  dailyReport(date?: string, tz?: number) {
+    const qs = new URLSearchParams();
+    if (date) qs.set('date', date);
+    if (tz != null) qs.set('tz', String(tz));
+    const s = qs.toString();
+    return request<DailyReport>(`/reports/daily${s ? `?${s}` : ''}`);
   },
   toggleEvent(id: number) {
     return request<TodoEvent>(`/events/${id}/toggle`, { method: 'PATCH' });

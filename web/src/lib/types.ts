@@ -68,6 +68,8 @@ export interface HabitOccurrence {
   title: string;
   date: string;
   time: string;
+  /** 习惯结束时间（可空；空则按 45 分钟占位） */
+  end_time?: string;
   category: string;
   rrule: string;
   status: HabitStatus;
@@ -118,9 +120,11 @@ export interface StatsOverview {
     createdInRange: number;
   };
   trend: { day: string; n: number }[];
-  /** 窗口内专注时长（按时间轴去重 / 未去重），后端新口径才有 */
+  /** 窗口内实际投入（任务 ∪ 习惯，按时间轴去重 / 未去重） */
   focusMinutes?: number;
   focusSumMinutes?: number;
+  focusTaskMinutes?: number;
+  focusHabitMinutes?: number;
   statusDistribution: Record<TaskStatus, number>;
   projectHours: { id: number; name: string; color: string | null; minutes: number; entries: number }[];
 }
@@ -130,7 +134,16 @@ export interface DailyReport {
   completedCount: number;
   completed: { id: number; title: string; category: string; project_id: number | null; completed_at: string }[];
   createdCount: number;
-  time: { entries: number; minutes: number; hours: number };
+  time: {
+    entries: number;
+    /** 实际投入（任务 ∪ 习惯，按时间轴去重） */
+    minutes: number;
+    hours: number;
+    taskMinutes?: number;
+    habitMinutes?: number;
+    overlapMinutes?: number;
+    sumMinutes?: number;
+  };
   notes: { id: number; content: string; created_at: string }[];
   summary: string;
 }

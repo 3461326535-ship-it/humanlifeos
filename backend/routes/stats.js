@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models/db');
 const { sanitizeError } = require('../../middleware/sanitizeError');
-const { unionSeconds } = require('../utils/timeWindow');
+const { collect } = require('../services/actualLoad');
 
 function uid(req) { return req.user ? req.user.userId : null; }
 function scope(userId) {
@@ -28,6 +28,8 @@ router.get('/overview', (req, res) => {
   const toTs = isTs(req.query.toTs) ? req.query.toTs : sqlTs(new Date(now.getTime() + 86400000));
   const fromDay = isDay(req.query.fromDay) ? req.query.fromDay : fromTs.slice(0, 10);
   const toDay = isDay(req.query.toDay) ? req.query.toDay : toTs.slice(0, 10);
+  // 本地时区偏移（东八区 480），习惯按本地时间落位；没传就按服务器时区
+  const tzOffsetMin = req.query.tz != null && req.query.tz !== '' ? Number(req.query.tz) : -new Date().getTimezoneOffset();
 
   // 1) 状态分布 + 总量：本周期内的任务 = 计划日期落在窗口内 或 完成于窗口内
   //    （排除软归档的周期实例，否则 155 这种全量数字会把未来的重复实例也算进来）
@@ -95,15 +97,12 @@ router.get('/overview', (req, res) => {
                 (err4, projectRows) => {
                   if (err4) return res.status(500).json({ error: sanitizeError(err4) });
 
-                  // 5) 窗口内的专注时长（按时间轴去重，同时开多个计时不叠加）
-                  db.all(
-                    `SELECT started_at, ended_at FROM time_entries
-                     WHERE ${scope(userId)} AND started_at >= ? AND started_at < ?`,
-                    scopeParams(userId, [fromTs, toTs]),
-                    (err5, segRows) => {
+                  // 5) 窗口内的「实际投入」：任务计时 ∪ 已打卡习惯，按时间轴去重
+                  collect(
+                    { userId, fromTs, toTs, fromDay, toDay, tzOffsetMin },
+                    (err5, actual) => {
                       if (err5) return res.status(500).json({ error: sanitizeError(err5) });
 
-                      const union = unionSeconds(segRows);
                       res.json({
                         range,
                         window: { fromDay, toDay, fromTs, toTs },
@@ -115,9 +114,11 @@ router.get('/overview', (req, res) => {
                         },
                         trend: trendRows,
                         statusDistribution,
-                        // 专注时长：去重后（时间轴长度）与未去重之和
-                        focusMinutes: Math.round(union.seconds / 60),
-                        focusSumMinutes: Math.round(union.sumSeconds / 60),
+                        // 实际投入：去重后（时间轴长度）与未去重之和，另给任务/习惯拆分
+                        focusMinutes: Math.round(actual.total_minutes),
+                        focusSumMinutes: Math.round(actual.sum_minutes),
+                        focusTaskMinutes: Math.round(actual.task_minutes),
+                        focusHabitMinutes: Math.round(actual.habit_minutes),
                         projectHours: projectRows.map(p => ({ ...p, minutes: Math.round(p.minutes) }))
                       });
                     }

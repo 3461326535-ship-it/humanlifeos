@@ -19,6 +19,7 @@ const activitiesRouter = require('./backend/routes/activities');
 const statsRouter = require('./backend/routes/stats');
 const reportsRouter = require('./backend/routes/reports');
 const timersRouter = require('./backend/routes/timers');
+const timelineRouter = require('./backend/routes/timeline');
 // v0.4 三分类：Habit / Recurring Task / 统一日历
 const habitsRouter = require('./backend/routes/habits');
 const recurringRulesRouter = require('./backend/routes/recurring-rules');
@@ -130,6 +131,7 @@ app.use('/api/activities', optionalAuth, activitiesRouter); // 动态流: /api/a
 app.use('/api/stats', optionalAuth, statsRouter);    // 统计: /api/stats/overview
 app.use('/api/reports', optionalAuth, reportsRouter); // 战报: /api/reports/daily
 app.use('/api/timers', optionalAuth, timersRouter);   // 计时: /api/timers/active
+app.use('/api/timeline', optionalAuth, timelineRouter); // 时间轴实际投入: /api/timeline/actual
 // v0.4 三分类 API（旧 /api/events /overview /daily 保持兼容，不动）
 app.use('/api/habits', optionalAuth, habitsRouter);                    // 习惯: 规则、按日状态、统计
 app.use('/api/recurring-rules', optionalAuth, recurringRulesRouter);   // 周期任务: 规则、窗口实例、归档

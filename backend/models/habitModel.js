@@ -189,6 +189,7 @@ function createHabitModel(db) {
                   title: h.title,
                   date,
                   time: h.start_time || '',
+                  end_time: h.end_time || '',
                   category: h.category,
                   rrule: h.rrule,
                   status,

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models/db');
 const { sanitizeError } = require('../../middleware/sanitizeError');
-const { unionSeconds } = require('../utils/timeWindow');
+const { collect } = require('../services/actualLoad');
 
 function uid(req) { return req.user ? req.user.userId : null; }
 function scope(userId) {
@@ -22,6 +22,12 @@ router.get('/daily', (req, res) => {
   const userId = uid(req);
   const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : todayStr();
   const dayPrefix = date + '%';
+  // 当日窗口（本地 00:00 → 次日 00:00，转成 UTC 给 actualLoad）
+  const tzOffsetMin = req.query.tz != null && req.query.tz !== '' ? Number(req.query.tz) : -new Date().getTimezoneOffset();
+  const [yy, mm, dd] = date.split('-').map(Number);
+  const sqlTs = (d) => new Date(d).toISOString().slice(0, 19).replace('T', ' ');
+  const winFrom = sqlTs(Date.UTC(yy, mm - 1, dd) - tzOffsetMin * 60000);
+  const winTo = sqlTs(Date.UTC(yy, mm - 1, dd + 1) - tzOffsetMin * 60000);
 
   // 1) 当日完成的任务（按 completed_at）
   db.all(
@@ -40,12 +46,10 @@ router.get('/daily', (req, res) => {
         (err2, createdRow) => {
           if (err2) return res.status(500).json({ error: sanitizeError(err2) });
 
-          // 3) 当日计时汇总（按时间轴去重：同时开多个计时时重叠段只算一次）
-          db.all(
-            `SELECT started_at, ended_at FROM time_entries
-             WHERE user_id ${userId != null ? '= ?' : 'IS NULL'} AND started_at LIKE ?`,
-            scopeParams(userId, [dayPrefix]),
-            (err3, segRows) => {
+          // 3) 当日实际投入：任务计时 ∪ 已打卡习惯，按时间轴去重（重叠只算一次）
+          collect(
+            { userId, fromTs: winFrom, toTs: winTo, fromDay: date, toDay: date, tzOffsetMin },
+            (err3, actual) => {
               if (err3) return res.status(500).json({ error: sanitizeError(err3) });
 
               // 4) 当日随手记
@@ -57,20 +61,25 @@ router.get('/daily', (req, res) => {
                 (err4, notes) => {
                   if (err4) return res.status(500).json({ error: sanitizeError(err4) });
 
-                  const union = unionSeconds(segRows);
-                  const minutes = Math.round(union.seconds / 60);
+                  const minutes = Math.round(actual.total_minutes);
+                  const hours = Math.round((minutes / 60) * 10) / 10;
                   res.json({
                     date,
                     completedCount: completed.length,
                     completed,
                     createdCount: createdRow ? createdRow.n : 0,
                     time: {
-                      entries: (segRows || []).length,
+                      entries: actual.segments.length,
                       minutes,
-                      hours: Math.round((minutes / 60) * 10) / 10
+                      hours,
+                      // 拆分：任务 / 习惯各自去重后的时长，以及重叠掉了多少
+                      taskMinutes: Math.round(actual.task_minutes),
+                      habitMinutes: Math.round(actual.habit_minutes),
+                      overlapMinutes: Math.round(actual.overlap_minutes),
+                      sumMinutes: Math.round(actual.sum_minutes)
                     },
                     notes,
-                    summary: `完成 ${completed.length} 项，新建 ${createdRow ? createdRow.n : 0} 项，计时 ${Math.round((minutes / 60) * 10) / 10} 小时，随手记 ${notes.length} 条。`
+                    summary: `完成 ${completed.length} 项，新建 ${createdRow ? createdRow.n : 0} 项，实际投入 ${hours} 小时（含习惯、已去重），随手记 ${notes.length} 条。`
                   });
                 }
               );
@@ -94,6 +103,12 @@ router.get('/v04', (req, res) => {
   const userId = uid(req);
   const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : todayStr();
   const dayPrefix = date + '%';
+  // 当日窗口（本地 00:00 → 次日 00:00，转成 UTC 给 actualLoad）
+  const tzOffsetMin = req.query.tz != null && req.query.tz !== '' ? Number(req.query.tz) : -new Date().getTimezoneOffset();
+  const [yy, mm, dd] = date.split('-').map(Number);
+  const sqlTs = (d) => new Date(d).toISOString().slice(0, 19).replace('T', ' ');
+  const winFrom = sqlTs(Date.UTC(yy, mm - 1, dd) - tzOffsetMin * 60000);
+  const winTo = sqlTs(Date.UTC(yy, mm - 1, dd + 1) - tzOffsetMin * 60000);
 
   const asPromise = (fn) => new Promise((resolve, reject) => {
     fn((err, data) => err ? reject(err) : resolve(data));

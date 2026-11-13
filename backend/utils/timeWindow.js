@@ -10,32 +10,22 @@ function toEpoch(sqliteTs) {
 }
 
 /**
- * @param {Array<{started_at: string, ended_at: string|null}>} rows
- * @param {number} nowSec 进行中的段按此时刻截断
- * @returns {{ seconds:number, minutes:number, sumSeconds:number, overlapSeconds:number }}
- *   seconds      = 去重后的总秒数（时间轴长度）
- *   sumSeconds   = 各段简单相加（未去重，可用于展示「重叠了多少」）
- *   overlapSeconds = 两者之差
+ * 合并一组 [start, end] 区间（epoch 秒），重叠或首尾相接只算一次。
+ * @param {Array<[number, number]>} intervals
  */
-function unionSeconds(rows, nowSec = Math.floor(Date.now() / 1000)) {
-  const segs = [];
+function unionOfIntervals(intervals) {
+  const segs = (intervals || [])
+    .filter((p) => Array.isArray(p) && p.length === 2 && p[0] != null && p[1] != null)
+    .map(([s, e]) => [s, Math.max(s, e)])
+    .sort((a, b) => a[0] - b[0]);
+
   let sumSeconds = 0;
-
-  (rows || []).forEach((r) => {
-    const s = toEpoch(r.started_at);
-    if (!Number.isFinite(s)) return;
-    const rawEnd = r.ended_at ? toEpoch(r.ended_at) : nowSec;
-    const e = Number.isFinite(rawEnd) ? Math.max(s, rawEnd) : s;
-    segs.push([s, e]);
-    sumSeconds += e - s;
-  });
-
-  segs.sort((a, b) => a[0] - b[0]);
-
   let merged = 0;
   let curS = null;
   let curE = null;
+
   for (const [s, e] of segs) {
+    sumSeconds += e - s;
     if (curS === null) {
       curS = s;
       curE = e;
@@ -57,4 +47,21 @@ function unionSeconds(rows, nowSec = Math.floor(Date.now() / 1000)) {
   };
 }
 
-module.exports = { toEpoch, unionSeconds };
+/**
+ * @param {Array<{started_at: string, ended_at: string|null}>} rows
+ * @param {number} nowSec 进行中的段按此时刻截断
+ * @returns {{ seconds:number, minutes:number, sumSeconds:number, overlapSeconds:number }}
+ *   seconds      = 去重后的总秒数（时间轴长度）
+ *   sumSeconds   = 各段简单相加（未去重，可用于展示「重叠了多少」）
+ *   overlapSeconds = 两者之差
+ */
+function unionSeconds(rows, nowSec = Math.floor(Date.now() / 1000)) {
+  const intervals = (rows || []).map((r) => {
+    const s = toEpoch(r.started_at);
+    const rawEnd = r.ended_at ? toEpoch(r.ended_at) : nowSec;
+    return [s, Number.isFinite(rawEnd) ? Math.max(s, rawEnd) : s];
+  });
+  return unionOfIntervals(intervals.filter(([s]) => Number.isFinite(s)));
+}
+
+module.exports = { toEpoch, unionSeconds, unionOfIntervals };

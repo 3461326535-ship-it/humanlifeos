@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fmtClock, runningSec, useRunningTimers, useTimerSummary, useTimerSwitch } from '../lib/timer';
+import { dayStr, dayWindow, useActualLoad } from '../lib/actual';
 
 /**
  * 右栏「专注计时」卡：
- *   大数字 = 今日累计（所有任务，含正在跑的段）
+ *   大数字 = 今日实际投入（任务 ∪ 已打卡习惯，按时间轴去重）
  *   下面按任务列出正在计时的几条，各自带连续表盘与暂停按钮 —— 允许同时挂多个
  * 开始计时在任务行内的 ▶（可对任意任务），这里只负责看与停。
  */
@@ -18,10 +19,19 @@ export default function ActiveTimer() {
     return () => clearInterval(t);
   }, []);
 
+  const today = dayStr(new Date());
+  const win = useMemo(() => dayWindow(today), [today]);
+  const { data: actual } = useActualLoad(win);
+
   const items = runningList?.items ?? [];
   const running = items.length > 0;
-  const todayClock = fmtClock(Math.round((summary?.total_minutes ?? 0) * 60));
-  const overlap = Math.round(summary?.overlap_minutes ?? 0);
+  // 实际投入（含习惯、已去重）；后端还没返回时先按任务口径兜底
+  const actualMinutes = actual?.total_minutes ?? summary?.total_minutes ?? 0;
+  const todayClock = fmtClock(Math.round(actualMinutes * 60));
+  const overlap = Math.round(actual?.overlap_minutes ?? summary?.overlap_minutes ?? 0);
+  const habitMinutes = Math.round(actual?.habit_minutes ?? 0);
+  // 接近 24 小时（20 小时起）就提示：这是真实生命占用，不是可刷的绩效
+  const nearFullDay = actualMinutes >= 20 * 60;
 
   return (
     <div className="card p-4">
@@ -43,9 +53,17 @@ export default function ActiveTimer() {
         {todayClock}
       </div>
       <p className="mt-1.5 text-[11px] text-ink-faint">
-        今日累计（全部任务）
-        {overlap >= 1 && ` · 已按时间轴去重，重叠 ${overlap} 分钟只算一次`}
+        今日实际投入 · 含习惯
+        {habitMinutes > 0 && ` ${habitMinutes}m`}
+        {overlap >= 1 && ` · 已去重，重叠 ${overlap}m 只算一次`}
       </p>
+
+      {/* 去重后仍接近一天：这已经不是「效率指标」而是真实生命占用，提醒一句 */}
+      {nearFullDay && (
+        <p className="mt-2 rounded-md bg-coral/10 px-2 py-1.5 text-[11px] leading-relaxed text-coral">
+          今天已真实占用 {Math.floor(actualMinutes / 60)} 小时 —— 这个数字是生命的实际占用，不是完成量。专注力可能有损耗，早点休息。
+        </p>
+      )}
 
       {running ? (
         <ul className="mt-3 space-y-1.5">

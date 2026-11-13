@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { TaskStatus } from '../lib/types';
 import { STATUS_LABELS } from '../lib/types';
+import { tzOffsetMin } from '../lib/actual';
 
 const STATUS_COLOR: Record<TaskStatus, string> = {
   todo: 'bg-ink-soft',
@@ -55,11 +56,11 @@ export default function StatsPage() {
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['stats', range, win.fromDay],
-    queryFn: () => api.statsOverview(range, win),
+    queryFn: () => api.statsOverview(range, win, tzOffsetMin()),
   });
   const { data: report } = useQuery({
     queryKey: ['report', reportDate],
-    queryFn: () => api.dailyReport(reportDate),
+    queryFn: () => api.dailyReport(reportDate, tzOffsetMin()),
   });
   const { data: allEvents } = useQuery({ queryKey: ['events'], queryFn: api.getEvents });
 
@@ -133,10 +134,15 @@ export default function StatsPage() {
             <MetricCard
               label="平均专注"
               value={focusMinutes > 0 ? fmtDuration(avgFocus) : '—'}
-              sub={focusMinutes > 0 ? '每天 · 已按时间轴去重' : '暂无计时'}
+              sub={focusMinutes > 0 ? '每天 · 含习惯，已去重' : '暂无计时'}
             />
             <MetricCard label="连续完成" value={`${streak} 天`} sub="含今天" />
           </div>
+
+          <p className="-mt-1 text-[11px] leading-5 text-ink-faint">
+            时长口径：实际投入 ＝ 任务计时 ∪ 已打卡习惯时段，按时间轴去重 ——
+            并行（如渲染＋写周报）与习惯重叠的时间只算一次。
+          </p>
 
           {/* ── 近 N 天完成数：细柱 ── */}
           <section className="card px-5 pb-4 pt-4">
@@ -264,8 +270,17 @@ export default function StatsPage() {
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <MiniStat label="完成" value={report.completedCount} />
                   <MiniStat label="新建" value={report.createdCount} />
-                  <MiniStat label="计时" value={`${report.time.hours} 时`} />
+                  <MiniStat label="实际投入" value={`${report.time.hours} 时`} />
                 </div>
+                <p className="mt-2 text-[11px] leading-5 text-ink-faint">
+                  已按时间轴去重并行与习惯重叠时间
+                  {report.time.taskMinutes != null && report.time.habitMinutes != null && (
+                    <>
+                      {' '}· 任务 {report.time.taskMinutes}m / 习惯 {report.time.habitMinutes}m
+                    </>
+                  )}
+                  {report.time.overlapMinutes ? ` · 合并重叠 ${report.time.overlapMinutes}m` : ''}
+                </p>
                 {report.completed.length > 0 && (
                   <div className="mt-4">
                     <p className="mb-1.5 text-[12px] font-medium text-ink-mid">当日完成</p>
