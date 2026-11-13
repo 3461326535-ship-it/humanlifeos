@@ -24,6 +24,8 @@ export function useTimerSwitch() {
     qc.invalidateQueries({ queryKey: ['activeTimer'] });
     qc.invalidateQueries({ queryKey: ['events'] });
     qc.invalidateQueries({ queryKey: ['timeEntries'] });
+    // 今日累计/连续表盘的基数，暂停或继续后立刻刷新，别等 10s 轮询
+    qc.invalidateQueries({ queryKey: ['timerSummary'] });
   };
 
   const start = useMutation({
@@ -75,13 +77,36 @@ export function fmtMinutes(min: number): string {
   return m > 0 ? `${h}h${m}m` : `${h}h`;
 }
 
+export type TimerSummaryItem = {
+  event_id: number;
+  /** 今天该任务的总累计（含正在跑的这一段），刷新间隔 10s，适合文字展示 */
+  minutes: number;
+  /** 今天已结束段落的精确秒数，配合当前段做连续表盘 */
+  finished_seconds: number;
+  last_at: string | null;
+};
+
 export type TimerSummary = {
   from: string;
   to: string;
   total_minutes: number;
-  items: { event_id: number; minutes: number; last_at: string | null }[];
+  items: TimerSummaryItem[];
   last_ended: { event_id: number; event_title: string; ended_at: string; minutes: number } | null;
 };
+
+/**
+ * 进行中任务「连续」表盘的秒数 = 今天已结束段落 + 当前段。
+ * 暂停后继续应该从 3:01 接着走，而不是回到 0:01 —— 暂停不清零，显示也得连续。
+ */
+export function runningSec(
+  summary: TimerSummary | undefined,
+  eventId: number | undefined,
+  startedAt: string | undefined
+): number {
+  if (!eventId) return elapsedSec(startedAt);
+  const finished = summary?.items.find((i) => i.event_id === eventId)?.finished_seconds ?? 0;
+  return finished + elapsedSec(startedAt);
+}
 
 /**
  * 本地「今天」的起止，转成 DB 里存的 UTC 字符串。

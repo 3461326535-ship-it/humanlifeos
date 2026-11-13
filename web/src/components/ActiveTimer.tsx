@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { elapsedSec, fmtClock, useTimerSwitch } from '../lib/timer';
+import { fmtClock, runningSec, useTimerSummary, useTimerSwitch } from '../lib/timer';
 
 /**
  * 右栏「专注计时」卡：只负责显示与结束。
+ * 表盘按「今日累计」连续走（暂停后继续不归零）。
  * 开始计时移到任务行内的 ▶（可对任意任务），不再默认给第一条待办起表。
  * 原「重置」按钮与「结束」调用同一个 stop 接口、语义重复，已去掉。
  */
@@ -14,6 +15,7 @@ export default function ActiveTimer() {
     queryFn: api.getActiveTimer,
     refetchInterval: 5000,
   });
+  const { data: summary } = useTimerSummary();
   const { stop } = useTimerSwitch();
   const [, setTick] = useState(0);
 
@@ -23,7 +25,7 @@ export default function ActiveTimer() {
   }, []);
 
   const running = Boolean(data?.running && data.started_at && data.event_id);
-  const elapsed = running ? elapsedSec(data!.started_at) : 0;
+  const elapsed = running ? runningSec(summary, data!.event_id, data!.started_at) : 0;
 
   return (
     <div className="card p-4">

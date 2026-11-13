@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { elapsedSec, fmtClock, fmtMinutes, useTimerSummary, useTimerSwitch } from '../lib/timer';
+import { fmtClock, fmtMinutes, runningSec, useTimerSummary, useTimerSwitch } from '../lib/timer';
 
 /**
  * 全局计时浮标：
- *   进行中 → 任务名 + 实时时长 + 暂停
+ *   进行中 → 任务名 + 今日累计走的表盘（暂停后继续不会归零）+ 暂停
  *   刚暂停 → 任务名 + 今日累计 + 继续 / 收起（避免暂停后「入口消失」）
  * 未计时且没有可续的段落时完全不渲染，位置避开右下角 AI 助手浮标。
  */
@@ -43,7 +43,7 @@ export default function TimerFloat() {
           <div className="min-w-0 flex-1">
             <p className="truncate text-[11.5px] text-ink-soft">正在计时 · {active!.event_title}</p>
             <p className="text-[15px] font-semibold leading-tight tabular-nums text-ink">
-              {fmtClock(elapsedSec(active!.started_at))}
+              {fmtClock(runningSec(summary, active!.event_id, active!.started_at))}
             </p>
           </div>
           <button

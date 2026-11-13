@@ -715,8 +715,14 @@ class EventModel {
         THEN (strftime('%s','now') - strftime('%s', te.started_at)) / 60.0
         ELSE (strftime('%s', te.ended_at) - strftime('%s', te.started_at)) / 60.0 END`;
 
+    // 只统计「已经结束的段落」的秒数：前端拿它 + 当前段秒数，让继续计时时
+    // 表盘接着 3:01 往下走，而不是从 0 重新数（暂停不清零、显示也要连续）
+    const finishedSecExpr = `SUM(CASE WHEN te.ended_at IS NULL THEN 0
+        ELSE strftime('%s', te.ended_at) - strftime('%s', te.started_at) END)`;
+
     db.all(
-      `SELECT te.event_id, SUM(${durExpr}) AS minutes, MAX(COALESCE(te.ended_at, te.started_at)) AS last_at
+      `SELECT te.event_id, SUM(${durExpr}) AS minutes, ${finishedSecExpr} AS finished_seconds,
+              MAX(COALESCE(te.ended_at, te.started_at)) AS last_at
        FROM time_entries te
        WHERE ${userWhere} AND te.started_at >= ? AND te.started_at < ?
        GROUP BY te.event_id`,
@@ -727,6 +733,7 @@ class EventModel {
         const items = (rows || []).map(r => ({
           event_id: r.event_id,
           minutes: Math.round((r.minutes || 0) * 10) / 10,
+          finished_seconds: r.finished_seconds || 0,
           last_at: r.last_at
         }));
 

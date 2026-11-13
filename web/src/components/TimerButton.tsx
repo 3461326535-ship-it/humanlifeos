@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { elapsedSec, fmtClock, fmtMinutes, useTimerSummary, useTimerSwitch } from '../lib/timer';
+import { fmtClock, fmtMinutes, runningSec, useTimerSummary, useTimerSwitch } from '../lib/timer';
 
 /**
  * 任务行内的计时开关，三态：
  *   未开始 → ▶（hover 出现）
- *   进行中 → ■ + 实时时长，点击 = 暂停（结束这一段，不清零）
- *   今日已做 → ▶ + 今日累计，点击 = 继续（新开一段）
+ *   进行中 → ■ + 今日累计走的表盘，点击 = 暂停（结束这一段，不清零）
+ *   今日已做 → ▶ + 今日累计，点击 = 继续（新开一段，表盘接着之前的时长走）
  * 自己订阅 activeTimer / timerSummary，与右栏卡、全局浮标共享缓存。
  */
 export default function TimerButton({ eventId }: { eventId: number }) {
@@ -30,12 +30,13 @@ export default function TimerButton({ eventId }: { eventId: number }) {
   }, [running]);
 
   const busy = start.isPending || stop.isPending;
-  const clock = fmtClock(elapsedSec(active?.started_at));
+  // 连续表盘：已结束段落 + 当前段，继续计时不会从 0 重新数
+  const clock = fmtClock(runningSec(summary, eventId, active?.started_at));
   const err = (start.error || stop.error) as Error | null;
   const label = err
     ? `计时失败：${err.message}`
     : running
-      ? `暂停计时（这一段已 ${clock}）`
+      ? `暂停计时（今日已 ${clock}）`
       : paused
         ? `继续计时（今日已 ${fmtMinutes(todayMin)}）`
         : '开始计时';
