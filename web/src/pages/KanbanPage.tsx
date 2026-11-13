@@ -375,10 +375,13 @@ export default function KanbanPage() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status, position }: { id: number; status: TaskStatus; position: number }) =>
       api.updateStatus(id, status, position),
+    // 失败要显式提示：否则乐观更新会被 invalidate 悄悄拉回，看起来像「刷新就回去了」
+    onError: (err: Error) => setBanner(`状态保存失败：${err.message}`),
     onSettled: invalidate,
   });
   const reorderMutation = useMutation({
     mutationFn: (items: { id: number; position: number }[]) => api.reorder(items),
+    onError: (err: Error) => setBanner(`排序保存失败：${err.message}`),
     onSettled: invalidate,
   });
 

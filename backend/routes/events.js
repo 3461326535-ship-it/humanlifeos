@@ -173,7 +173,8 @@ router.patch('/:id/status', validate({
 }), (req, res) => {
   const id = parseInt(req.params.id);
   EventModel.updateStatus(uid(req), id, req.body.status, req.body.position, (err, event) => {
-    if (err) return res.status(500).json({ error: sanitizeError(err) });
+    // model 对「0 行受影响」会给出 404，别再统一压成 500
+    if (err) return res.status(err.statusCode || 500).json({ error: sanitizeError(err) });
     if (!event) return res.status(404).json({ error: '事件不存在' });
     res.json(event);
   });

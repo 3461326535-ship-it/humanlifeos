@@ -562,11 +562,20 @@ class EventModel {
       values.push(Number(position));
     }
     const where = userId != null ? 'WHERE id = ? AND user_id = ?' : 'WHERE id = ? AND user_id IS NULL';
-    if (userId != null) values.push(userId);
+    // 占位符顺序必须与 WHERE 一致：先 id，再 user_id。
+    // 之前写成 [userId, id] 会让 UPDATE 命中 0 行，而 SQLite 不报错，
+    // 接口仍返回 200 + 旧记录，前端 invalidate 后卡片回到原列（「状态没保存」）。
     values.push(id);
+    if (userId != null) values.push(userId);
 
-    db.run(`UPDATE events SET ${setClauses.join(', ')} ${where}`, values, (err) => {
+    db.run(`UPDATE events SET ${setClauses.join(', ')} ${where}`, values, function (err) {
       if (err) return callback(err, null);
+      // 防呆：0 行受影响说明事件不存在或不属于当前用户，不能再静默成功
+      if (this.changes === 0) {
+        const notFound = new Error('事件不存在或无权修改（状态未保存）');
+        notFound.statusCode = 404;
+        return callback(notFound, null);
+      }
       EventModel._logActivityForEvent(userId, id, s === 'done' ? 'complete' : 'status_change', { status: s });
 
       const finish = () => EventModel.getEventById(userId, id, callback);
