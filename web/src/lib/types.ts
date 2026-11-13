@@ -106,6 +106,8 @@ export interface HabitInput {
 
 export interface StatsOverview {
   range: number;
+  /** 统计窗口：本地日期 + 对应的 UTC 时间戳（前端按本地时区算好，避免服务器猜） */
+  window?: { fromDay: string; toDay: string; fromTs: string; toTs: string };
   totals: {
     all: number;
     todo: number;

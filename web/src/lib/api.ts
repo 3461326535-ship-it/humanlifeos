@@ -188,8 +188,15 @@ export const api = {
   },
 
   // ── 统计 / 战报 ──
-  statsOverview(range = 7) {
-    return request<StatsOverview>(`/stats/overview?range=${range}`);
+  statsOverview(range = 7, win?: { fromDay: string; toDay: string; fromTs: string; toTs: string }) {
+    const qs = new URLSearchParams({ range: String(range) });
+    if (win) {
+      qs.set('fromDay', win.fromDay);
+      qs.set('toDay', win.toDay);
+      qs.set('fromTs', win.fromTs);
+      qs.set('toTs', win.toTs);
+    }
+    return request<StatsOverview>(`/stats/overview?${qs.toString()}`);
   },
   dailyReport(date?: string) {
     return request<DailyReport>(`/reports/daily${date ? `?date=${date}` : ''}`);

@@ -11,15 +11,35 @@ function scopeParams(userId, extra) {
   return userId != null ? [userId, ...extra] : extra;
 }
 
-// 概览统计：GET /api/stats/overview?range=7|30
+// 概览统计：GET /api/stats/overview?range=7|30|90&fromDay=&toDay=&fromTs=&toTs=
+// 口径：状态分布 / 完成率 / 完成趋势 / 项目工时 一律限定在「所选周期」内，
+// 且只统计任务（events 表）。习惯打卡在 habits 表、走 /api/stats/v04，不混进这里的完成率。
 router.get('/overview', (req, res) => {
   const userId = uid(req);
   const range = [7, 30, 90].includes(parseInt(req.query.range)) ? parseInt(req.query.range) : 7;
 
-  // 1) 状态分布 + 总量（全部事件）
+  // 窗口由前端按本地时区算好传进来（服务器时区不可信）；没传就退化成本机 UTC 近 N 天
+  const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const isTs = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(v);
+  const sqlTs = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+  const now = new Date();
+  const fromTs = isTs(req.query.fromTs) ? req.query.fromTs : sqlTs(new Date(now.getTime() - (range - 1) * 86400000));
+  const toTs = isTs(req.query.toTs) ? req.query.toTs : sqlTs(new Date(now.getTime() + 86400000));
+  const fromDay = isDay(req.query.fromDay) ? req.query.fromDay : fromTs.slice(0, 10);
+  const toDay = isDay(req.query.toDay) ? req.query.toDay : toTs.slice(0, 10);
+
+  // 1) 状态分布 + 总量：本周期内的任务 = 计划日期落在窗口内 或 完成于窗口内
+  //    （排除软归档的周期实例，否则 155 这种全量数字会把未来的重复实例也算进来）
   db.all(
-    `SELECT status, COUNT(*) AS n FROM events WHERE ${scope(userId)} GROUP BY status`,
-    scopeParams(userId, []),
+    `SELECT status, COUNT(*) AS n FROM events
+     WHERE ${scope(userId)}
+       AND COALESCE(archived_at, '') = ''
+       AND (
+         (date >= ? AND date <= ?)
+         OR (completed_at IS NOT NULL AND completed_at >= ? AND completed_at < ?)
+       )
+     GROUP BY status`,
+    scopeParams(userId, [fromDay, toDay, fromTs, toTs]),
     (err, statusRows) => {
       if (err) return res.status(500).json({ error: sanitizeError(err) });
 
@@ -34,34 +54,49 @@ router.get('/overview', (req, res) => {
         `SELECT substr(completed_at, 1, 10) AS day, COUNT(*) AS n
          FROM events
          WHERE ${scope(userId)} AND completed_at IS NOT NULL
-           AND completed_at >= datetime('now', '-' || ? || ' days')
+           AND completed_at >= ? AND completed_at < ?
          GROUP BY day ORDER BY day`,
-        scopeParams(userId, [range]),
+        scopeParams(userId, [fromTs, toTs]),
         (err2, trendRows) => {
           if (err2) return res.status(500).json({ error: sanitizeError(err2) });
 
           // 3) 近 N 天新建数
           db.get(
             `SELECT COUNT(*) AS n FROM events
-             WHERE ${scope(userId)} AND created_at >= datetime('now', '-' || ? || ' days')`,
-            scopeParams(userId, [range]),
+             WHERE ${scope(userId)} AND created_at >= ? AND created_at < ?`,
+            scopeParams(userId, [fromTs, toTs]),
             (err3, createdRow) => {
               if (err3) return res.status(500).json({ error: sanitizeError(err3) });
 
-              // 4) 项目工时（time_entries 聚合，分钟）
+              // 4) 项目工时：只算落在窗口内的计时段（进行中的按当前时刻算），零工时的项目不列出
+              //    注意占位符顺序：SUM(...) 在 SELECT 里、先于 WHERE 的 p.user_id，故时间参数在前
+              const projParams = [fromTs, toTs];
+              if (userId != null) projParams.push(userId);
               db.all(
-                `SELECT p.id, p.name, p.color, COALESCE(SUM(t.duration_min), 0) AS minutes, COUNT(t.id) AS entries
+                `SELECT p.id, p.name, p.color,
+                        COALESCE(SUM(
+                          CASE WHEN t.started_at >= ? AND t.started_at < ? THEN
+                            CASE WHEN t.ended_at IS NULL
+                              THEN (strftime('%s','now') - strftime('%s', t.started_at)) / 60.0
+                              ELSE (strftime('%s', t.ended_at) - strftime('%s', t.started_at)) / 60.0
+                            END
+                          END
+                        ), 0) AS minutes,
+                        COUNT(t.id) AS entries
                  FROM projects p
                  LEFT JOIN events e ON e.project_id = p.id
                  LEFT JOIN time_entries t ON t.event_id = e.id
                  WHERE p.${scope(userId)} AND p.status != 'deleted'
-                 GROUP BY p.id ORDER BY minutes DESC`,
-                scopeParams(userId, []),
+                 GROUP BY p.id
+                 HAVING minutes > 0
+                 ORDER BY minutes DESC`,
+                projParams,
                 (err4, projectRows) => {
                   if (err4) return res.status(500).json({ error: sanitizeError(err4) });
 
                   res.json({
                     range,
+                    window: { fromDay, toDay, fromTs, toTs },
                     totals: {
                       all: total,
                       ...statusDistribution,
@@ -70,7 +105,7 @@ router.get('/overview', (req, res) => {
                     },
                     trend: trendRows,
                     statusDistribution,
-                    projectHours: projectRows
+                    projectHours: projectRows.map(p => ({ ...p, minutes: Math.round(p.minutes) }))
                   });
                 }
               );

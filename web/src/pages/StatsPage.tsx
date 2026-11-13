@@ -29,13 +29,33 @@ function md(day: string) {
   return `${Number(p[1])}/${Number(p[2])}`;
 }
 
+/**
+ * 本地时区的「近 N 天」窗口。
+ * fromDay/toDay 用于和 events.date（本地日期串）比较；
+ * fromTs/toTs 是同一窗口的 UTC 时间串，用于 completed_at / created_at / started_at 比较。
+ * 窗口在前端算，避免服务器时区与用户不一致导致「今天」错位。
+ */
+function rangeWindow(days: number) {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (days - 1));
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+  end.setDate(end.getDate() + 1);
+  const lastDay = new Date(end.getTime() - 86400000);
+  const toSql = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+  return { fromDay: fmt(start), toDay: fmt(lastDay), fromTs: toSql(start), toTs: toSql(end) };
+}
+
 export default function StatsPage() {
   const [range, setRange] = useState(7);
   const [reportDate, setReportDate] = useState(fmt(new Date()));
 
+  const win = useMemo(() => rangeWindow(range), [range]);
+
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['stats', range],
-    queryFn: () => api.statsOverview(range),
+    queryKey: ['stats', range, win.fromDay],
+    queryFn: () => api.statsOverview(range, win),
   });
   const { data: report } = useQuery({
     queryKey: ['report', reportDate],
@@ -43,7 +63,22 @@ export default function StatsPage() {
   });
   const { data: allEvents } = useQuery({ queryKey: ['events'], queryFn: api.getEvents });
 
-  const maxTrend = stats ? Math.max(1, ...stats.trend.map((t) => t.n)) : 1;
+  // 补齐 N 天（后端只返回有完成记录的天，缺的天补 0，柱子才等宽）
+  const trendDays = useMemo(() => {
+    const map = new Map((stats?.trend ?? []).map((t) => [t.day, t.n]));
+    const out: { day: string; n: number }[] = [];
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - (range - 1));
+    for (let i = 0; i < range; i += 1) {
+      const key = fmt(d);
+      out.push({ day: key, n: map.get(key) ?? 0 });
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }, [stats, range]);
+
+  const maxTrend = Math.max(1, ...trendDays.map((t) => t.n));
   const maxProj = stats ? Math.max(1, ...stats.projectHours.map((p) => p.minutes)) : 1;
 
   const weekDone = useMemo(() => (stats ? stats.trend.reduce((s, t) => s + t.n, 0) : 0), [stats]);
@@ -87,7 +122,12 @@ export default function StatsPage() {
           {/* ── 四张指标卡 ── */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <MetricCard label="本周期完成" value={weekDone} sub={`${range} 天内`} />
-            <MetricCard label="完成率" value={`${stats.totals.completionRate}%`} sub={`共 ${stats.totals.all} 项`} accent />
+            <MetricCard
+              label="完成率"
+              value={`${stats.totals.completionRate}%`}
+              sub={`本周期 ${stats.totals.all} 项任务`}
+              accent
+            />
             <MetricCard label="平均专注" value={totalMinutes > 0 ? fmtDuration(avgFocus) : '—'} sub={totalMinutes > 0 ? '每天' : '暂无计时'} />
             <MetricCard label="连续完成" value={`${streak} 天`} sub="含今天" />
           </div>
@@ -102,29 +142,30 @@ export default function StatsPage() {
               </span>
             </div>
             <div className="flex h-[168px] items-end gap-1">
-              {stats.trend.length === 0 && (
+              {trendDays.every((t) => t.n === 0) ? (
                 <div className="flex h-full w-full items-center justify-center text-[12px] text-ink-soft">
                   近 {range} 天还没有完成记录
                 </div>
+              ) : (
+                trendDays.map((t) => {
+                  const isToday = t.day === fmt(new Date());
+                  const h = t.n === 0 ? 0 : Math.max(4, Math.round((t.n / maxTrend) * 132));
+                  return (
+                    <div key={t.day} className="group/bar flex flex-1 flex-col items-center justify-end gap-2" title={`${t.day}：${t.n} 项`}>
+                      <span className="text-[10px] tabular-nums text-ink-soft opacity-0 transition-opacity group-hover/bar:opacity-100">
+                        {t.n}
+                      </span>
+                      <div
+                        className={`w-[6px] rounded-full transition-colors ${t.n === 0 ? 'bg-line-soft' : isToday ? 'bg-moss-deep' : 'bg-moss/60 group-hover/bar:bg-moss'}`}
+                        style={{ height: Math.max(2, h) }}
+                      />
+                      <span className={`text-[10.5px] ${isToday ? 'font-medium text-ink' : 'text-ink-soft'}`}>
+                        {range <= 7 ? weekdayCN(t.day) : md(t.day)}
+                      </span>
+                    </div>
+                  );
+                })
               )}
-              {stats.trend.map((t) => {
-                const isToday = t.day === fmt(new Date());
-                const h = Math.max(4, Math.round((t.n / maxTrend) * 132));
-                return (
-                  <div key={t.day} className="group/bar flex flex-1 flex-col items-center justify-end gap-2" title={`${t.day}：${t.n} 项`}>
-                    <span className="text-[10px] tabular-nums text-ink-soft opacity-0 transition-opacity group-hover/bar:opacity-100">
-                      {t.n}
-                    </span>
-                    <div
-                      className={`w-[6px] rounded-full transition-colors ${isToday ? 'bg-moss-deep' : 'bg-moss/60 group-hover/bar:bg-moss'}`}
-                      style={{ height: h }}
-                    />
-                    <span className={`text-[10.5px] ${isToday ? 'font-medium text-ink' : 'text-ink-soft'}`}>
-                      {range <= 7 ? weekdayCN(t.day) : md(t.day)}
-                    </span>
-                  </div>
-                );
-              })}
             </div>
           </section>
 
@@ -132,7 +173,7 @@ export default function StatsPage() {
             {/* ── 项目分布 ── */}
             <section className="card p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <h2 className="text-[14px] font-semibold text-ink">项目分布</h2>
+                <h2 className="text-[14px] font-semibold text-ink">本周期项目工时</h2>
                 <div className="ml-auto flex flex-wrap items-center gap-2.5">
                   {stats.projectHours.slice(0, 3).map((p, i) => (
                     <span key={p.id} className="flex items-center gap-1 text-[11px] text-ink-soft">
@@ -143,7 +184,7 @@ export default function StatsPage() {
                 </div>
               </div>
               {stats.projectHours.length === 0 ? (
-                <p className="py-6 text-[12px] text-ink-soft">还没有项目或计时记录</p>
+                <p className="py-6 text-[12px] text-ink-soft">本周期还没有计时记录</p>
               ) : (
                 <ul className="space-y-3">
                   {stats.projectHours.map((p, i) => (
@@ -171,7 +212,7 @@ export default function StatsPage() {
             <section className="card p-4">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-[14px] font-semibold text-ink">状态分布</h2>
-                <span className="text-[11px] text-ink-soft">共 {stats.totals.all} 项</span>
+                <span className="text-[11px] text-ink-soft">本周期 {stats.totals.all} 项 · 不含习惯</span>
               </div>
               <ul className="space-y-3">
                 {STATUS_ORDER.map((s) => {
@@ -192,7 +233,8 @@ export default function StatsPage() {
                 })}
               </ul>
               <p className="mt-4 text-[11px] leading-5 text-ink-faint">
-                专注时段热力图需要后端按小时聚合 time_entries，接口就绪后替换这块。
+                口径：只统计任务本身（计划日期落在本周期内，或在本周期完成的），已归档的重复实例不计。
+                习惯打卡在「习惯」里单独计算，不进入这里的完成率与状态分布。
               </p>
             </section>
           </div>
