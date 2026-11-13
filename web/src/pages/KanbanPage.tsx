@@ -24,6 +24,7 @@ import { api } from '../lib/api';
 import type { TodoEvent, TaskStatus } from '../lib/types';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../lib/types';
 import EventDialog from '../components/EventDialog';
+import TimerButton from '../components/TimerButton';
 
 const COLUMNS: TaskStatus[] = ['todo', 'in_progress', 'review', 'done'];
 
@@ -151,7 +152,7 @@ function KanbanCard({
       {...attributes}
       {...listeners}
       onClick={() => onOpen(event)}
-      className="card cursor-grab p-3 active:cursor-grabbing"
+      className="card group cursor-grab p-3 active:cursor-grabbing"
     >
       <div className="flex items-start gap-2">
         {event.status === 'done' && (
@@ -171,6 +172,7 @@ function KanbanCard({
         {event.priority && event.status !== 'done' && (
           <span className={`chip flex-none border ${PRIORITY_CHIP[event.priority]}`}>{PRIORITY_TEXT[event.priority]}</span>
         )}
+        {!event.completed && event.status !== 'done' && <TimerButton eventId={event.id} />}
       </div>
 
       <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">

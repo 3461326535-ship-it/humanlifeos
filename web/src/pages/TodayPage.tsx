@@ -168,7 +168,6 @@ export default function TodayPage() {
   const { md, weekday, relative } = dateParts(date);
   const isToday = date === todayStr();
 
-  const firstOpen = openEvents[0];
   const hasAnything = shown.length > 0 || doneEvents.length > 0;
 
   return (
@@ -275,7 +274,7 @@ export default function TodayPage() {
 
       {/* ── 右栏：三张辅助卡（不是导航）── */}
       <aside className="space-y-4">
-        <ActiveTimer taskId={firstOpen?.id} taskTitle={firstOpen?.title} />
+        <ActiveTimer />
 
         {/* 今日概览：2×2 网格 */}
         <div className="card overflow-hidden">

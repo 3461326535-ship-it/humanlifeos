@@ -1,51 +1,29 @@
 import { useEffect, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
-
-function fmtClock(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(h)}:${p(m)}:${p(s)}`;
-}
+import { elapsedSec, fmtClock, useTimerSwitch } from '../lib/timer';
 
 /**
- * 右栏「专注计时」卡。
- * 未在计时时，「开始」会在传入的第一条待办上开计时（taskId / taskTitle 由今天页给）。
+ * 右栏「专注计时」卡：只负责显示与结束。
+ * 开始计时移到任务行内的 ▶（可对任意任务），不再默认给第一条待办起表。
+ * 原「重置」按钮与「结束」调用同一个 stop 接口、语义重复，已去掉。
  */
-export default function ActiveTimer({ taskId, taskTitle }: { taskId?: number; taskTitle?: string }) {
-  const qc = useQueryClient();
-  const setTick = useState(0)[1];
+export default function ActiveTimer() {
   const { data } = useQuery({
     queryKey: ['activeTimer'],
     queryFn: api.getActiveTimer,
     refetchInterval: 5000,
   });
+  const { stop } = useTimerSwitch();
+  const [, setTick] = useState(0);
 
   useEffect(() => {
     const t = setInterval(() => setTick((x) => x + 1), 1000);
     return () => clearInterval(t);
-  }, [setTick]);
+  }, []);
 
-  const refresh = () => {
-    qc.invalidateQueries({ queryKey: ['activeTimer'] });
-    qc.invalidateQueries({ queryKey: ['events'] });
-  };
-
-  const startMut = useMutation({
-    mutationFn: (id: number) => api.timerStart(id),
-    onSuccess: refresh,
-  });
-  const stopMut = useMutation({
-    mutationFn: (id: number) => api.timerStop(id),
-    onSuccess: refresh,
-  });
-
-  const running = Boolean(data?.running && data.started_at);
-  const elapsed = running
-    ? Math.max(0, Math.round((Date.now() - new Date(data!.started_at!.replace(' ', 'T') + 'Z').getTime()) / 1000))
-    : 0;
+  const running = Boolean(data?.running && data.started_at && data.event_id);
+  const elapsed = running ? elapsedSec(data!.started_at) : 0;
 
   return (
     <div className="card p-4">
@@ -59,7 +37,11 @@ export default function ActiveTimer({ taskId, taskTitle }: { taskId?: number; ta
         )}
       </div>
 
-      <div className={`text-[30px] font-medium leading-none tracking-[0.01em] tabular-nums ${running ? 'text-ink' : 'text-ink-faint'}`}>
+      <div
+        className={`text-[30px] font-medium leading-none tracking-[0.01em] tabular-nums ${
+          running ? 'text-ink' : 'text-ink-faint'
+        }`}
+      >
         {fmtClock(elapsed)}
       </div>
 
@@ -67,39 +49,20 @@ export default function ActiveTimer({ taskId, taskTitle }: { taskId?: number; ta
         {running ? (
           <button
             className="h-8 flex-1 rounded-lg bg-moss-deep text-[12.5px] font-medium text-white transition-colors hover:bg-moss disabled:opacity-50"
-            onClick={() => stopMut.mutate(data!.event_id!)}
-            disabled={stopMut.isPending}
+            onClick={() => stop.mutate(data!.event_id!)}
+            disabled={stop.isPending}
           >
             结束
           </button>
         ) : (
-          <button
-            className="h-8 flex-1 rounded-lg bg-moss-deep text-[12.5px] font-medium text-white transition-colors hover:bg-moss disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={() => taskId && startMut.mutate(taskId)}
-            disabled={!taskId || startMut.isPending}
-            title={taskId ? `在「${taskTitle}」上开始计时` : '当前没有待办任务'}
-          >
-            开始
-          </button>
+          <div className="flex h-8 flex-1 items-center rounded-lg border border-dashed border-line px-2.5 text-[11.5px] text-ink-soft">
+            点任务右侧 ▶ 开始计时
+          </div>
         )}
-        <button
-          className="h-8 flex-1 rounded-lg border border-line text-[12.5px] text-ink-mid transition-colors hover:bg-paper-deep disabled:cursor-not-allowed disabled:opacity-40"
-          onClick={() => data?.event_id && stopMut.mutate(data.event_id)}
-          disabled={!running || stopMut.isPending}
-          title="停止并清零本次计时"
-        >
-          重置
-        </button>
       </div>
 
       <p className="mt-2.5 truncate text-[11.5px] text-ink-soft">
-        {running ? (
-          <>正在做：{data?.event_title}</>
-        ) : taskId ? (
-          <>开始后会在「{taskTitle}」上计时</>
-        ) : (
-          <>今天没有待办，先加一条任务</>
-        )}
+        {running ? <>正在做：{data?.event_title}</> : <>换一条任务会自动结束当前计时</>}
       </p>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { TodoEvent } from '../lib/types';
+import TimerButton from './TimerButton';
 
 // 优先级 chip：图纸上是「浅底 + 描边」的小方牌，不是实心块
 const PRIORITY_CHIP: Record<string, string> = {
@@ -131,8 +132,9 @@ export default function EventRow({
           )}
         </div>
 
-        {/* 右：编辑按钮（hover / 触屏常显）+ 优先级牌 / 已完成绿勾 */}
+        {/* 右：行内计时 + 编辑按钮（hover / 触屏常显）+ 优先级牌 / 已完成绿勾 */}
         <div className="flex flex-none items-center gap-2">
+          {!event.completed && <TimerButton eventId={event.id} />}
           <button
             className="flex h-6 w-6 items-center justify-center rounded-md text-ink-faint opacity-40 transition-opacity hover:bg-line/60 hover:text-ink-mid sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
             onClick={(e) => {

@@ -10,6 +10,7 @@ import CalendarPage from './pages/CalendarPage';
 import StatsPage from './pages/StatsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import AiChat from './components/AiChat';
+import TimerFloat from './components/TimerFloat';
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -228,6 +229,8 @@ export default function App() {
         </Routes>
       </main>
 
+      {/* 全局计时浮标：任何页面都能看到 / 结束当前计时 */}
+      {!isLogin && <TimerFloat />}
       {/* AI 助手：浮标 + 聊天窗 + 确认弹窗，走后端现有的 /api/ai/* */}
       {!isLogin && <AiChat />}
     </div>
