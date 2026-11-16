@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { TodoEvent } from '../lib/types';
 import { PRIORITY_TEXT, priorityChipClass } from '../lib/priority';
+import { spanInfo } from '../lib/spans';
 import TimerButton from './TimerButton';
 
 function timeRange(event: TodoEvent) {
@@ -12,11 +13,14 @@ function timeRange(event: TodoEvent) {
 
 export default function EventRow({
   event,
+  viewDate,
   onToggle,
   onEdit,
   onToggleSubtask,
 }: {
   event: TodoEvent;
+  /** 正在看的那一天：跨天任务靠它算「第 N/M 天」 */
+  viewDate?: string;
   onToggle: () => void;
   onEdit: () => void;
   onToggleSubtask?: (subtaskId: number) => void;
@@ -36,10 +40,15 @@ export default function EventRow({
     else onEdit();
   };
 
-  const metaBits = [
-    event.category && event.category !== '其他' ? event.category : '',
-    range,
-  ].filter(Boolean) as string[];
+  // 跨天任务：在行内报出「第几天 / 到哪天为止 / 超期几天」。
+  // 没有它就分不清这一行是今天新排的，还是从上周一直挂到现在的。
+  const span = viewDate ? spanInfo(event, viewDate) : null;
+
+  const metaBits: { text: string; cls?: string }[] = [
+    ...(span ? [{ text: span.label, cls: span.kind === 'overdue' ? 'text-coral' : 'text-ink-mid' }] : []),
+    ...(event.category && event.category !== '其他' ? [{ text: event.category }] : []),
+    ...(range ? [{ text: range }] : []),
+  ];
 
   return (
     <li className="border-b border-line/40 last:border-b-0">
@@ -103,9 +112,9 @@ export default function EventRow({
           {(metaBits.length > 0 || subTotal > 0) && (
             <div className="mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] text-ink-soft">
               {metaBits.map((b, i) => (
-                <span key={b} className="flex items-center gap-1.5">
-                  {i > 0 && <span className="text-ink-faint">·</span>}
-                  <span className="truncate">{b}</span>
+                <span key={b.text} className="flex min-w-0 items-center gap-1.5">
+                  {i > 0 && <span className="flex-none text-ink-faint">·</span>}
+                  <span className={`truncate ${b.cls || ''}`}>{b.text}</span>
                 </span>
               ))}
 

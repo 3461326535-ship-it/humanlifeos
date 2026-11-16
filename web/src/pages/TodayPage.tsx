@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { TodoEvent, Recurrence } from '../lib/types';
+import { doneDate, endOf } from '../lib/spans';
 import EventDialog from '../components/EventDialog';
 import EventRow from '../components/EventRow';
 import ActiveTimer from '../components/ActiveTimer';
@@ -138,22 +139,53 @@ export default function TodayPage() {
       .catch(invalidate);
   };
 
+  // 「这一天该出现的任务」
+  //   · 单日任务：只有自己那天出现
+  //   · 跨天任务：起点那天进当天列表；之后每天进顶部「进行中」直到完成；
+  //              完成的那天在「已完成」里再留一条（知道是哪天收的尾）
   const dayEvents = useMemo(() => {
     if (!allEvents) return [];
     return allEvents
-      .filter((e) => e.date === date)
       .filter((e) => !q || e.title.includes(q) || (e.category || '').includes(q))
+      .filter((e) => {
+        const end = endOf(e);
+        if (!end) return e.date === date;
+        if (e.completed) return e.date === date || doneDate(e) === date;
+        return e.date === date;
+      })
       .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+  }, [allEvents, date, q]);
+
+  // 跨天且还没做完的活：从上手那天起，每天都挂在这里（已超期的排最前）
+  const carriedOver = useMemo(() => {
+    if (!allEvents) return [];
+    return allEvents
+      .filter((e) => !e.completed && endOf(e) && e.date < date)
+      .filter((e) => !q || e.title.includes(q) || (e.category || '').includes(q))
+      .sort((a, b) => {
+        const ea = endOf(a);
+        const eb = endOf(b);
+        const oa = ea < date ? 0 : 1;
+        const ob = eb < date ? 0 : 1;
+        if (oa !== ob) return oa - ob; // 已超期的先露头
+        return ea.localeCompare(eb) || (a.time || '99:99').localeCompare(b.time || '99:99');
+      });
   }, [allEvents, date, q]);
 
   const openEvents = dayEvents.filter((e) => !e.completed);
   const doneEvents = dayEvents.filter((e) => e.completed);
   const shown = focus ? openEvents : dayEvents;
+  // 待办 = 今天排的 + 还挂在手上的跨天活
+  const todoCount = openEvents.length + carriedOver.length;
   const pct = dayEvents.length > 0 ? Math.round((doneEvents.length / dayEvents.length) * 100) : 0;
 
+  // 逾期只算「真过去了还没做」的：跨天任务要过了 end_date 才算，
+  // 周期任务的往日实例不算（下周还会有同一件事，不该攒成债）
   const overdue = useMemo(() => {
     const t = todayStr();
-    return (allEvents || []).filter((e) => !e.completed && e.date < t).length;
+    return (allEvents || []).filter(
+      (e) => !e.completed && !e.rule_id && (endOf(e) || e.date) < t
+    ).length;
   }, [allEvents]);
 
   const groups = useMemo(
@@ -168,7 +200,7 @@ export default function TodayPage() {
   const { md, weekday, relative } = dateParts(date);
   const isToday = date === todayStr();
 
-  const hasAnything = shown.length > 0 || doneEvents.length > 0;
+  const hasAnything = shown.length > 0 || doneEvents.length > 0 || carriedOver.length > 0;
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -218,6 +250,31 @@ export default function TodayPage() {
           </div>
         ) : (
           <>
+            {/* 进行中：跨天的活从上手那天起每天都在这，不用回头翻开始那天 */}
+            {carriedOver.length > 0 && (
+              <section>
+                <div className="flex items-center gap-3 pb-0.5 pt-4">
+                  <span className="flex-none text-[12px] text-ink-soft">进行中 {carriedOver.length}</span>
+                  <span className="h-px flex-1 bg-line/70" />
+                </div>
+                <ul>
+                  {carriedOver.map((event) => (
+                    <EventRow
+                      key={event.id}
+                      event={event}
+                      viewDate={date}
+                      onToggle={() => toggleMutation.mutate(event.id)}
+                      onEdit={() => {
+                        setEditing(event);
+                        setDialogOpen(true);
+                      }}
+                      onToggleSubtask={(sid) => toggleSubtask(event, sid)}
+                    />
+                  ))}
+                </ul>
+              </section>
+            )}
+
             {groups.map((g) => (
               <section key={g.key}>
                 <div className="flex items-center gap-3 pb-0.5 pt-4">
@@ -229,6 +286,7 @@ export default function TodayPage() {
                     <EventRow
                       key={event.id}
                       event={event}
+                      viewDate={date}
                       onToggle={() => toggleMutation.mutate(event.id)}
                       onEdit={() => {
                         setEditing(event);
@@ -256,6 +314,7 @@ export default function TodayPage() {
                       <EventRow
                         key={event.id}
                         event={event}
+                        viewDate={date}
                         onToggle={() => toggleMutation.mutate(event.id)}
                         onEdit={() => {
                           setEditing(event);
@@ -282,7 +341,7 @@ export default function TodayPage() {
           <div className="grid grid-cols-2">
             <div className="border-b border-r border-line-soft px-4 py-3">
               <p className="text-[11.5px] text-ink-soft">待办</p>
-              <p className="mt-1 text-[22px] font-semibold leading-none tabular-nums text-ink">{openEvents.length}</p>
+              <p className="mt-1 text-[22px] font-semibold leading-none tabular-nums text-ink">{todoCount}</p>
             </div>
             <div className="border-b border-line-soft px-4 py-3">
               <p className="text-[11.5px] text-ink-soft">完成</p>

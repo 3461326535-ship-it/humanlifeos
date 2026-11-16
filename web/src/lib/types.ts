@@ -32,6 +32,10 @@ export interface TodoEvent {
   reminder: boolean;
   recurrence: Recurrence | null;
   recurrence_end_date: string | null;
+  /** 周期规则 id：有值 = 某条规则的实例（往日实例不该算成逾期） */
+  rule_id?: number | null;
+  /** 实例对应的原始发生日 */
+  occurrence_date?: string | null;
   created_at: string;
   updated_at: string;
   subtasks: Subtask[];
