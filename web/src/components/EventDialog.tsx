@@ -409,6 +409,9 @@ export default function EventDialog({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={isEdit ? '编辑任务' : '新任务'}
         className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-line/60 bg-white p-6 shadow-pop"
         onClick={(e) => e.stopPropagation()}
       >

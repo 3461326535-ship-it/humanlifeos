@@ -145,6 +145,9 @@ export default function HabitDialog({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={isEdit ? '编辑习惯' : '新习惯'}
         className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-2xl border border-line/60 bg-white p-6 shadow-pop"
         onClick={(e) => e.stopPropagation()}
       >

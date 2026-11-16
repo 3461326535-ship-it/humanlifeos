@@ -12,6 +12,7 @@ import ReviewPage from './pages/ReviewPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import AiChat from './components/AiChat';
 import TimerFloat from './components/TimerFloat';
+import QuickNote from './components/QuickNote';
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -94,6 +95,9 @@ export default function App() {
                   </button>
                 )}
               </div>
+
+              {/* 随手记：念头出现在哪个页面就在哪个页面记，不用先去统计页 */}
+              {!isLogin && <QuickNote />}
 
               {/* 筛选：只看未完成 */}
               <button

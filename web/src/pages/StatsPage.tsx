@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { saveNote, removeNote as removeNoteApi } from '../lib/noteActions';
 import type { TaskStatus } from '../lib/types';
 import { STATUS_LABELS } from '../lib/types';
 import { tzOffsetMin } from '../lib/actual';
@@ -50,10 +52,22 @@ function rangeWindow(days: number) {
 
 export default function StatsPage() {
   const [range, setRange] = useState(7);
-  const [reportDate, setReportDate] = useState(fmt(new Date()));
+  // 战报看哪天：支持 ?d=YYYY-MM-DD（页头随手记的回执「去战报看」直接落到那一天）
+  const [params] = useSearchParams();
+  const paramDay = params.get('d') ?? '';
+  const [reportDate, setReportDate] = useState(() =>
+    /^\d{4}-\d{2}-\d{2}$/.test(paramDay) ? paramDay : fmt(new Date())
+  );
 
-  // 随手记：写在这一页，因为它的归宿就是「这一天」的战报 ——
-  // 换个地方写、再回来确认有没有存上，是两倍的怀疑
+  // 已经在统计页时点回执 —— 只是 query 变了，路由组件不会重新挂载，
+  // useState 的初值也不会重算。只认 query 的变化，别覆盖手动改的日期
+  useEffect(() => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(paramDay) && paramDay !== reportDate) setReportDate(paramDay);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.toString()]);
+
+  // 随手记：这一页负责「看这一天记了什么」，写可以在任何页面 ——
+  // 页头的「记一句」和这里共用 saveNote，谁写都让所有日期的战报失效
   const queryClient = useQueryClient();
   const [noteDraft, setNoteDraft] = useState('');
   const [noteBusy, setNoteBusy] = useState(false);
@@ -78,9 +92,8 @@ export default function StatsPage() {
     setNoteBusy(true);
     setNoteErr('');
     try {
-      await api.addNote(text, reportDate);
+      await saveNote(queryClient, text, reportDate);
       setNoteDraft('');
-      queryClient.invalidateQueries({ queryKey: ['report', reportDate] });
     } catch (e) {
       setNoteErr((e as Error).message);
     } finally {
@@ -91,8 +104,7 @@ export default function StatsPage() {
   async function removeNote(id: number) {
     setNoteErr('');
     try {
-      await api.deleteNote(id);
-      queryClient.invalidateQueries({ queryKey: ['report', reportDate] });
+      await removeNoteApi(queryClient, id);
     } catch (e) {
       setNoteErr((e as Error).message);
     }
@@ -336,6 +348,7 @@ export default function StatsPage() {
                     {report.notes.length > 0 && (
                       <span className="text-[11px] tabular-nums text-ink-faint">{report.notes.length} 条</span>
                     )}
+                    <span className="ml-auto text-[11px] text-ink-faint">页头的「记一句」或按 n 随时记，不用回这一页</span>
                   </div>
 
                   {report.notes.length > 0 && (
