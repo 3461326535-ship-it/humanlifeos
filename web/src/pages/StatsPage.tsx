@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { TaskStatus } from '../lib/types';
 import { STATUS_LABELS } from '../lib/types';
@@ -52,6 +52,14 @@ export default function StatsPage() {
   const [range, setRange] = useState(7);
   const [reportDate, setReportDate] = useState(fmt(new Date()));
 
+  // 随手记：写在这一页，因为它的归宿就是「这一天」的战报 ——
+  // 换个地方写、再回来确认有没有存上，是两倍的怀疑
+  const queryClient = useQueryClient();
+  const [noteDraft, setNoteDraft] = useState('');
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [noteErr, setNoteErr] = useState('');
+  const isToday = reportDate === fmt(new Date());
+
   const win = useMemo(() => rangeWindow(range), [range]);
 
   const { data: stats, isLoading } = useQuery({
@@ -63,6 +71,32 @@ export default function StatsPage() {
     queryFn: () => api.dailyReport(reportDate, tzOffsetMin()),
   });
   const { data: allEvents } = useQuery({ queryKey: ['events'], queryFn: api.getEvents });
+
+  async function addNote() {
+    const text = noteDraft.trim();
+    if (!text || noteBusy) return;
+    setNoteBusy(true);
+    setNoteErr('');
+    try {
+      await api.addNote(text, reportDate);
+      setNoteDraft('');
+      queryClient.invalidateQueries({ queryKey: ['report', reportDate] });
+    } catch (e) {
+      setNoteErr((e as Error).message);
+    } finally {
+      setNoteBusy(false);
+    }
+  }
+
+  async function removeNote(id: number) {
+    setNoteErr('');
+    try {
+      await api.deleteNote(id);
+      queryClient.invalidateQueries({ queryKey: ['report', reportDate] });
+    } catch (e) {
+      setNoteErr((e as Error).message);
+    }
+  }
 
   // 补齐 N 天（后端只返回有完成记录的天，缺的天补 0，柱子才等宽）
   const trendDays = useMemo(() => {
@@ -295,18 +329,77 @@ export default function StatsPage() {
                     </ul>
                   </div>
                 )}
-                {report.notes.length > 0 && (
-                  <div className="mt-4">
-                    <p className="mb-1.5 text-[12px] font-medium text-ink-mid">随手记</p>
+                {/* 随手记：写在这张战报里，因为它属于「这一天」 */}
+                <div className="mt-4">
+                  <div className="mb-1.5 flex items-baseline gap-2">
+                    <p className="text-[12px] font-medium text-ink-mid">随手记</p>
+                    {report.notes.length > 0 && (
+                      <span className="text-[11px] tabular-nums text-ink-faint">{report.notes.length} 条</span>
+                    )}
+                  </div>
+
+                  {report.notes.length > 0 && (
                     <ul className="space-y-1">
                       {report.notes.map((n) => (
-                        <li key={n.id} className="rounded-lg bg-paper-deep px-2.5 py-1.5 text-[13px] text-ink-mid">
-                          {n.content}
+                        <li
+                          key={n.id}
+                          className="group flex items-start gap-2 rounded-lg bg-paper-deep px-2.5 py-1.5"
+                        >
+                          <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink-mid">
+                            {n.content}
+                          </span>
+                          <span className="mt-[3px] flex-none text-[10.5px] tabular-nums text-ink-faint">
+                            {n.created_at.slice(11, 16)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeNote(n.id)}
+                            title="删掉这条"
+                            aria-label="删掉这条随手记"
+                            className="mt-[1px] flex-none rounded px-1 text-[11px] leading-4 text-ink-faint opacity-0 transition-opacity hover:bg-coral-soft hover:text-coral group-hover:opacity-100"
+                          >
+                            ✕
+                          </button>
                         </li>
                       ))}
                     </ul>
-                  </div>
-                )}
+                  )}
+
+                  <form
+                    className="mt-1.5 flex items-center gap-1.5"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      addNote();
+                    }}
+                  >
+                    <input
+                      className="input flex-1 text-xs"
+                      value={noteDraft}
+                      maxLength={500}
+                      onChange={(e) => {
+                        setNoteDraft(e.target.value);
+                        if (noteErr) setNoteErr('');
+                      }}
+                      placeholder={
+                        isToday ? '记一句今天的事，回车保存' : `补记一句 ${md(reportDate)} 的事，回车保存`
+                      }
+                      aria-label="随手记一句话"
+                    />
+                    <button
+                      type="submit"
+                      className="btn-ghost flex-none px-2.5 py-1 text-[12px]"
+                      disabled={!noteDraft.trim() || noteBusy}
+                    >
+                      {noteBusy ? '记下…' : '记下'}
+                    </button>
+                  </form>
+                  {noteErr && <p className="mt-1 text-[11px] text-coral">{noteErr}</p>}
+                  {!isToday && !noteErr && (
+                    <p className="mt-1 text-[11px] text-ink-faint">
+                      会记在 {md(reportDate)} 这一天，不是今天
+                    </p>
+                  )}
+                </div>
               </>
             )}
           </section>

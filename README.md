@@ -125,6 +125,7 @@
 - 周期 7 / 30 / 90 天，四张卡：本周期完成、完成率、平均专注、连续完成
 - 近 N 天完成细柱、本周期项目工时、状态分布、每日战报
 - **口径统一**：状态分布 / 完成率 / 项目工时一律限定在所选周期内，不拿全量任务算（否则周期一换数字不动）
+- **随手记就写在战报里**：那是它唯一的归宿 —— 换个地方写、再回来确认存没存上，是两倍的怀疑。`activities` 里 `type='note'` 的行按天归属；写到哪天由战报上的日期决定，所以翻到前几天也能补一句（后端拒收未来日期）。删掉是硬删，没有编辑：它就是一句话，改一个字和重说一遍成本一样
 
 ---
 
@@ -247,7 +248,8 @@ DeepSeek `deepseek-chat`，走 `/api/ai/*`。
 | GET | `/events/:id/time-entries` | 该任务的计时明细 |
 | PATCH | `/events/:id/unarchive` | 归档实例恢复 |
 | GET/POST/PUT/DELETE | `/projects` | 项目 CRUD |
-| GET/POST | `/activities` | 动态流 |
+| GET/POST | `/activities` | 动态流；POST 写 `type='note'`（随手记，可选 `date` 补记到某天，拒收未来） |
+| DELETE | `/activities/:id` | 删一条随手记（只删自己的 `note`，系统写的 complete/status_change 动不了） |
 
 ### 习惯与周期任务
 | 方法 | 路径 | 说明 |
@@ -374,6 +376,7 @@ location /     { root /www/wwwroot/todo; try_files $uri $uri/ /index.html; }
 11. **改规则的重排范围要盖住「已经铺到的最远那一期」，不是 horizon。** 老数据能一直铺到一年后（周报 52 期）。只按 horizon（180 天）重排的话，horizon 之外的旧排期会全部被判成「不匹配」收走 —— 用户只是把周五改成周日，日历却少了半年。所以 `planChange` 先取 `MAX(date)`，`to = max(horizonEnd, maxOpen)`。
 12. **RRULE 不能按字符串比「改没改」。** 库里是 `FREQ=WEEKLY;BYDAY=FR;INTERVAL=1`，前端拼出来是 `FREQ=WEEKLY;INTERVAL=1;BYDAY=FR` —— 段序不同，字符串比较会把「什么都没动」判成「改了」，红按钮亮着、点一下就把 52 期全归档重排。`sameRRule()` 解析后逐字段比（`BYDAY`/`BYMONTHDAY` 排序后比）。
 13. **改规则要「捞回」被归档的实例。** `UNIQUE(rule_id, occurrence_date)` 是部分唯一索引，归档行仍占着坑：周五 → 周日 → 又改回周五时，那 52 个周五还躺在 `archived_at` 里，`INSERT OR IGNORE` 会全部忽略，日历上凭空缺一年。所以先按 `occurrence_date` 把这些行 `archived_at = NULL` 捞回来，再补窗口。
+14. **随手记的 `created_at` 要写本地时间，别用 `DEFAULT CURRENT_TIMESTAMP`。** 那是 UTC，而战报按「本地日期前缀」查（`created_at LIKE '2026-11-17%'`）—— 北京时间清早 7 点写的会被算到前一天，晚上 11 点写的会跑到第二天，人会怀疑自己记错了日子。所以 `POST /activities` 显式写 `YYYY-MM-DD HH:MM:SS` 本地串，写入和读取用同一套日期语义。
 
 ---
 

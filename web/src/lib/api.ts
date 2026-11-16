@@ -282,6 +282,19 @@ export const api = {
     const s = qs.toString();
     return request<DailyReport>(`/reports/daily${s ? `?${s}` : ''}`);
   },
+  /**
+   * 随手记：写一句到某天的战报里（不填 date 就是今天）。
+   * 后端会显式写本地时间，不是 UTC —— 否则清晨写的会算到前一天。
+   */
+  addNote(content: string, date?: string) {
+    return request<{ id: number; content: string; created_at: string }>('/activities', {
+      method: 'POST',
+      body: JSON.stringify(date ? { content, date } : { content }),
+    });
+  },
+  deleteNote(id: number) {
+    return request<{ ok: boolean }>(`/activities/${id}`, { method: 'DELETE' });
+  },
   toggleEvent(id: number) {
     return request<TodoEvent>(`/events/${id}/toggle`, { method: 'PATCH' });
   },
