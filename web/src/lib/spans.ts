@@ -49,16 +49,45 @@ export interface SpanInfo {
   dayIndex: number;
 }
 
+/** 计划终点：有跨天就用 end_date，否则就是 date 本身 */
+export function deadlineOf(e: { date: string; end_date?: string | null }): string {
+  return endOf(e) || e.date;
+}
+
+/** 这一天是否落在它的工期内（单日任务 = 只有自己那天） */
+export function coversDay(e: { date: string; end_date?: string | null }, day: string): boolean {
+  return e.date <= day && day <= deadlineOf(e);
+}
+
+/** 工期是否与 [from, to] 有交集 —— 看板「本周」用它 */
+export function overlaps(
+  e: { date: string; end_date?: string | null },
+  from: string,
+  to: string
+): boolean {
+  return e.date <= to && deadlineOf(e) >= from;
+}
+
 /**
  * view: 正在看的那一天（YYYY-MM-DD）
- * 返回 null = 这不是跨天任务，按单日任务处理
+ * 返回 null = 这条不是跨天任务、也没过期，行内不必额外标注
  */
 export function spanInfo(
   e: { date: string; end_date?: string | null; completed?: boolean },
   view: string
 ): SpanInfo | null {
   const end = endOf(e);
-  if (!end) return null;
+
+  // 单日任务：只有「已经过了那天还没做完」才需要说话（逾期列表里用）
+  if (!end) {
+    if (e.completed || view <= e.date) return null;
+    return {
+      kind: 'overdue',
+      label: `原定 ${md(e.date)} · 超期 ${diffDays(e.date, view)} 天`,
+      total: 1,
+      dayIndex: 1,
+    };
+  }
 
   const total = diffDays(e.date, end) + 1;
 

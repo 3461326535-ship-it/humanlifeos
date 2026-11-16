@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
@@ -55,6 +55,9 @@ export default function TodayPage() {
   // 习惯弹窗：null = 关闭；{ habit: null } = 新建；{ habit } = 编辑
   const [habitDialog, setHabitDialog] = useState<{ habit: Habit | null } | null>(null);
   const [doneOpen, setDoneOpen] = useState(true);
+  // 逾期清单默认收起：它是一直欠着的账，不该天天铺满屏幕
+  const [overdueOpen, setOverdueOpen] = useState(false);
+  const overdueRef = useRef<HTMLElement | null>(null);
   const queryClient = useQueryClient();
 
   const [params, setParams] = useSearchParams();
@@ -179,14 +182,28 @@ export default function TodayPage() {
   const todoCount = openEvents.length + carriedOver.length;
   const pct = dayEvents.length > 0 ? Math.round((doneEvents.length / dayEvents.length) * 100) : 0;
 
-  // 逾期只算「真过去了还没做」的：跨天任务要过了 end_date 才算，
-  // 周期任务的往日实例不算（下周还会有同一件事，不该攒成债）
-  const overdue = useMemo(() => {
+  // 逾期 = 「某一天要做的事，那天过了还没做」。
+  //   · 单日任务 → 进这里（计划日已过）
+  //   · 跨天任务 → **不进这里**，它过了 end_date 仍然留在上面的「进行中」（标红超期），
+  //     因为它还是手上正在做的活，塞进收起的面板里等于藏起来
+  //   · 周期任务的往日实例 → 不算（下周还会有同一件事，不该攒成债）
+  // 这里直接出清单，右栏那个红数字和清单是同一份数据，不会各算各的。
+  const overdueAll = useMemo(() => {
     const t = todayStr();
-    return (allEvents || []).filter(
-      (e) => !e.completed && !e.rule_id && (endOf(e) || e.date) < t
-    ).length;
+    return (allEvents || [])
+      .filter((e) => !e.completed && !e.rule_id && !endOf(e) && e.date < t)
+      .sort((a, b) => b.date.localeCompare(a.date) || a.id - b.id); // 最近错过的排前面
   }, [allEvents]);
+
+  const overdueList = useMemo(
+    () =>
+      q
+        ? overdueAll.filter((e) => e.title.includes(q) || (e.category || '').includes(q))
+        : overdueAll,
+    [overdueAll, q]
+  );
+
+  const overdue = overdueAll.length;
 
   const groups = useMemo(
     () =>
@@ -200,7 +217,8 @@ export default function TodayPage() {
   const { md, weekday, relative } = dateParts(date);
   const isToday = date === todayStr();
 
-  const hasAnything = shown.length > 0 || doneEvents.length > 0 || carriedOver.length > 0;
+  const hasAnything =
+    shown.length > 0 || doneEvents.length > 0 || carriedOver.length > 0 || overdue > 0;
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -272,6 +290,39 @@ export default function TodayPage() {
                     />
                   ))}
                 </ul>
+              </section>
+            )}
+
+            {/* 逾期：默认收起，右栏那个红数字就是它的入口 */}
+            {overdue > 0 && (
+              <section ref={overdueRef}>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-1.5 pb-0.5 pt-4 text-left text-[12px] text-ink-mid transition-colors hover:text-ink"
+                  onClick={() => setOverdueOpen((v) => !v)}
+                  aria-expanded={overdueOpen}
+                >
+                  逾期 <span className="tabular-nums text-coral">{overdue}</span>
+                  <span className={`text-[9px] transition-transform ${overdueOpen ? 'inline-block -rotate-90' : 'inline-block rotate-90'}`}>›</span>
+                  {!overdueOpen && <span className="text-[11px] text-ink-faint">点开处理／改期</span>}
+                </button>
+                {overdueOpen && (
+                  <ul className="border-t border-line/40">
+                    {overdueList.map((event) => (
+                      <EventRow
+                        key={event.id}
+                        event={event}
+                        viewDate={todayStr()}
+                        onToggle={() => toggleMutation.mutate(event.id)}
+                        onEdit={() => {
+                          setEditing(event);
+                          setDialogOpen(true);
+                        }}
+                        onToggleSubtask={(sid) => toggleSubtask(event, sid)}
+                      />
+                    ))}
+                  </ul>
+                )}
               </section>
             )}
 
@@ -349,9 +400,28 @@ export default function TodayPage() {
             </div>
             <div className="border-r border-line-soft px-4 py-3">
               <p className="text-[11.5px] text-ink-soft">逾期</p>
-              <p className={`mt-1 text-[22px] font-semibold leading-none tabular-nums ${overdue > 0 ? 'text-coral' : 'text-ink'}`}>
-                {overdue}
-              </p>
+              {overdue > 0 ? (
+                <button
+                  type="button"
+                  title="查看逾期任务"
+                  className={`mt-1 text-[22px] font-semibold leading-none tabular-nums text-coral underline-offset-4 transition-opacity hover:opacity-70`}
+                  onClick={() => {
+                    setOverdueOpen(true);
+                    // 清单在左栏，等它渲染出来再滚过去
+                    // 顶部导航是 sticky 的，scrollIntoView 会把标题顶到它背后，
+                    // 所以手动留出 88px（导航高度 + 一点呼吸）
+                    requestAnimationFrame(() => {
+                      const el = overdueRef.current;
+                      if (!el) return;
+                      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 88, behavior: 'smooth' });
+                    });
+                  }}
+                >
+                  {overdue}
+                </button>
+              ) : (
+                <p className="mt-1 text-[22px] font-semibold leading-none tabular-nums text-ink">0</p>
+              )}
             </div>
             <div className="px-4 py-3">
               <p className="text-[11.5px] text-ink-soft">完成率</p>

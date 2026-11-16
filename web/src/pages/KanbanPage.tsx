@@ -24,6 +24,7 @@ import { api } from '../lib/api';
 import type { TodoEvent, TaskStatus } from '../lib/types';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../lib/types';
 import { PRIORITY_TEXT, priorityChipClass } from '../lib/priority';
+import { coversDay, overlaps, spanInfo } from '../lib/spans';
 import EventDialog from '../components/EventDialog';
 
 const COLUMNS: TaskStatus[] = ['todo', 'in_progress', 'review', 'done'];
@@ -138,6 +139,8 @@ function KanbanCard({
   };
   const { done: doneSub, total: totalSub } = subProgress(event);
   const pct = totalSub > 0 ? Math.round((doneSub / totalSub) * 100) : 0;
+  // 跨天任务：卡片上直接说「第 8/12 天」，跟今天页同一套话术
+  const span = spanInfo(event, todayStr());
 
   return (
     <div
@@ -172,9 +175,10 @@ function KanbanCard({
 
       <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
         <span className="min-w-0 truncate">
-          {[event.category && event.category !== '其他' ? event.category : '', dayLabel(event.date)]
-            .filter(Boolean)
-            .join(' · ')}
+          {event.category && event.category !== '其他' ? `${event.category} · ` : ''}
+          <span className={span?.kind === 'overdue' ? 'text-coral' : undefined}>
+            {span ? span.label : dayLabel(event.date)}
+          </span>
         </span>
         {totalSub > 0 && (
           <button
@@ -245,9 +249,8 @@ function CardPreview({ event }: { event: TodoEvent }) {
       </div>
       <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
         <span className="truncate">
-          {[event.category && event.category !== '其他' ? event.category : '', dayLabel(event.date)]
-            .filter(Boolean)
-            .join(' · ')}
+          {event.category && event.category !== '其他' ? `${event.category} · ` : ''}
+          {spanInfo(event, todayStr())?.label || dayLabel(event.date)}
         </span>
         {totalSub > 0 && (
           <span className="ml-auto flex flex-none items-center gap-1.5">
@@ -389,11 +392,13 @@ export default function KanbanPage() {
   // 按范围过滤 + 分列
   const inScope = useMemo(() => {
     let base: (e: TodoEvent) => boolean;
+    // 跨天任务只要工期覆盖这一天 / 和这一周有交集，就属于这个范围。
+    // 否则一个 11/09–11/20 的活在 11/16 看板上凭空消失，只能回起始日找。
     if (scope === 'all') base = () => true;
-    else if (scope === 'today') base = (e: TodoEvent) => e.date === date;
+    else if (scope === 'today') base = (e: TodoEvent) => coversDay(e, date);
     else {
       const { start, end } = weekBounds();
-      base = (e: TodoEvent) => e.date >= start && e.date <= end;
+      base = (e: TodoEvent) => overlaps(e, start, end);
     }
     if (!onlyUnfinishedSub) return base;
     return (e: TodoEvent) => base(e) && (e.subtasks || []).some((s) => !s.completed);
