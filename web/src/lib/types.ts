@@ -36,6 +36,10 @@ export interface TodoEvent {
   rule_id?: number | null;
   /** 实例对应的原始发生日 */
   occurrence_date?: string | null;
+  /** 所属规则的 RRULE（后端随行带出；实例行自己没有 recurrence 字段） */
+  rule_rrule?: string | null;
+  /** 所属规则的重复截止日 */
+  rule_until?: string | null;
   /** 「不做」终态：非空 = 已决定不做（与完成分开计数，也不再进待办视图） */
   canceled_at?: string | null;
   created_at: string;
@@ -333,4 +337,51 @@ export interface AiConfirmResponse {
   reply: string;
   actionExecuted?: boolean;
   cancelled?: boolean;
+}
+
+/** 周期规则（后端 recurring_rules 行，详情面板用） */
+export interface RecurringRule {
+  id: number;
+  title: string;
+  rrule: string;
+  dtstart: string;
+  until_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  category: string;
+  priority: Priority | null;
+  default_status: TaskStatus;
+  valid_from: string;
+  valid_to: string | null;
+  archived_at: string | null;
+}
+
+/**
+ * 改规则的入参：界面只填人话，RRULE 由后端拼。
+ * weekday 周日=0 … 周六=6；monthday 1~31 或 -1（月末）。
+ */
+export interface RuleChange {
+  recurrence: Recurrence;
+  interval?: number;
+  weekday?: number;
+  monthday?: number;
+  until_date?: string | null;
+}
+
+export interface RuleChangePreview {
+  rrule: string;
+  next_dates: string[];
+  will_close: number;
+  will_restore: number;
+  cadence_changed: boolean;
+}
+
+export interface RuleChangeResult {
+  success: boolean;
+  rule_id: number;
+  rrule: string;
+  closed_instances: number;
+  restored_instances: number;
+  created_instances: number;
+  next_date: string | null;
 }

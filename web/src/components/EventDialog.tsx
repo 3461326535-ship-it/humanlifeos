@@ -1,11 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import type { TodoEvent, EventInput, Subtask, Recurrence, Priority, TaskStatus } from '../lib/types';
+import type {
+  TodoEvent, EventInput, Subtask, Recurrence, Priority, TaskStatus,
+  RuleChange, RuleChangePreview,
+} from '../lib/types';
 import { DEFAULT_CATEGORIES, STATUS_LABELS } from '../lib/types';
 import { doneDate, doneStamp } from '../lib/spans';
-import { cadenceLabel } from '../lib/recurring';
+import { cadenceOf, parseRRuleLite, rruleLabel } from '../lib/recurring';
+import { rule } from '../lib/ruleActions';
 import EventTimer from './EventTimer';
+
+const RRULE_DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+const WEEK_LABEL = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+/** RRULE 的 FREQ 反推成旧枚举（只用于把只读选择器显示对） */
+function rruleFreq(rrule?: string | null): Recurrence | '' {
+  const f = (parseRRuleLite(rrule).FREQ || '').toLowerCase();
+  return f === 'daily' || f === 'weekly' || f === 'monthly' || f === 'yearly' ? f : '';
+}
 
 interface Draft {
   title: string;
@@ -45,8 +58,10 @@ function toDraft(
       description: event.description || '',
       status: event.status,
       priority: event.priority || '',
-      recurrence: event.recurrence || '',
-      recurrence_end_date: event.recurrence_end_date || '',
+      // 实例行自己没有 recurrence（懒补时刻意不写），只读框会显示成「不重复」，
+      // 等于在详情里说这条任务根本不重复 —— 从所属规则的 rrule 反推回来
+      recurrence: event.recurrence || rruleFreq(event.rule_rrule),
+      recurrence_end_date: event.recurrence_end_date || event.rule_until || '',
       subtasks: (event.subtasks || []).map((s) => ({ title: s.title, completed: s.completed })),
       completed_date: event.completed ? doneDate(event) : '',
     };
@@ -86,6 +101,204 @@ function toInput(d: Draft): EventInput {
   };
 }
 
+/**
+ * 改规则面板：把「只读的节律选择器」换成一次显式的、说清后果的动作。
+ *
+ * 为什么不做成「直接放开那个重复下拉框」：
+ *   下拉框改的是一期任务的字段，而改节律动的是整条规则和未来所有排期
+ *   —— 一个控件两种后果，正是上一轮被指出的那个毛病。
+ *
+ * 背后不是「删了重来」：后端按新节奏重排明天之后的实例，今天及以前不动、
+ * 已完成的保留，统计口径不会断。
+ */
+function RuleChangePanel({
+  event,
+  onSaved,
+}: {
+  event: TodoEvent;
+  onSaved: () => void;
+}) {
+  const ruleId = event.rule_id as number;
+  // 用规则自己的 rrule 回填，而不是实例的日期猜 —— 猜出来的默认值最容易「点确认就改了」
+  const seed = useMemo(() => {
+    const p = parseRRuleLite(event.rule_rrule);
+    const anchor = new Date((event.occurrence_date || event.date) + 'T00:00:00');
+    const freq = (p.FREQ || 'WEEKLY').toLowerCase() as Recurrence;
+    const byday = RRULE_DAYS.indexOf(p.BYDAY || '');
+    return {
+      recurrence: (['daily', 'weekly', 'monthly', 'yearly'].includes(freq) ? freq : 'weekly') as Recurrence,
+      interval: Math.max(1, Number(p.INTERVAL || 1)),
+      weekday: byday >= 0 ? byday : anchor.getDay(),
+      monthday: p.BYMONTHDAY ? Number(p.BYMONTHDAY) : anchor.getDate(),
+    };
+  }, [event.rule_rrule, event.occurrence_date, event.date]);
+
+  const [recurrence, setRecurrence] = useState<Recurrence>(seed.recurrence);
+  const [interval, setInterval] = useState(seed.interval);
+  const [weekday, setWeekday] = useState(seed.weekday);
+  const [monthday, setMonthday] = useState(seed.monthday);
+  const [until, setUntil] = useState(event.rule_until || '');
+  const [preview, setPreview] = useState<RuleChangePreview | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const patch: RuleChange = {
+    recurrence,
+    interval,
+    until_date: until || null,
+    ...(recurrence === 'weekly' ? { weekday } : {}),
+    ...(recurrence === 'monthly' ? { monthday } : {}),
+  };
+
+  // 每次改选项都先问后端「会怎样」：收走几期、下一期哪天。
+  // 让人在按下去之前就知道后果，而不是按完再去日历上找少没少。
+  useEffect(() => {
+    let alive = true;
+    setErr('');
+    rule
+      .preview(ruleId, patch)
+      .then((p) => { if (alive) setPreview(p); })
+      .catch((e: Error) => { if (alive) { setPreview(null); setErr(e.message); } });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ruleId, recurrence, interval, weekday, monthday, until]);
+
+  const label = preview ? rruleLabel(preview.rrule, event.date) : rruleLabel(
+    recurrence === 'daily' ? 'FREQ=DAILY' : recurrence === 'weekly' ? `FREQ=WEEKLY;BYDAY=${RRULE_DAYS[weekday]}` : recurrence === 'monthly' ? `FREQ=MONTHLY;BYMONTHDAY=${monthday}` : 'FREQ=YEARLY',
+    event.date
+  );
+
+  async function submit() {
+    setBusy(true);
+    setErr('');
+    try {
+      await rule.change(ruleId, patch);
+      onSaved();
+    } catch (e) {
+      setErr((e as Error).message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-2.5 space-y-2.5 rounded-lg border border-coral/25 bg-white/70 p-2.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-[11.5px] text-ink-soft">频率</span>
+        {(['daily', 'weekly', 'monthly', 'yearly'] as Recurrence[]).map((r) => (
+          <button
+            key={r}
+            type="button"
+            className={`rounded-full px-2 py-0.5 text-[11.5px] ring-1 transition-colors ${
+              recurrence === r ? 'bg-moss text-white ring-moss' : 'text-ink-mid ring-line hover:bg-paper-deep'
+            }`}
+            onClick={() => { setRecurrence(r); setInterval(1); }}
+          >
+            {{ daily: '每天', weekly: '每周', monthly: '每月', yearly: '每年' }[r]}
+          </button>
+        ))}
+      </div>
+
+      {/* 周几 / 几号 —— 「周报改双周、洗澡从周五改周日」就是改这一行 */}
+      {recurrence === 'weekly' && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11.5px] text-ink-soft">星期</span>
+          {WEEK_LABEL.map((w, i) => (
+            <button
+              key={w}
+              type="button"
+              className={`h-6 min-w-[26px] rounded-full px-1.5 text-[11.5px] ring-1 transition-colors ${
+                weekday === i ? 'bg-moss text-white ring-moss' : 'text-ink-mid ring-line hover:bg-paper-deep'
+              }`}
+              onClick={() => setWeekday(i)}
+            >
+              {w.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {recurrence === 'monthly' && (
+        <div className="flex items-center gap-2">
+          <span className="text-[11.5px] text-ink-soft">日期</span>
+          <input
+            type="number"
+            min={1}
+            max={31}
+            className="w-16 rounded-md border border-line bg-white px-1.5 py-0.5 text-[11.5px] text-ink outline-none focus:border-moss/40"
+            value={monthday === -1 ? '' : monthday}
+            onChange={(e) => setMonthday(Math.min(31, Math.max(1, Number(e.target.value) || 1)))}
+            aria-label="每月几号"
+          />
+          <button
+            type="button"
+            className={`rounded-full px-2 py-0.5 text-[11.5px] ring-1 transition-colors ${
+              monthday === -1 ? 'bg-moss text-white ring-moss' : 'text-ink-mid ring-line hover:bg-paper-deep'
+            }`}
+            onClick={() => setMonthday(-1)}
+          >
+            月末
+          </button>
+        </div>
+      )}
+
+      {(recurrence === 'weekly' || recurrence === 'monthly') && (
+        <div className="flex items-center gap-2">
+          <span className="text-[11.5px] text-ink-soft">间隔</span>
+          <select
+            className="rounded-md border border-line bg-white px-1.5 py-0.5 text-[11.5px] text-ink-mid outline-none focus:border-moss/40"
+            value={interval}
+            onChange={(e) => setInterval(Number(e.target.value))}
+            aria-label="间隔"
+          >
+            {[1, 2, 3, 4, 6, 12].map((n) => (
+              <option key={n} value={n}>
+                {recurrence === 'weekly'
+                  ? n === 1 ? '每周' : `每${n === 2 ? '两' : n}周`
+                  : n === 1 ? '每月' : n === 3 ? '每季度' : `每${n === 2 ? '两' : n}个月`}
+              </option>
+            ))}
+          </select>
+          <span className="text-[11.5px] text-ink-soft">重复截止</span>
+          <input
+            type="date"
+            className="rounded-md border border-line bg-white px-1.5 py-0.5 text-[11.5px] text-ink-mid outline-none focus:border-moss/40"
+            value={until}
+            onChange={(e) => setUntil(e.target.value)}
+            aria-label="重复截止"
+          />
+        </div>
+      )}
+
+      {/* 后果先说清：改的是明天之后，历史不动 */}
+      <p className="text-[11.5px] leading-relaxed text-ink-soft">
+        明天起改按 <span className="font-medium text-ink">{label}</span>
+        {preview?.next_dates?.length ? `（下一期 ${preview.next_dates[0].slice(5).replace('-', '/')}）` : ''}
+        {preview && preview.will_close > 0 ? `，收走 ${preview.will_close} 期旧的未完成排期` : '，没有已铺出去的旧排期要收'}
+        。今天及以前、已完成的都不动。
+      </p>
+      {preview?.next_dates?.length ? (
+        <p className="text-[11px] text-ink-faint">
+          接下来：{preview.next_dates.map((d) => d.slice(5).replace('-', '/')).join(' · ')}
+        </p>
+      ) : null}
+      {err && <p className="text-[11.5px] text-coral">{err}</p>}
+
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          className="rounded-md bg-coral px-2.5 py-1 text-[11.5px] text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+          disabled={busy || !preview?.cadence_changed}
+          onClick={submit}
+          title={preview && !preview.cadence_changed ? '节律没变' : '按新节奏重排明天之后的排期'}
+        >
+          {busy ? '正在重排…' : `改成「${label}」`}
+        </button>
+        <span className="text-[11px] text-ink-faint">历史统计不受影响，规则还是同一条</span>
+      </div>
+    </div>
+  );
+}
+
 export default function EventDialog({
   event,
   defaultDate,
@@ -113,11 +326,12 @@ export default function EventDialog({
     toDraft(event, defaultDate, defaultStatus, defaultRecurrence, defaultEndDate, defaultMilestone, defaultTime)
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [rulePanel, setRulePanel] = useState(false);
   const [error, setError] = useState('');
   const isEdit = !!event;
   // 这条是某条周期规则的一期（不是规则本身）
   const isRuleInstance = isEdit && !!event!.rule_id;
-  const cadence = event ? cadenceLabel(event.recurrence, event.date) : '';
+  const cadence = event ? cadenceOf(event) : '';
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -125,6 +339,12 @@ export default function EventDialog({
   const saveMutation = useMutation({
     mutationFn: () => {
       const payload: EventInput = toInput(draft);
+      // 周期实例：节律属于整条规则，回写实例行只会造出「一条自认为在重复的实例」。
+      // 界面上那个只读框是为了显示正确，不是用来编辑的
+      if (isRuleInstance) {
+        payload.recurrence = null;
+        payload.recurrence_end_date = null;
+      }
       // 完成日期被改过才传 —— 不传的时候后端保留原来的时间戳（编辑不该刷新完成日）
       if (isEdit && event!.completed && draft.completed_date && draft.completed_date !== doneDate(event!)) {
         payload.completed_at = doneStamp(draft.completed_date);
@@ -356,7 +576,7 @@ export default function EventDialog({
             )}
           </div>
 
-          {/* 周期实例：说清「这一期」和「整条规则」的区别，并把停规则放在这里 */}
+          {/* 周期实例：说清「这一期」和「整条规则」的区别，并把改/停规则放在这里 */}
           {isRuleInstance && (
             <div className="rounded-lg bg-paper-deep/45 px-3 py-2.5 ring-1 ring-line/60">
               <p className="text-[12px] leading-relaxed text-ink-mid">
@@ -366,6 +586,18 @@ export default function EventDialog({
               <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
                 <button
                   type="button"
+                  className={`rounded-md px-2 py-1 text-[11.5px] ring-1 transition-colors disabled:opacity-40 ${
+                    rulePanel
+                      ? 'bg-coral-soft text-coral ring-coral/40'
+                      : 'text-coral ring-coral/25 hover:bg-coral-soft'
+                  }`}
+                  onClick={() => setRulePanel((v) => !v)}
+                  title="改整条规则的节奏：周报改双周、洗澡从周五改周日"
+                >
+                  {rulePanel ? '收起' : '改规则…'}
+                </button>
+                <button
+                  type="button"
                   className="rounded-md px-2 py-1 text-[11.5px] text-coral ring-1 ring-coral/25 transition-colors hover:bg-coral-soft disabled:opacity-40"
                   onClick={onStopRule}
                   disabled={stopRuleMutation.isPending}
@@ -373,9 +605,10 @@ export default function EventDialog({
                   {stopRuleMutation.isPending ? '正在停…' : '停掉整条周期'}
                 </button>
                 <span className="text-[11px] text-ink-faint">
-                  明天起不再生成；已完成的保留，今天及以前不受影响
+                  这两个动的是整条规则，明天起生效；已完成的不受影响
                 </span>
               </div>
+              {rulePanel && <RuleChangePanel event={event!} onSaved={() => onSaved?.()} />}
             </div>
           )}
 

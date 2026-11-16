@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { TodoEvent } from '../lib/types';
 import { PRIORITY_TEXT, priorityChipClass } from '../lib/priority';
 import { diffDays, doneDate, spanInfo, todayStr } from '../lib/spans';
-import { cadenceLabel } from '../lib/recurring';
+import { cadenceOf } from '../lib/recurring';
 import TimerButton from './TimerButton';
 import DoneDateBar from './DoneDateBar';
 
@@ -57,7 +57,7 @@ export default function EventRow({
   const range = timeRange(event);
 
   const isRecurring = !!event.rule_id || !!event.recurrence;
-  const cadence = cadenceLabel(event.recurrence, event.date);
+  const cadence = cadenceOf(event);
   const done = event.completed ? doneDate(event) : '';
 
   // 行的主点击＝展开/收起子任务（有子任务时），只有没有子任务时才落回编辑。

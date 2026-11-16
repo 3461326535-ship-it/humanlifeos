@@ -105,8 +105,9 @@ router.post('/', validate({
 
         RuleModel.attachInstance(userId, rule.id, event.id, event.date, () => {
           const today = R.todayStr();
-          // 只补「今天 → 4 个月」：日历/甘特够看未来排期，又不会一建就铺几百行
-          RuleModel.ensureWindow(userId, today, R.addDays(today, 120), () => {
+          // 铺到「今天 → 视节律而定的 horizon」：日历/甘特够看未来排期，又不至于一建就几百行。
+          // 窗口长度和「改规则」共用同一张表 —— 两边不一致就会出现「改完铺得比建的还少」
+          RuleModel.ensureWindow(userId, today, R.addDays(today, RuleModel.horizonDays(RRULE_OF[rec])), () => {
             EventModel.getEventById(userId, event.id, (e2, fresh) => res.status(201).json(fresh || event));
           });
         });

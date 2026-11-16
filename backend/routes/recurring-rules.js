@@ -92,6 +92,15 @@ router.post('/instances/:id/unarchive', (req, res) => {
   });
 });
 
+// 单条规则（详情面板要看当前节律；实例行上的 rrule 就是从这里来的）
+router.get('/:id', (req, res) => {
+  RuleModel.getRule(uid(req), Number(req.params.id), (err, rule) => {
+    if (err) return fail(res, err);
+    if (!rule) return res.status(404).json({ error: '规则不存在' });
+    res.json(rule);
+  });
+});
+
 // 改规则：影响后续窗口懒补，已有实例不动
 router.put('/:id', (req, res) => {
   RuleModel.updateRule(uid(req), Number(req.params.id), req.body || {}, (err, rule) => {
@@ -106,6 +115,25 @@ router.put('/:id', (req, res) => {
 router.post('/:id/stop', (req, res) => {
   RuleModel.stopRule(uid(req), Number(req.params.id), (err, result) => {
     if (err) return fail(res, err);
+    if (!result) return res.status(404).json({ error: '规则不存在' });
+    res.json(result);
+  });
+});
+
+// 改规则（先看影响）：只算不写，面板里用来显示「会收走几期、下一期哪天」
+router.post('/:id/preview', (req, res) => {
+  RuleModel.previewChange(uid(req), Number(req.params.id), req.body || {}, (err, result) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!result) return res.status(404).json({ error: '规则不存在' });
+    res.json(result);
+  });
+});
+
+// 改规则（真正执行）：改节奏 + 收走不匹配的未来实例 + 按新节奏补齐，
+// 今天及以前、已完成的一律不动
+router.post('/:id/change', (req, res) => {
+  RuleModel.changeRule(uid(req), Number(req.params.id), req.body || {}, (err, result) => {
+    if (err) return res.status(400).json({ error: err.message });
     if (!result) return res.status(404).json({ error: '规则不存在' });
     res.json(result);
   });

@@ -14,6 +14,10 @@ import type {
   GanttBoard,
   GanttMoveResult,
   DepType,
+  RecurringRule,
+  RuleChange,
+  RuleChangePreview,
+  RuleChangeResult,
 } from './types';
 
 // 同源部署（/app），Cookie 自动携带；token 不落 localStorage（XSS 防护决策见方案 §6.1）
@@ -95,6 +99,24 @@ export const api = {
       `/recurring-rules/${ruleId}/stop`,
       { method: 'POST' }
     );
+  },
+  /** 单条规则（详情面板要显示/预填当前节律） */
+  getRecurringRule(ruleId: number) {
+    return request<RecurringRule>(`/recurring-rules/${ruleId}`);
+  },
+  /** 改规则前先看影响：会收走几期、下一期哪天。只算不写 */
+  previewRecurringChange(ruleId: number, patch: RuleChange) {
+    return request<RuleChangePreview>(`/recurring-rules/${ruleId}/preview`, {
+      method: 'POST',
+      body: JSON.stringify(patch),
+    });
+  },
+  /** 改规则：改节奏 + 收走不匹配的未来实例 + 按新节奏补齐（今天及以前、已完成的不动） */
+  changeRecurringRule(ruleId: number, patch: RuleChange) {
+    return request<RuleChangeResult>(`/recurring-rules/${ruleId}/change`, {
+      method: 'POST',
+      body: JSON.stringify(patch),
+    });
   },
   reorder(items: { id: number; position: number }[]) {
     return request<{ success: boolean; updated: number }>('/events/reorder', {

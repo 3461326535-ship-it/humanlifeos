@@ -18,8 +18,36 @@ class EventModel {
         reminder: !!row.reminder
       }));
 
-      EventModel._attachSubtasks(events, callback);
+      EventModel._attachSubtasks(events, (err2, withSubs) => {
+        if (err2) return callback(err2, null);
+        EventModel._attachRules(withSubs, callback);
+      });
     });
+  }
+
+  // ===== 批量挂上「所属周期的节律」=====
+  // 实例行本身不带 recurrence（懒补时刻意不写，免得旧 catchUp 再生成一批），
+  // 于是行内只能露出一个光秃秃的 ↻。把 rrule 一起带出去，
+  // 界面才说得出「每周五」——「这条动的是这一期还是整条规则」全靠它。
+  static _attachRules(events, callback) {
+    const ids = [...new Set(events.filter((e) => e.rule_id).map((e) => e.rule_id))];
+    if (!ids.length) return callback(null, events);
+    const placeholders = ids.map(() => '?').join(',');
+    db.all(
+      `SELECT id, rrule, until_date FROM recurring_rules WHERE id IN (${placeholders})`,
+      ids,
+      (err, rows) => {
+        // 旧 schema 还没有 recurring_rules 表 / 规则已被删：不挂就行，
+        // 一个标注拿不到不该让整页挂掉
+        if (err || !rows) return callback(null, events);
+        const map = {};
+        rows.forEach((r) => { map[r.id] = r; });
+        callback(null, events.map((e) => {
+          const rule = e.rule_id ? map[e.rule_id] : null;
+          return rule ? { ...e, rule_rrule: rule.rrule, rule_until: rule.until_date } : e;
+        }));
+      }
+    );
   }
 
   // ===== 批量加载子任务（修复 N+1：一次 IN 查询替代逐个查询）=====
@@ -72,13 +100,13 @@ class EventModel {
 
       db.all(`SELECT * FROM subtasks WHERE event_id = ?`, [id], (err2, subtasks) => {
         if (err2) return callback(err2, null);
-        callback(null, {
+        EventModel._attachRules([{
           ...event,
           subtasks: subtasks.map(st => ({
             ...st,
             completed: !!st.completed
           }))
-        });
+        }], (e3, list) => callback(e3 || null, list ? list[0] : null));
       });
     });
   }

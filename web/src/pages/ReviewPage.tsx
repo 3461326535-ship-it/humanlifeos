@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { TodoEvent } from '../lib/types';
-import { deadlineOf, diffDays, doneStamp, endOf, md } from '../lib/spans';
+import { deadlineOf, diffDays, endOf, md } from '../lib/spans';
+import { occurrence, rule } from '../lib/ruleActions';
 import DoneDateBar from '../components/DoneDateBar';
 
 // ── 阈值（想调就改这里）──
@@ -103,9 +104,9 @@ export default function ReviewPage() {
     try {
       if (kind === 'done') {
         // 补记：默认今天，但允许记在真正做完的那天 —— 这正是这个页面最需要说清的事
-        await api.completeOn(e.id, doneStamp(doneOn || todayStr()));
+        await occurrence.complete(e.id, doneOn || todayStr());
       } else if (kind === 'drop') {
-        await api.cancelEvent(e.id);
+        await occurrence.skip(e.id);
       } else {
         // 「今天」和「+7 天」都以**今天**为基准算，而不是在原来那个过期日上加减 ——
         // 一个 7 月的活往后推一周还是 7 月，等于没推
@@ -145,7 +146,7 @@ export default function ReviewPage() {
     if (!ok) return;
     setBusyId(e.id);
     try {
-      await api.stopRecurringRule(e.rule_id);
+      await rule.stop(e.rule_id);
       setHandled((prev) => new Set(prev).add(e.id));
       queryClient.invalidateQueries({ queryKey: ['events'] });
     } catch (e2) {
@@ -158,7 +159,7 @@ export default function ReviewPage() {
   async function restore(e: TodoEvent) {
     setBusyId(e.id);
     try {
-      await api.cancelEvent(e.id, false);
+      await occurrence.restore(e.id);
       // 之前标记「已处置」的痕迹要抹掉，不然它会重新进列表却立刻被过滤隐藏
       setHandled((prev) => {
         const next = new Set(prev);

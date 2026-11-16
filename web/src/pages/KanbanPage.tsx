@@ -26,7 +26,8 @@ import type { TodoEvent, TaskStatus } from '../lib/types';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../lib/types';
 import { PRIORITY_TEXT, priorityChipClass } from '../lib/priority';
 import { diffDays, doneDate, spanInfo } from '../lib/spans';
-import { collapseRecurring } from '../lib/recurring';
+import { cadenceOf, collapseRecurring } from '../lib/recurring';
+import { occurrence, rule } from '../lib/ruleActions';
 import EventDialog from '../components/EventDialog';
 
 const COLUMNS: TaskStatus[] = ['todo', 'in_progress', 'review', 'done'];
@@ -138,10 +139,12 @@ function KanbanCard({
   event,
   onOpen,
   onToggleSubtask,
+  onContext,
 }: {
   event: TodoEvent;
   onOpen: (e: TodoEvent) => void;
   onToggleSubtask: (e: TodoEvent, subtaskId: number) => void;
+  onContext: (e: React.MouseEvent, ev: TodoEvent) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: event.id });
   const [expanded, setExpanded] = useState(false);
@@ -162,6 +165,7 @@ function KanbanCard({
       {...attributes}
       {...listeners}
       onClick={() => onOpen(event)}
+      onContextMenu={(e) => onContext(e, event)}
       className="card cursor-grab p-3 active:cursor-grabbing"
     >
       <div className="flex items-start gap-2">
@@ -177,11 +181,6 @@ function KanbanCard({
             event.status === 'done' ? 'text-ink-soft line-through' : 'text-ink'
           }`}
         >
-          {event.rule_id && (
-            <span className="mr-1 text-[12px] text-ink-faint" title="周期任务：这里是它的下一期">
-              ↻
-            </span>
-          )}
           {event.title}
         </p>
         {event.priority && (
@@ -193,6 +192,11 @@ function KanbanCard({
 
       <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
         <span className="min-w-0 truncate">
+          {event.rule_id ? (
+            <span className="text-ink-soft" title="周期任务：这里是它的下一期（其余各期折叠了）">
+              ↻ {cadenceOf(event) || '周期'} ·{' '}
+            </span>
+          ) : null}
           {event.category && event.category !== '其他' ? `${event.category} · ` : ''}
           <span className={span?.kind === 'overdue' ? 'text-coral' : undefined}>
             {span ? span.label : dayLabel(event.date)}
@@ -253,20 +257,26 @@ function KanbanCard({
 }
 
 // 预览卡（DragOverlay 用，无交互）；onOpen 传了就当静态卡用（收起区）
-function CardPreview({ event, onOpen, dragging }: { event: TodoEvent; onOpen?: (e: TodoEvent) => void; dragging?: boolean }) {
+function CardPreview({
+  event,
+  onOpen,
+  dragging,
+  onContext,
+}: {
+  event: TodoEvent;
+  onOpen?: (e: TodoEvent) => void;
+  dragging?: boolean;
+  onContext?: (e: React.MouseEvent, ev: TodoEvent) => void;
+}) {
   const { done: doneSub, total: totalSub } = subProgress(event);
   return (
     <div
       onClick={onOpen ? () => onOpen(event) : undefined}
+      onContextMenu={onContext ? (e) => onContext(e, event) : undefined}
       className={`card p-3 ${dragging ? 'cursor-grabbing shadow-pop' : 'cursor-pointer opacity-75 hover:opacity-100'}`}
     >
       <div className="flex items-start gap-2">
         <p className="min-w-0 flex-1 text-[13.5px] leading-[1.45] text-ink">
-          {event.rule_id && (
-            <span className="mr-1 text-[12px] text-ink-faint" title="周期任务：这里是它的下一期">
-              ↻
-            </span>
-          )}
           {event.title}
         </p>
         {event.priority && (
@@ -277,6 +287,11 @@ function CardPreview({ event, onOpen, dragging }: { event: TodoEvent; onOpen?: (
       </div>
       <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
         <span className="truncate">
+          {event.rule_id ? (
+            <span title="周期任务：这里是它的下一期（其余各期折叠了）">
+              ↻ {cadenceOf(event) || '周期'} ·{' '}
+            </span>
+          ) : null}
           {event.category && event.category !== '其他' ? `${event.category} · ` : ''}
           {spanInfo(event, todayStr())?.label || dayLabel(event.date)}
         </span>
@@ -298,12 +313,14 @@ function CollapseRow({
   label,
   items,
   onOpen,
+  onContext,
   hint,
   action,
 }: {
   label: string;
   items: TodoEvent[];
   onOpen: (e: TodoEvent) => void;
+  onContext: (e: React.MouseEvent, ev: TodoEvent) => void;
   hint?: string;
   action?: React.ReactNode;
 }) {
@@ -327,10 +344,87 @@ function CollapseRow({
       {open && (
         <div className="mt-1 space-y-2">
           {items.map((e) => (
-            <CardPreview key={e.id} event={e} onOpen={onOpen} />
+            <CardPreview key={e.id} event={e} onOpen={onOpen} onContext={onContext} />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── 右键菜单：周期的三个动作和「这一期」的两个动作摆在一起，但要分得开 ──
+//
+// 看板上一张卡就是「这条规则的下一期」。想跳过某一周、或者不想再做这件事了，
+// 拖进已完成是最别扭的路（跳过不是完成）。所以给一个就地菜单：
+//   上面一组动这一期（完成 / 跳过），下面一组动整条规则（改规则 / 停掉）。
+// 和回顾页、行内勾选共用 lib/ruleActions 里的同一套调用。
+function CardMenu({
+  event,
+  x,
+  y,
+  busy,
+  onAct,
+  onClose,
+}: {
+  event: TodoEvent;
+  x: number;
+  y: number;
+  busy: boolean;
+  onAct: (kind: 'complete' | 'skip' | 'stop' | 'change' | 'open') => void;
+  onClose: () => void;
+}) {
+  const recurring = !!event.rule_id;
+  const cadence = cadenceOf(event);
+  const marked = !!event.canceled_at;
+  const left = Math.min(x, window.innerWidth - 208);
+  const top = Math.min(y, window.innerHeight - (recurring ? 250 : 150));
+
+  const item =
+    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12.5px] transition-colors disabled:opacity-40';
+
+  return (
+    <div className="fixed inset-0 z-[60]" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }}>
+      <div
+        className="absolute w-52 rounded-xl border border-line bg-white p-1 shadow-pop"
+        style={{ left, top }}
+        onClick={(e) => e.stopPropagation()}
+        role="menu"
+      >
+        <p className="truncate px-2 pb-1 pt-1 text-[11px] text-ink-faint">
+          {recurring ? `↻ ${cadence} 的这一期` : event.title}
+        </p>
+
+        <button className={`${item} text-ink hover:bg-paper-deep`} disabled={busy} onClick={() => onAct('complete')}>
+          <span className="text-moss-deep">✓</span> {recurring ? '完成这一期' : '完成'}
+        </button>
+        <button
+          className={`${item} text-ink hover:bg-paper-deep`}
+          disabled={busy}
+          onClick={() => onAct('skip')}
+          title={recurring ? '这次不做，下次照常出现' : '决定不做了（不删除，可恢复）'}
+        >
+          <span className="text-ink-soft">✕</span> {recurring ? '跳过这一期' : '不做'}
+          {marked && <span className="ml-auto text-[10.5px] text-ink-faint">已跳过</span>}
+        </button>
+
+        {recurring && (
+          <>
+            <div className="my-1 border-t border-line/70" />
+            <p className="px-2 pb-0.5 text-[10.5px] text-ink-faint">动整条规则 · 明天起生效</p>
+            <button className={`${item} text-coral hover:bg-coral-soft`} disabled={busy} onClick={() => onAct('change')}>
+              <span>↻</span> 改规则…
+            </button>
+            <button className={`${item} text-coral hover:bg-coral-soft`} disabled={busy} onClick={() => onAct('stop')}>
+              <span>⊘</span> 停掉整条周期
+            </button>
+          </>
+        )}
+
+        <div className="my-1 border-t border-line/70" />
+        <button className={`${item} text-ink-soft hover:bg-paper-deep`} onClick={() => onAct('open')}>
+          打开详情
+        </button>
+      </div>
     </div>
   );
 }
@@ -345,6 +439,7 @@ function Column({
   onOpen,
   onAdd,
   onToggleSubtask,
+  onContext,
 }: {
   status: TaskStatus;
   events: TodoEvent[];
@@ -352,6 +447,7 @@ function Column({
   onOpen: (e: TodoEvent) => void;
   onAdd: (s: TaskStatus) => void;
   onToggleSubtask: (e: TodoEvent, subtaskId: number) => void;
+  onContext: (e: React.MouseEvent, ev: TodoEvent) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: status });
   const isDone = status === 'done';
@@ -368,18 +464,19 @@ function Column({
       <div ref={setNodeRef} className="flex-1 space-y-2 px-2">
         <SortableContext items={events.map((e) => e.id)} strategy={verticalListSortingStrategy}>
           {events.map((e) => (
-            <KanbanCard key={e.id} event={e} onOpen={onOpen} onToggleSubtask={onToggleSubtask} />
+            <KanbanCard key={e.id} event={e} onOpen={onOpen} onToggleSubtask={onToggleSubtask} onContext={onContext} />
           ))}
         </SortableContext>
 
         {isDone ? (
-          <CollapseRow label="更早完成" items={folded.older} onOpen={onOpen} />
+          <CollapseRow label="更早完成" items={folded.older} onOpen={onOpen} onContext={onContext} />
         ) : (
           <>
             <CollapseRow
               label="陈年旧账"
               items={folded.stale}
               onOpen={onOpen}
+              onContext={onContext}
               hint="该做决定了"
               action={
                 <Link
@@ -390,7 +487,7 @@ function Column({
                 </Link>
               }
             />
-            <CollapseRow label="未到期" items={folded.future} onOpen={onOpen} />
+            <CollapseRow label="未到期" items={folded.future} onOpen={onOpen} onContext={onContext} />
           </>
         )}
 
@@ -473,6 +570,8 @@ export default function KanbanPage() {
   const [pendingDone, setPendingDone] = useState<PendingDone | null>(null);
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{ event: TodoEvent; x: number; y: number } | null>(null);
+  const [menuBusy, setMenuBusy] = useState(false);
 
   const queryClient = useQueryClient();
   const { data: allEvents, isLoading } = useQuery({ queryKey: ['events'], queryFn: api.getEvents });
@@ -705,6 +804,55 @@ export default function KanbanPage() {
     setDefaultStatus(s);
     setDialogOpen(true);
   };
+
+  // ── 右键菜单：一张卡就是「这条规则的下一期」，所以菜单里必须把
+  //    「动这一期」和「动整条规则」分成两组，和详情/回顾页共用 lib/ruleActions 的调用 ──
+  const openMenu = (e: React.MouseEvent, ev: TodoEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({ event: ev, x: e.clientX, y: e.clientY });
+  };
+
+  async function menuAct(kind: 'complete' | 'skip' | 'stop' | 'change' | 'open') {
+    const ev = menu?.event;
+    if (!ev) return;
+
+    // 改规则要选周几、要先看影响，面板在详情里；菜单只负责把人送过去
+    if (kind === 'open' || kind === 'change') {
+      setMenu(null);
+      openEdit(ev);
+      return;
+    }
+
+    if (kind === 'stop' && ev.rule_id) {
+      const ok = window.confirm(
+        `停掉「${ev.title}」这条周期？\n\n明天起不再生成新的，已经铺到日历上的未来几期会一起收走；` +
+          `已经做完的保留，今天及以前的不受影响。\n\n只想跳过这一次，用「跳过这一期」。`
+      );
+      if (!ok) return;
+    }
+
+    setMenuBusy(true);
+    setBanner(null);
+    try {
+      if (kind === 'complete') {
+        await occurrence.complete(ev.id);
+      } else if (kind === 'skip') {
+        await occurrence.skip(ev.id);
+        setBanner(`已跳过「${ev.title}」的这一期，下一期照常出现`);
+      } else if (kind === 'stop' && ev.rule_id) {
+        const r = await rule.stop(ev.rule_id);
+        setBanner(`已停掉「${ev.title}」的周期，收走 ${r.closed_instances} 期未完成排期`);
+      }
+      invalidate();
+    } catch (err) {
+      setBanner((err as Error).message);
+    } finally {
+      setMenuBusy(false);
+      setMenu(null);
+    }
+  }
+
   const dialogDefaultDate = scope === 'today' ? date : todayStr();
 
   const activeEvent = activeId != null ? allEvents?.find((e) => e.id === activeId) ?? null : null;
@@ -800,6 +948,7 @@ export default function KanbanPage() {
                 onOpen={openEdit}
                 onAdd={openAdd}
                 onToggleSubtask={toggleSubtask}
+                onContext={openMenu}
               />
             ))}
           </div>
@@ -821,6 +970,18 @@ export default function KanbanPage() {
             setPendingDone(null);
             invalidate();
           }}
+        />
+      )}
+
+      {/* 右键菜单：跳过一期 / 停掉整条周期，不用先拖进已完成 */}
+      {menu && (
+        <CardMenu
+          event={menu.event}
+          x={menu.x}
+          y={menu.y}
+          busy={menuBusy}
+          onAct={menuAct}
+          onClose={() => setMenu(null)}
         />
       )}
 
