@@ -67,6 +67,10 @@ type Scope = 'today' | 'week' | 'backlog';
 // 阈值与 /review 页保持一致，改一处要改两处
 type Folded = { future: TodoEvent[]; older: TodoEvent[]; stale: TodoEvent[]; total: number };
 
+// rule_id → 该规则已经过期没做的期数。折叠后一条规则只剩一张卡，
+// 但「攒了几期」必须说出来 —— 否则用户以为只欠这一期
+type MissedMap = Record<number, number>;
+
 const STALE_DAYS = 14;
 type Columns = Record<TaskStatus, TodoEvent[]>;
 
@@ -137,11 +141,14 @@ function subProgress(event: TodoEvent) {
 // ── 看板卡片（可拖拽，卡内可展开子任务）──
 function KanbanCard({
   event,
+  missed,
   onOpen,
   onToggleSubtask,
   onContext,
 }: {
   event: TodoEvent;
+  /** 这条规则有几期已经过期没做（0 不渲染） */
+  missed?: number;
   onOpen: (e: TodoEvent) => void;
   onToggleSubtask: (e: TodoEvent, subtaskId: number) => void;
   onContext: (e: React.MouseEvent, ev: TodoEvent) => void;
@@ -154,6 +161,9 @@ function KanbanCard({
     opacity: isDragging ? 0.4 : 1,
   };
   const { done: doneSub, total: totalSub } = subProgress(event);
+  // 只有「还没处置的那一期」才报欠账。已完成的历史期不该替规则背这个数字 ——
+  // 不然 Done 列里会挂着一张划掉的卡说「还有 16 期没做」，像在骂人
+  const owed = missed && !event.completed && event.status !== 'done' ? missed : 0;
   const pct = totalSub > 0 ? Math.round((doneSub / totalSub) * 100) : 0;
   // 跨天任务：卡片上直接说「第 8/12 天」，跟今天页同一套话术
   const span = spanInfo(event, todayStr());
@@ -193,7 +203,14 @@ function KanbanCard({
       <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
         <span className="min-w-0 truncate">
           {event.rule_id ? (
-            <span className="text-ink-soft" title="周期任务：这里是它的下一期（其余各期折叠了）">
+            <span
+              className="text-ink-soft"
+              title={
+                owed
+                  ? `周期任务：卡片上是它的下一期，其余各期折叠了；这条规则还有 ${owed} 期已经过期没做`
+                  : '周期任务：这里是它的下一期（其余各期折叠了）'
+              }
+            >
               ↻ {cadenceOf(event) || '周期'} ·{' '}
             </span>
           ) : null}
@@ -223,6 +240,17 @@ function KanbanCard({
           </button>
         )}
       </div>
+
+      {/* 攒了几期没做。不塞进日期行 —— 那一行本来就挤，塞进去会把日期挤掉，
+          而日期恰恰是这张卡要回答的问题 */}
+      {owed > 0 && (
+        <p
+          className="mt-1 text-[11px] leading-4 text-coral"
+          title="这些期已经过去了没做。去「回顾」逐条处置：补记、跳过，或者改节奏"
+        >
+          还有 {owed} 期没做
+        </p>
+      )}
 
       {/* 子任务清单：点右上角进度展开，卡内勾选（不跳页、不开弹窗） */}
       {expanded && totalSub > 0 && (
@@ -259,16 +287,20 @@ function KanbanCard({
 // 预览卡（DragOverlay 用，无交互）；onOpen 传了就当静态卡用（收起区）
 function CardPreview({
   event,
+  missed,
   onOpen,
   dragging,
   onContext,
 }: {
   event: TodoEvent;
+  missed?: number;
   onOpen?: (e: TodoEvent) => void;
   dragging?: boolean;
   onContext?: (e: React.MouseEvent, ev: TodoEvent) => void;
 }) {
   const { done: doneSub, total: totalSub } = subProgress(event);
+  // 收起区里的「更早完成」也会传进来，同样不该报欠账
+  const owed = missed && !event.completed && event.status !== 'done' ? missed : 0;
   return (
     <div
       onClick={onOpen ? () => onOpen(event) : undefined}
@@ -288,7 +320,7 @@ function CardPreview({
       <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
         <span className="truncate">
           {event.rule_id ? (
-            <span title="周期任务：这里是它的下一期（其余各期折叠了）">
+            <span title={owed ? `还有 ${owed} 期已经过期没做` : undefined}>
               ↻ {cadenceOf(event) || '周期'} ·{' '}
             </span>
           ) : null}
@@ -304,6 +336,7 @@ function CardPreview({
           </span>
         )}
       </div>
+      {owed > 0 && <p className="mt-1 text-[11px] leading-4 text-coral">还有 {owed} 期没做</p>}
     </div>
   );
 }
@@ -312,6 +345,7 @@ function CardPreview({
 function CollapseRow({
   label,
   items,
+  missed,
   onOpen,
   onContext,
   hint,
@@ -319,6 +353,7 @@ function CollapseRow({
 }: {
   label: string;
   items: TodoEvent[];
+  missed: MissedMap;
   onOpen: (e: TodoEvent) => void;
   onContext: (e: React.MouseEvent, ev: TodoEvent) => void;
   hint?: string;
@@ -344,7 +379,13 @@ function CollapseRow({
       {open && (
         <div className="mt-1 space-y-2">
           {items.map((e) => (
-            <CardPreview key={e.id} event={e} onOpen={onOpen} onContext={onContext} />
+            <CardPreview
+              key={e.id}
+              event={e}
+              missed={e.rule_id ? missed[e.rule_id] : undefined}
+              onOpen={onOpen}
+              onContext={onContext}
+            />
           ))}
         </div>
       )}
@@ -436,6 +477,7 @@ function Column({
   status,
   events,
   folded,
+  missed,
   onOpen,
   onAdd,
   onToggleSubtask,
@@ -444,6 +486,7 @@ function Column({
   status: TaskStatus;
   events: TodoEvent[];
   folded: Folded;
+  missed: MissedMap;
   onOpen: (e: TodoEvent) => void;
   onAdd: (s: TaskStatus) => void;
   onToggleSubtask: (e: TodoEvent, subtaskId: number) => void;
@@ -464,17 +507,25 @@ function Column({
       <div ref={setNodeRef} className="flex-1 space-y-2 px-2">
         <SortableContext items={events.map((e) => e.id)} strategy={verticalListSortingStrategy}>
           {events.map((e) => (
-            <KanbanCard key={e.id} event={e} onOpen={onOpen} onToggleSubtask={onToggleSubtask} onContext={onContext} />
+            <KanbanCard
+              key={e.id}
+              event={e}
+              missed={e.rule_id ? missed[e.rule_id] : undefined}
+              onOpen={onOpen}
+              onToggleSubtask={onToggleSubtask}
+              onContext={onContext}
+            />
           ))}
         </SortableContext>
 
         {isDone ? (
-          <CollapseRow label="更早完成" items={folded.older} onOpen={onOpen} onContext={onContext} />
+          <CollapseRow label="更早完成" items={folded.older} missed={missed} onOpen={onOpen} onContext={onContext} />
         ) : (
           <>
             <CollapseRow
               label="陈年旧账"
               items={folded.stale}
+              missed={missed}
               onOpen={onOpen}
               onContext={onContext}
               hint="该做决定了"
@@ -487,7 +538,7 @@ function Column({
                 </Link>
               }
             />
-            <CollapseRow label="未到期" items={folded.future} onOpen={onOpen} onContext={onContext} />
+            <CollapseRow label="未到期" items={folded.future} missed={missed} onOpen={onOpen} onContext={onContext} />
           </>
         )}
 
@@ -561,6 +612,8 @@ export default function KanbanPage() {
   });
   const [activeId, setActiveId] = useState<number | null>(null);
   const [originCol, setOriginCol] = useState<TaskStatus | null>(null);
+  // 每条规则欠了几期：卡片上要报出来，不然折成一张以后就没人记得还欠着
+  const [missed, setMissed] = useState<MissedMap>({});
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TodoEvent | null>(null);
@@ -629,7 +682,8 @@ export default function KanbanPage() {
 
     // 先按窗口筛，再把周期任务折成「每条规则只露下一次」
     const scoped = allEvents.filter(inScope);
-    const { visible } = collapseRecurring(scoped, today);
+    const { visible, missed: missedMap } = collapseRecurring(scoped, today);
+    setMissed(missedMap);
 
     const grouped: Columns = { todo: [], in_progress: [], review: [], done: [] };
     visible.forEach((e) => grouped[e.status].push(e));
@@ -945,6 +999,7 @@ export default function KanbanPage() {
                 status={status}
                 events={columns[status]}
                 folded={folded[status]}
+                missed={missed}
                 onOpen={openEdit}
                 onAdd={openAdd}
                 onToggleSubtask={toggleSubtask}

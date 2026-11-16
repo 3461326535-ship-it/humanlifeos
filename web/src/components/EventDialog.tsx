@@ -307,6 +307,7 @@ export default function EventDialog({
   defaultEndDate = '',
   defaultMilestone = false,
   defaultTime = '',
+  openRulePanel = false,
   onClose,
   onSaved,
 }: {
@@ -318,6 +319,12 @@ export default function EventDialog({
   defaultMilestone?: boolean;
   /** 新建时的默认时间 HH:MM（日历「实际」视图双击空白补记用） */
   defaultTime?: string;
+  /**
+   * 一打开就展开「改规则」面板。
+   * 回顾页的「改节奏」需要——那儿的人已经决定要改频率了，
+   * 再让他进来点一次「改规则…」等于把同一个问题问两遍。
+   */
+  openRulePanel?: boolean;
   onClose: () => void;
   /** 保存成功回调；新建时带回刚创建的任务，编辑时为 undefined */
   onSaved?: (created?: TodoEvent) => void;
@@ -326,7 +333,7 @@ export default function EventDialog({
     toDraft(event, defaultDate, defaultStatus, defaultRecurrence, defaultEndDate, defaultMilestone, defaultTime)
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [rulePanel, setRulePanel] = useState(false);
+  const [rulePanel, setRulePanel] = useState(openRulePanel);
   const [error, setError] = useState('');
   const isEdit = !!event;
   // 这条是某条周期规则的一期（不是规则本身）

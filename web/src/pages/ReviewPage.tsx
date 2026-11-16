@@ -5,6 +5,7 @@ import type { TodoEvent } from '../lib/types';
 import { deadlineOf, diffDays, endOf, md } from '../lib/spans';
 import { occurrence, rule } from '../lib/ruleActions';
 import DoneDateBar from '../components/DoneDateBar';
+import EventDialog from '../components/EventDialog';
 
 // ── 阈值（想调就改这里）──
 const STALE_DAYS = 14; // 一次性任务：计划终点过去两周还没做 → 该处置了
@@ -41,6 +42,8 @@ export default function ReviewPage() {
   const [showDropped, setShowDropped] = useState(false);
   // 正在选「哪天做完的」的那一行：这个页面上全是旧账，默认记成今天是最容易撒谎的一步
   const [picking, setPicking] = useState<number | null>(null);
+  // 正在改节奏的那条周期：连着几十期没做，往往不是「要不要补」，而是「节奏本身错了」
+  const [editingRule, setEditingRule] = useState<TodoEvent | null>(null);
 
   const { stale, missed, drifting, dropped } = useMemo(() => {
     const today = todayStr();
@@ -229,14 +232,24 @@ export default function ReviewPage() {
               {isRecurring ? '跳过这期' : '不做'}
             </button>
             {isRecurring && (
-              <button
-                className="rounded-md px-2 py-1 text-[11.5px] text-coral/85 transition-colors hover:bg-coral-soft disabled:opacity-40"
-                onClick={() => stopRule(e)}
-                disabled={busy}
-                title="以后不再生成这条周期（不是只跳过这一次）"
-              >
-                停掉周期
-              </button>
+              <>
+                <button
+                  className="rounded-md px-2 py-1 text-[11.5px] text-coral/85 transition-colors hover:bg-coral-soft disabled:opacity-40"
+                  onClick={() => setEditingRule(e)}
+                  disabled={busy}
+                  title="改整条规则的节奏：周报改双周、洗澡从周五改周日"
+                >
+                  改节奏
+                </button>
+                <button
+                  className="rounded-md px-2 py-1 text-[11.5px] text-coral/85 transition-colors hover:bg-coral-soft disabled:opacity-40"
+                  onClick={() => stopRule(e)}
+                  disabled={busy}
+                  title="以后不再生成这条周期（不是只跳过这一次）"
+                >
+                  停掉周期
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -292,6 +305,11 @@ export default function ReviewPage() {
         <p className="mt-1 text-[12px] leading-relaxed text-ink-faint">
           「补记」会先问哪天做完的：上个月做完的事就记在上个月，本周完成数不会因此虚高。
           周期任务上，「跳过这期」只跳过一期，「停掉周期」才是以后都不再生成。
+        </p>
+        <p className="mt-1 text-[12px] leading-relaxed text-ink-faint">
+          连着十几期没做，通常不是「缺一次补记」，而是节奏本身错了——
+          <span className="text-ink-soft">「改节奏」只重排明天之后的排期</span>
+          ，过去没做的那些期不会消失，该补记、该跳过还得逐条处置。
         </p>
       </div>
 
@@ -351,6 +369,21 @@ export default function ReviewPage() {
             </ul>
           )}
         </section>
+      )}
+
+      {/* 改节奏：直接落在规则面板上。改完不把这一行标成「已处置」——
+          改节奏只影响明天起的排期，过去没做的那些期还在，如实留着让人处置 */}
+      {editingRule && (
+        <EventDialog
+          event={editingRule}
+          defaultDate={editingRule.date}
+          openRulePanel
+          onClose={() => setEditingRule(null)}
+          onSaved={() => {
+            setEditingRule(null);
+            queryClient.invalidateQueries({ queryKey: ['events'] });
+          }}
+        />
       )}
     </div>
   );
