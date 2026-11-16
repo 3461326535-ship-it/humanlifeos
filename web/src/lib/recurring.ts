@@ -1,5 +1,31 @@
 import type { TodoEvent } from './types';
 
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+/**
+ * 周期节律的人话：每周五 / 每月 20 日 / 每天。
+ *
+ * 行内必须报出来 —— 否则「写周报」和一次性任务长得一模一样，
+ * 用户点「完成」时根本不知道自己动的是「这一期」还是「整条规则」。
+ * daily / weekly 是枚举不是 rrule：旧数据（迁移前）也只有这个字段。
+ */
+export function cadenceLabel(recurrence: string | null | undefined, date: string): string {
+  if (!recurrence) return '';
+  const d = new Date(date + 'T00:00:00');
+  switch (recurrence) {
+    case 'daily':
+      return '每天';
+    case 'weekly':
+      return `每${WEEKDAYS[d.getDay()]}`;
+    case 'monthly':
+      return `每月 ${d.getDate()} 日`;
+    case 'yearly':
+      return `每年 ${d.getMonth() + 1}/${d.getDate()}`;
+    default:
+      return '';
+  }
+}
+
 /**
  * 周期任务「一条规则只露一次」。
  *

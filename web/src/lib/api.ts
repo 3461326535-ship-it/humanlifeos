@@ -79,6 +79,23 @@ export const api = {
       body: JSON.stringify({ canceled }),
     });
   },
+  /**
+   * 补记完成日期：把这件事记成「在 date 那天做完的」。
+   * 不传 completed_at 就是现在；传了历史日期，完成数会落到那天而不是今天。
+   */
+  completeOn(id: number, completedAt: string) {
+    return request<TodoEvent>(`/events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ completed: 1, completed_at: completedAt }),
+    });
+  },
+  /** 停掉整条周期：明天起不再生成，未来没做的实例一起归档（已完成的保留） */
+  stopRecurringRule(ruleId: number) {
+    return request<{ success: boolean; rule_id: number; closed_instances: number }>(
+      `/recurring-rules/${ruleId}/stop`,
+      { method: 'POST' }
+    );
+  },
   reorder(items: { id: number; position: number }[]) {
     return request<{ success: boolean; updated: number }>('/events/reorder', {
       method: 'POST',

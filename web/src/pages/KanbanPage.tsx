@@ -177,6 +177,11 @@ function KanbanCard({
             event.status === 'done' ? 'text-ink-soft line-through' : 'text-ink'
           }`}
         >
+          {event.rule_id && (
+            <span className="mr-1 text-[12px] text-ink-faint" title="周期任务：这里是它的下一期">
+              ↻
+            </span>
+          )}
           {event.title}
         </p>
         {event.priority && (
@@ -256,7 +261,14 @@ function CardPreview({ event, onOpen, dragging }: { event: TodoEvent; onOpen?: (
       className={`card p-3 ${dragging ? 'cursor-grabbing shadow-pop' : 'cursor-pointer opacity-75 hover:opacity-100'}`}
     >
       <div className="flex items-start gap-2">
-        <p className="min-w-0 flex-1 text-[13.5px] leading-[1.45] text-ink">{event.title}</p>
+        <p className="min-w-0 flex-1 text-[13.5px] leading-[1.45] text-ink">
+          {event.rule_id && (
+            <span className="mr-1 text-[12px] text-ink-faint" title="周期任务：这里是它的下一期">
+              ↻
+            </span>
+          )}
+          {event.title}
+        </p>
         {event.priority && (
           <span className={`chip flex-none border ${priorityChipClass(event.priority, event.status === 'done')}`}>
             {PRIORITY_TEXT[event.priority]}

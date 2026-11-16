@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { TodoEvent } from '../lib/types';
-import { deadlineOf, diffDays, endOf, md } from '../lib/spans';
+import { deadlineOf, diffDays, doneStamp, endOf, md } from '../lib/spans';
+import DoneDateBar from '../components/DoneDateBar';
 
 // ── 阈值（想调就改这里）──
 const STALE_DAYS = 14; // 一次性任务：计划终点过去两周还没做 → 该处置了
@@ -37,6 +38,8 @@ export default function ReviewPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [showDropped, setShowDropped] = useState(false);
+  // 正在选「哪天做完的」的那一行：这个页面上全是旧账，默认记成今天是最容易撒谎的一步
+  const [picking, setPicking] = useState<number | null>(null);
 
   const { stale, missed, drifting, dropped } = useMemo(() => {
     const today = todayStr();
@@ -94,12 +97,13 @@ export default function ReviewPage() {
     0
   );
 
-  async function act(e: TodoEvent, kind: Act) {
+  async function act(e: TodoEvent, kind: Act, doneOn?: string) {
     setBusyId(e.id);
     setErr(null);
     try {
       if (kind === 'done') {
-        await api.updateStatus(e.id, 'done');
+        // 补记：默认今天，但允许记在真正做完的那天 —— 这正是这个页面最需要说清的事
+        await api.completeOn(e.id, doneStamp(doneOn || todayStr()));
       } else if (kind === 'drop') {
         await api.cancelEvent(e.id);
       } else {
@@ -116,6 +120,32 @@ export default function ReviewPage() {
           end_date: end ? shiftDate(end, delta) : null,
         });
       }
+      setHandled((prev) => new Set(prev).add(e.id));
+      setPicking(null);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+    } catch (e2) {
+      setErr((e2 as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  /**
+   * 停掉整条周期。和「跳过这一期」是两件事：
+   *  - 跳过：只有这一期不做了，下周照旧
+   *  - 停掉：明天起不再生成，未来没做的实例一起收走（已完成的保留）
+   * 连着几十期没做的规则，答案通常是「停掉」，不是「再跳过一次」。
+   */
+  async function stopRule(e: TodoEvent) {
+    if (!e.rule_id) return;
+    const ok = window.confirm(
+      `停掉「${e.title}」这条周期？\n\n明天起不再生成新的，已经铺到日历上的未来几期会一起收走；` +
+        `已经做完的保留。今天及以前的不受影响。`
+    );
+    if (!ok) return;
+    setBusyId(e.id);
+    try {
+      await api.stopRecurringRule(e.rule_id);
       setHandled((prev) => new Set(prev).add(e.id));
       queryClient.invalidateQueries({ queryKey: ['events'] });
     } catch (e2) {
@@ -146,49 +176,80 @@ export default function ReviewPage() {
   function Row({ item }: { item: Item }) {
     const e = item.event;
     const busy = busyId === e.id;
+    const isRecurring = !!e.rule_id;
     return (
-      <li className={`flex items-center gap-3 py-2.5 ${busy ? 'opacity-50' : ''}`}>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[13.5px] leading-[1.4] text-ink">{e.title}</p>
-          <p className="mt-0.5 truncate text-[11.5px] text-ink-soft">
-            {e.category && e.category !== '其他' ? `${e.category} · ` : ''}
-            <span className="text-coral/90">{item.reason}</span>
-          </p>
+      <li className={busy ? 'opacity-50' : ''}>
+        <div className="flex items-center gap-3 py-2.5">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13.5px] leading-[1.4] text-ink">
+              {isRecurring && <span className="mr-1 text-[12px] text-ink-faint">↻</span>}
+              {e.title}
+            </p>
+            <p className="mt-0.5 truncate text-[11.5px] text-ink-soft">
+              {e.category && e.category !== '其他' ? `${e.category} · ` : ''}
+              <span className="text-coral/90">{item.reason}</span>
+            </p>
+          </div>
+          <div className="flex flex-none items-center gap-1">
+            <button
+              className="rounded-md px-2 py-1 text-[11.5px] text-moss-deep ring-1 ring-moss/25 transition-colors hover:bg-moss-soft disabled:opacity-40"
+              onClick={() => setPicking(picking === e.id ? null : e.id)}
+              disabled={busy}
+              title={isRecurring ? '补记这一期：选哪天做完的' : '这件事做完了：选哪天做完的'}
+            >
+              {isRecurring ? '补记这期' : '完成'}
+            </button>
+            <button
+              className="rounded-md px-2 py-1 text-[11.5px] text-ink-mid ring-1 ring-line transition-colors hover:bg-paper-deep disabled:opacity-40"
+              onClick={() => act(e, 'today')}
+              disabled={busy}
+              title="挪到今天重新排"
+            >
+              今天
+            </button>
+            <button
+              className="rounded-md px-2 py-1 text-[11.5px] text-ink-mid ring-1 ring-line transition-colors hover:bg-paper-deep disabled:opacity-40"
+              onClick={() => act(e, 'later')}
+              disabled={busy}
+              title="往后推一周"
+            >
+              +7 天
+            </button>
+            <button
+              className="rounded-md px-2 py-1 text-[11.5px] text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink-mid disabled:opacity-40"
+              onClick={() => act(e, 'drop')}
+              disabled={busy}
+              title={
+                isRecurring
+                  ? '这一期不做了，规则照旧（下次照常出现）'
+                  : '决定不做了（不删除，统计里仍可见，可恢复）'
+              }
+            >
+              {isRecurring ? '跳过这期' : '不做'}
+            </button>
+            {isRecurring && (
+              <button
+                className="rounded-md px-2 py-1 text-[11.5px] text-coral/85 transition-colors hover:bg-coral-soft disabled:opacity-40"
+                onClick={() => stopRule(e)}
+                disabled={busy}
+                title="以后不再生成这条周期（不是只跳过这一次）"
+              >
+                停掉周期
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex flex-none items-center gap-1">
-          <button
-            className="rounded-md px-2 py-1 text-[11.5px] text-moss-deep ring-1 ring-moss/25 transition-colors hover:bg-moss-soft disabled:opacity-40"
-            onClick={() => act(e, 'done')}
-            disabled={busy}
-            title="这件事做完了"
-          >
-            完成
-          </button>
-          <button
-            className="rounded-md px-2 py-1 text-[11.5px] text-ink-mid ring-1 ring-line transition-colors hover:bg-paper-deep disabled:opacity-40"
-            onClick={() => act(e, 'today')}
-            disabled={busy}
-            title="挪到今天重新排"
-          >
-            今天
-          </button>
-          <button
-            className="rounded-md px-2 py-1 text-[11.5px] text-ink-mid ring-1 ring-line transition-colors hover:bg-paper-deep disabled:opacity-40"
-            onClick={() => act(e, 'later')}
-            disabled={busy}
-            title="往后推一周"
-          >
-            +7 天
-          </button>
-          <button
-            className="rounded-md px-2 py-1 text-[11.5px] text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink-mid disabled:opacity-40"
-            onClick={() => act(e, 'drop')}
-            disabled={busy}
-            title="决定不做了（不删除，统计里仍可见，可恢复）"
-          >
-            不做
-          </button>
-        </div>
+
+        {picking === e.id && (
+          <DoneDateBar
+            mode="complete"
+            value={todayStr()}
+            original={e.date}
+            busy={busy}
+            onSubmit={(d) => act(e, 'done', d)}
+            onCancel={() => setPicking(null)}
+          />
+        )}
       </li>
     );
   }
@@ -226,6 +287,10 @@ export default function ReviewPage() {
           这些是很久没动的事，不是「今天忘了做」——是「一直没决定」。逐条给个结论：做完了、挪到今天、还是决定不做。
           <span className="text-ink-mid">「不做」不等于删除</span>
           ，它只是离开待办，统计里仍算一次「取消」，随时能恢复。
+        </p>
+        <p className="mt-1 text-[12px] leading-relaxed text-ink-faint">
+          「补记」会先问哪天做完的：上个月做完的事就记在上个月，本周完成数不会因此虚高。
+          周期任务上，「跳过这期」只跳过一期，「停掉周期」才是以后都不再生成。
         </p>
       </div>
 

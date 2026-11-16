@@ -3,6 +3,8 @@ import { useMutation } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { TodoEvent, EventInput, Subtask, Recurrence, Priority, TaskStatus } from '../lib/types';
 import { DEFAULT_CATEGORIES, STATUS_LABELS } from '../lib/types';
+import { doneDate, doneStamp } from '../lib/spans';
+import { cadenceLabel } from '../lib/recurring';
 import EventTimer from './EventTimer';
 
 interface Draft {
@@ -18,6 +20,8 @@ interface Draft {
   recurrence: Recurrence | '';
   recurrence_end_date: string;
   subtasks: { title: string; completed: boolean }[];
+  /** 已完成的任务：完成于哪一天（可改，补记到实际做完的那天） */
+  completed_date: string;
 }
 
 function toDraft(
@@ -44,6 +48,7 @@ function toDraft(
       recurrence: event.recurrence || '',
       recurrence_end_date: event.recurrence_end_date || '',
       subtasks: (event.subtasks || []).map((s) => ({ title: s.title, completed: s.completed })),
+      completed_date: event.completed ? doneDate(event) : '',
     };
   }
   return {
@@ -59,6 +64,7 @@ function toDraft(
     recurrence: defaultRecurrence,
     recurrence_end_date: '',
     subtasks: [],
+    completed_date: '',
   };
 }
 
@@ -109,13 +115,22 @@ export default function EventDialog({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
   const isEdit = !!event;
+  // 这条是某条周期规则的一期（不是规则本身）
+  const isRuleInstance = isEdit && !!event!.rule_id;
+  const cadence = event ? cadenceLabel(event.recurrence, event.date) : '';
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      isEdit ? api.updateEvent(event.id, toInput(draft)) : api.createEvent(toInput(draft)),
+    mutationFn: () => {
+      const payload: EventInput = toInput(draft);
+      // 完成日期被改过才传 —— 不传的时候后端保留原来的时间戳（编辑不该刷新完成日）
+      if (isEdit && event!.completed && draft.completed_date && draft.completed_date !== doneDate(event!)) {
+        payload.completed_at = doneStamp(draft.completed_date);
+      }
+      return isEdit ? api.updateEvent(event!.id, payload) : api.createEvent(payload);
+    },
     onSuccess: (data) => onSaved?.(isEdit ? undefined : (data as TodoEvent)),
     onError: (e: Error) => setError(e.message),
   });
@@ -132,6 +147,20 @@ export default function EventDialog({
     onSuccess: () => onSaved?.(),
     onError: (e: Error) => setError(e.message),
   });
+
+  // 停掉整条周期：明天起不再生成，未来没做的实例一起归档（已在做的和做完的保留）
+  const stopRuleMutation = useMutation({
+    mutationFn: () => api.stopRecurringRule(event!.rule_id as number),
+    onSuccess: () => onSaved?.(),
+    onError: (e: Error) => setError(e.message),
+  });
+  const onStopRule = () => {
+    const ok = window.confirm(
+      `停掉「${event!.title}」这条周期？\n\n明天起不再生成新的，已经铺到日历上的未来几期会一起收走；` +
+        `已经做完的保留，今天及以前的不受影响。`
+    );
+    if (ok) stopRuleMutation.mutate();
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,8 +327,10 @@ export default function EventDialog({
               <label className="label" htmlFor="ev-recurrence">重复</label>
               <select
                 id="ev-recurrence"
-                className="input"
+                className="input disabled:bg-paper-deep/60 disabled:text-ink-soft"
                 value={draft.recurrence}
+                disabled={isRuleInstance}
+                title={isRuleInstance ? '周期任务的节律属于整条规则，不能按某一期单独改' : undefined}
                 onChange={(e) => set('recurrence', e.target.value as Recurrence | '')}
               >
                 <option value="">不重复</option>
@@ -324,6 +355,47 @@ export default function EventDialog({
               <div />
             )}
           </div>
+
+          {/* 周期实例：说清「这一期」和「整条规则」的区别，并把停规则放在这里 */}
+          {isRuleInstance && (
+            <div className="rounded-lg bg-paper-deep/45 px-3 py-2.5 ring-1 ring-line/60">
+              <p className="text-[12px] leading-relaxed text-ink-mid">
+                这是周期任务的<span className="font-medium text-ink">其中一期</span>
+                {cadence ? `（${cadence}）` : ''}。勾完成、点不做，都只作用于这一期，规则照旧往下走。
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <button
+                  type="button"
+                  className="rounded-md px-2 py-1 text-[11.5px] text-coral ring-1 ring-coral/25 transition-colors hover:bg-coral-soft disabled:opacity-40"
+                  onClick={onStopRule}
+                  disabled={stopRuleMutation.isPending}
+                >
+                  {stopRuleMutation.isPending ? '正在停…' : '停掉整条周期'}
+                </button>
+                <span className="text-[11px] text-ink-faint">
+                  明天起不再生成；已完成的保留，今天及以前不受影响
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* 已完成的任务：完成日期可改（补记到实际做完的那天） */}
+          {isEdit && event!.completed && (
+            <div>
+              <label className="label" htmlFor="ev-done-date">完成于</label>
+              <input
+                id="ev-done-date"
+                type="date"
+                className="input"
+                value={draft.completed_date}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => set('completed_date', e.target.value)}
+              />
+              <p className="mt-1 text-[11px] text-ink-faint">
+                改这里不会影响任务本身，只把这次完成记到那一天（补记旧账用，免得算进今天的完成数）
+              </p>
+            </div>
+          )}
 
           {/* 备注 */}
           <div>
@@ -388,7 +460,9 @@ export default function EventDialog({
               <div className="flex-none">
                 {confirmDelete ? (
                   <div className="flex items-center gap-1">
-                    {event.recurrence ? (
+                    {/* 「删除此后所有」只对旧链式周期任务有意义：v0.4 的实例是按规则懒补的，
+                        按标题批量删会把同名任务一起卷进去。想停规则请用上面的「停掉整条周期」。 */}
+                    {event.recurrence && !event.rule_id ? (
                       <button
                         type="button"
                         className="btn-danger text-xs"
@@ -426,10 +500,12 @@ export default function EventDialog({
                 title={
                   event!.canceled_at
                     ? '重新放回待办'
-                    : '决定不做了：离开待办但不删除，统计里算一次「取消」，随时可恢复'
+                    : isRuleInstance
+                      ? '这一期不做了，规则照旧（下次照常出现）；想彻底停掉用上面的「停掉整条周期」'
+                      : '决定不做了：离开待办但不删除，统计里算一次「取消」，随时可恢复'
                 }
               >
-                {event!.canceled_at ? '恢复' : '不做'}
+                {event!.canceled_at ? '恢复' : isRuleInstance ? '跳过这一期' : '不做'}
               </button>
             )}
             <div className="ml-auto flex gap-2">

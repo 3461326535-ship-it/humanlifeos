@@ -210,8 +210,10 @@ class EventModel {
     //  - 只传 completed → 由 completed 派生 status
     //  - 两者都传且冲突（done 状态与 completed 布尔不一致）→ completed 优先
     //    （兼容旧端/ai.js 全量回传行快照：快照里的 status 是旧值，completed 才是用户意图）
-    //  - status 变 done → completed_at = 当前时间；离开 done → completed_at = NULL
-    let derivedCompletedAt; // undefined = 本次更新不涉及状态
+    //  - 进入 done → completed_at 盖章；离开 done → completed_at = NULL
+    //  - 已经 done 的行再改别的字段（标题 / 备注 / 日期）→ **不动 completed_at**
+    //    （原来的实现每次都写成 now，等于每编辑一次就把「哪天完成的」抹成今天）
+    let derivedStatus; // undefined = 本次更新不涉及状态
     if ('status' in fields || 'completed' in fields) {
       let s;
       if ('status' in fields && 'completed' in fields) {
@@ -227,8 +229,15 @@ class EventModel {
       }
       fields.status = s;
       fields.completed = (s === 'done') ? 1 : 0;
-      derivedCompletedAt = (s === 'done') ? nowSqlite() : null;
+      derivedStatus = s;
     }
+
+    // 补录完成日期：前端传完整时间戳（带时区），这里统一落成 UTC 'YYYY-MM-DD HH:MM:SS'，
+    // 与 nowSqlite() 同格式 —— 读的时候前端 doneDate() 再转回本地自然日。
+    // 显式给了就以它为准，不再用「现在」。
+    const explicitCompletedAt = 'completed_at' in fields
+      ? normalizeCompletedAt(fields.completed_at)
+      : undefined;
 
     // 动态构建 SET 子句：只更新实际传入的字段
     const allowedFields = ['title', 'date', 'time', 'category', 'description', 'completed', 'reminder',
@@ -250,6 +259,17 @@ class EventModel {
       }
     });
 
+    if (explicitCompletedAt !== undefined) {
+      // 显式补录 / 改完成日期：直接用给定时间（null = 清掉）
+      setClauses.push('completed_at = ?');
+      values.push(explicitCompletedAt);
+    } else if (derivedStatus !== undefined) {
+      // 只有「从未完成变成完成」才盖章：COALESCE 保住已经存在的时间戳。
+      // 离开 done（回到 todo / in_progress / review）才清空。
+      setClauses.push("completed_at = CASE WHEN ? = 'done' THEN COALESCE(completed_at, ?) ELSE NULL END");
+      values.push(derivedStatus, nowSqlite());
+    }
+
     if (setClauses.length === 0) {
       // 没有任何要更新的字段：若调用方只改了子任务，仍要落库；否则直接返回当前事件
       if (!hasSubtasks) return EventModel.getEventById(userId, id, callback);
@@ -260,12 +280,6 @@ class EventModel {
         }
         if (!called) { called = true; EventModel.getEventById(userId, id, callback); }
       });
-    }
-
-    // 派生出的 completed_at（仅当本次更新涉及状态字段）
-    if (derivedCompletedAt !== undefined) {
-      setClauses.push('completed_at = ?');
-      values.push(derivedCompletedAt);
     }
 
     setClauses.push('updated_at = CURRENT_TIMESTAMP');
@@ -580,9 +594,14 @@ class EventModel {
   static updateStatus(userId, id, status, position, callback) {
     const s = normalizeStatus(status);
     const completed = (s === 'done') ? 1 : 0;
-    const completedAt = (s === 'done') ? nowSqlite() : null;
-    const setClauses = ['status = ?', 'completed = ?', 'completed_at = ?', 'updated_at = CURRENT_TIMESTAMP'];
-    const values = [s, completed, completedAt];
+    // 和 updateEvent 同一口径：只在「刚变成 done」时盖章。
+    // 原来无条件写 now —— 在已完成列里拖一下顺序，完成日期就被刷成今天了。
+    const setClauses = [
+      'status = ?', 'completed = ?',
+      "completed_at = CASE WHEN ? = 'done' THEN COALESCE(completed_at, ?) ELSE NULL END",
+      'updated_at = CURRENT_TIMESTAMP',
+    ];
+    const values = [s, completed, s, nowSqlite()];
     const hasPosition = (position !== undefined && position !== null && Number.isFinite(Number(position)));
     if (hasPosition) {
       setClauses.push('position = ?');
@@ -850,6 +869,25 @@ function nowSqlite() {
 function normalizeStatus(raw) {
   const s = String(raw == null ? 'todo' : raw).toLowerCase();
   return ['todo', 'in_progress', 'review', 'done'].includes(s) ? s : 'todo';
+}
+
+/**
+ * 补录完成日期用：把各种写法收敛成库里统一的 UTC 'YYYY-MM-DD HH:MM:SS'。
+ *  - 前端正常传带时区的 ISO（如 2026-11-06T04:00:00.000Z）→ 直接换算
+ *  - 传 'YYYY-MM-DD HH:MM:SS'（已是 UTC）→ 原样保留
+ *  - 只传 'YYYY-MM-DD' → 当天 UTC 正午，各国时区下都还落在同一天
+ *  - 空 / 非法 → null（等于清掉完成时间）
+ */
+function normalizeCompletedAt(raw) {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  const s = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s} 12:00:00`;
+  const iso = s.includes('T') ? s : s.replace(' ', 'T');
+  const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(iso);
+  const d = new Date(hasTz ? iso : `${iso}Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().replace('T', ' ').substring(0, 19);
 }
 
 // 计算下一个重复日期

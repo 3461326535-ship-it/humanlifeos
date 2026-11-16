@@ -56,14 +56,14 @@ function createRecurringRuleModel(db) {
     db.run(
       `INSERT INTO recurring_rules
          (user_id, title, rrule, dtstart, until_date, start_time, end_time,
-          estimate_minutes, project_id, priority, default_status, timezone,
+          estimate_minutes, project_id, priority, default_status, category, timezone,
           valid_from, valid_to, archived_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
       sp(userId, [
         String(data.title).trim(), data.rrule, data.dtstart,
         data.until_date || null, data.start_time || '', data.end_time || null,
         data.estimate_minutes || null, data.project_id || null, data.priority || null,
-        data.default_status || 'todo', data.timezone || 'Asia/Shanghai',
+        data.default_status || 'todo', data.category || '其他', data.timezone || 'Asia/Shanghai',
         data.valid_from || data.dtstart,
       ]),
       function (err) {
@@ -84,7 +84,7 @@ function createRecurringRuleModel(db) {
         catch (e) { return bad(e.message, cb); }
       }
       const allowed = ['title', 'rrule', 'start_time', 'end_time', 'estimate_minutes',
-        'project_id', 'priority', 'default_status', 'until_date', 'valid_to'];
+        'project_id', 'priority', 'default_status', 'category', 'until_date', 'valid_to'];
       const sets = [];
       const vals = [];
       allowed.forEach((k) => {
@@ -106,6 +106,61 @@ function createRecurringRuleModel(db) {
        SET valid_to = ?, archived_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
        WHERE ${scope(userId)} AND id = ?`,
       (userId != null ? [today, userId, id] : [today, id]),
+      function (e) { cb(e || null, { success: !e, changes: this.changes }); }
+    );
+  }
+
+  /**
+   * 停掉整条周期：「明天起不再生成」，并把已经铺出去、还没做的未来实例一起收起来。
+   *
+   * 为什么不能只封规则：窗口懒补早把未来几个月的实例写进 events 了，
+   * 只封规则的话，用户点完「停掉」发现日历上那一排还杵在那儿 —— 等于没停。
+   * 归档（archived_at）而不是物理删除：工时 / 子任务外键还在，删了说不清，
+   * 而且真要恢复，unarchive 还能捞回来。
+   *
+   * 今天及以前的实例一律保留：今天这一期可能正开在用户眼前，
+   * 不能因为点了「停掉」就把手上的活抽走。
+   */
+  function stopRule(userId, id, cb) {
+    getRule(userId, id, (err, rule) => {
+      if (err) return cb(err, null);
+      if (!rule) return cb(null, null);
+      const today = R.todayStr();
+      db.run(
+        `UPDATE recurring_rules
+         SET valid_to = ?, archived_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [today, id],
+        (e) => {
+          if (e) return cb(e, null);
+          db.run(
+            `UPDATE events SET archived_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+             WHERE ${scope(userId)} AND rule_id = ? AND archived_at IS NULL
+               AND completed = 0 AND COALESCE(canceled_at, '') = ''
+               AND date > ?`,
+            sp(userId, [id, today]),
+            function (e2) {
+              if (e2) return cb(e2, null);
+              cb(null, { success: true, rule_id: id, closed_instances: this.changes || 0 });
+            }
+          );
+        }
+      );
+    });
+  }
+
+  // 新建周期任务时，把「已经建好的那一行」挂成规则的第一期。
+  // 不挂的话，第一次窗口懒补会在同一天再插一条（UNIQUE(rule_id, occurrence_date) 拦不住
+  // rule_id 还是 NULL 的原始行），用户会看到两条一模一样的任务。
+  function attachInstance(userId, ruleId, eventId, occurrenceDate, cb) {
+    const where = userId != null ? 'id = ? AND user_id = ?' : 'id = ? AND user_id IS NULL';
+    const vals = userId != null
+      ? [ruleId, occurrenceDate, eventId, userId]
+      : [ruleId, occurrenceDate, eventId];
+    db.run(
+      `UPDATE events SET rule_id = ?, occurrence_date = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE ${where}`,
+      vals,
       function (e) { cb(e || null, { success: !e, changes: this.changes }); }
     );
   }
@@ -253,8 +308,8 @@ function createRecurringRuleModel(db) {
 
   return {
     getRule, listRules, createRule, updateRule, archiveRule,
-    ensureWindow, listInstances, patchInstance,
-    archiveOldInstances, unarchive, getStats,
+    ensureWindow, listInstances, patchInstance, attachInstance,
+    stopRule, archiveOldInstances, unarchive, getStats,
     STATUSES,
   };
 }

@@ -60,6 +60,13 @@ export interface EventInput {
   /** 甘特：里程碑（1 = 里程碑，只有一个日期点） */
   is_milestone?: number | null;
   project_id?: number | null;
+  /**
+   * 补录完成日期（ISO，带时区）。
+   * 不传 = 后端按「现在」盖章；传了就以此为准（用于补记很久以前做完的事）。
+   */
+  completed_at?: string | null;
+  /** 只改完成日期、不动状态时一起传 completed */
+  completed?: number;
 }
 
 export interface AuthUser {

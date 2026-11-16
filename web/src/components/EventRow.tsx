@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TodoEvent } from '../lib/types';
 import { PRIORITY_TEXT, priorityChipClass } from '../lib/priority';
-import { spanInfo } from '../lib/spans';
+import { diffDays, doneDate, spanInfo, todayStr } from '../lib/spans';
+import { cadenceLabel } from '../lib/recurring';
 import TimerButton from './TimerButton';
+import DoneDateBar from './DoneDateBar';
 
 function timeRange(event: TodoEvent) {
   const start = event.time || (event.start_time ? event.start_time.slice(11, 16) : '');
@@ -11,12 +13,23 @@ function timeRange(event: TodoEvent) {
   return start;
 }
 
+/** 完成日的人话：今天 / 昨天 / 11/6（37 天前） */
+function doneLabel(day: string) {
+  if (!day) return '';
+  const gap = diffDays(day, todayStr()); // 正数 = 距今多少天前
+  if (gap === 0) return '今天';
+  if (gap === 1) return '昨天';
+  const [, m, d] = day.split('-');
+  return gap > 1 ? `${Number(m)}/${Number(d)}（${gap} 天前）` : `${Number(m)}/${Number(d)}`;
+}
+
 export default function EventRow({
   event,
   viewDate,
   onToggle,
   onEdit,
   onToggleSubtask,
+  onCompleteAt,
 }: {
   event: TodoEvent;
   /** 正在看的那一天：跨天任务靠它算「第 N/M 天」 */
@@ -24,14 +37,28 @@ export default function EventRow({
   onToggle: () => void;
   onEdit: () => void;
   onToggleSubtask?: (subtaskId: number) => void;
+  /** 补记完成日期（YYYY-MM-DD）；不传则不提供补录入口 */
+  onCompleteAt?: (date: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  // 补录面板：'complete' = 勾之前先选日子；'edit' = 已完成，回来改哪天数
+  const [sheet, setSheet] = useState<'none' | 'complete' | 'edit'>('none');
+  const holdRef = useRef<number | null>(null);
+  const longPressed = useRef(false);
+
+  useEffect(() => () => {
+    if (holdRef.current) window.clearTimeout(holdRef.current);
+  }, []);
 
   const subs = event.subtasks || [];
   const subTotal = subs.length;
   const subDone = subs.filter((s) => s.completed).length;
   const pct = subTotal > 0 ? Math.round((subDone / subTotal) * 100) : 0;
   const range = timeRange(event);
+
+  const isRecurring = !!event.rule_id || !!event.recurrence;
+  const cadence = cadenceLabel(event.recurrence, event.date);
+  const done = event.completed ? doneDate(event) : '';
 
   // 行的主点击＝展开/收起子任务（有子任务时），只有没有子任务时才落回编辑。
   // 编辑的明确入口：右侧铅笔按钮（hover 出现）或双击行。
@@ -46,9 +73,26 @@ export default function EventRow({
 
   const metaBits: { text: string; cls?: string }[] = [
     ...(span ? [{ text: span.label, cls: span.kind === 'overdue' ? 'text-coral' : 'text-ink-mid' }] : []),
+    // 节律是这一行的身份：不是「今天有事」，是「每周五都有事」。没有它，
+    // 勾选的人不会知道自己动的是这一期还是整条规则。
+    ...(isRecurring && cadence ? [{ text: `↻ ${cadence}` }] : []),
     ...(event.category && event.category !== '其他' ? [{ text: event.category }] : []),
     ...(range ? [{ text: range }] : []),
   ];
+
+  // 长按勾选圈 = 「慢着，是哪天做完的？」；普通单击仍然是零摩擦的「现在完成」
+  const startHold = () => {
+    if (!onCompleteAt || event.completed) return;
+    longPressed.current = false;
+    holdRef.current = window.setTimeout(() => {
+      longPressed.current = true;
+      setSheet('complete');
+    }, 450);
+  };
+  const endHold = () => {
+    if (holdRef.current) window.clearTimeout(holdRef.current);
+    holdRef.current = null;
+  };
 
   return (
     <li className="border-b border-line/40 last:border-b-0">
@@ -73,11 +117,38 @@ export default function EventRow({
               ? 'border-moss-deep bg-moss-deep'
               : 'border-[#CFC7BA] group-hover:border-moss/60'
           }`}
+          onPointerDown={startHold}
+          onPointerUp={endHold}
+          onPointerLeave={endHold}
+          onContextMenu={(e) => {
+            // 右键也开补录面板：长按在桌面端不直观，右键是同一个意思
+            if (!onCompleteAt || event.completed) return;
+            e.preventDefault();
+            e.stopPropagation();
+            setSheet('complete');
+          }}
           onClick={(e) => {
             e.stopPropagation();
+            if (longPressed.current) {
+              longPressed.current = false;
+              return;
+            }
             onToggle();
           }}
-          aria-label={event.completed ? '标记未完成' : '标记完成'}
+          aria-label={
+            event.completed
+              ? '标记未完成'
+              : isRecurring
+                ? '补记这一期完成（长按可选完成日期）'
+                : '标记完成（长按可选完成日期）'
+          }
+          title={
+            event.completed
+              ? '标记未完成'
+              : isRecurring
+                ? '完成这一期，周期继续；长按可选「哪天做完的」'
+                : '标记完成；长按可选「哪天做完的」'
+          }
         >
           {event.completed && (
             <svg
@@ -106,10 +177,13 @@ export default function EventRow({
                 title="里程碑（只有一个达成日）"
               />
             ) : null}
+            {isRecurring ? (
+              <span className="sr-only">周期任务</span>
+            ) : null}
             {event.title}
           </p>
 
-          {(metaBits.length > 0 || subTotal > 0) && (
+          {(metaBits.length > 0 || subTotal > 0 || done) && (
             <div className="mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] text-ink-soft">
               {metaBits.map((b, i) => (
                 <span key={b.text} className="flex min-w-0 items-center gap-1.5">
@@ -137,6 +211,27 @@ export default function EventRow({
                   >
                     ›
                   </span>
+                </span>
+              )}
+
+              {/* 完成日：默认显示，可点改 —— 「今天做的」和「上上周做的」不该长得一样 */}
+              {done && (
+                <span className="flex flex-none items-center gap-1.5">
+                  {metaBits.length > 0 && <span className="text-ink-faint">·</span>}
+                  <button
+                    type="button"
+                    disabled={!onCompleteAt}
+                    className={`rounded px-1 -mx-1 transition-colors ${
+                      onCompleteAt ? 'hover:bg-line/50 hover:text-ink-mid' : ''
+                    }`}
+                    title={onCompleteAt ? '改完成日期（补记到实际做完的那天）' : undefined}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onCompleteAt) setSheet('edit');
+                    }}
+                  >
+                    完成于 {doneLabel(done)}
+                  </button>
                 </span>
               )}
             </div>
@@ -168,6 +263,20 @@ export default function EventRow({
           )}
         </div>
       </div>
+
+      {/* 补录完成日期：行内展开，不夺走上下文 */}
+      {sheet !== 'none' && onCompleteAt && (
+        <DoneDateBar
+          mode={sheet}
+          value={sheet === 'edit' ? done || todayStr() : todayStr()}
+          original={event.date}
+          onSubmit={(d) => {
+            setSheet('none');
+            onCompleteAt(d);
+          }}
+          onCancel={() => setSheet('none')}
+        />
+      )}
 
       {/* 子任务：行内展开，勾选即时生效，不跳页不开弹窗 */}
       {expanded && subTotal > 0 && (

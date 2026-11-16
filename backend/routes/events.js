@@ -62,18 +62,55 @@ router.post('/', validate({
       return res.status(500).json({ error: sanitizeError(err) });
     }
 
+    const userId = uid(req);
+    const rec = event.recurrence;
+    const isRecurring = rec && ['daily', 'weekly', 'monthly', 'yearly'].includes(rec);
+
     // v0.4：新模型三表已建后不再前置生成几十~上千条实体实例。
     // 习惯走 habits 规则（零物化），周期任务走 recurring_rules + 窗口懒补。
     isV04SchemaReady((v04Ready) => {
-      const hasRecurrence = !v04Ready && event.recurrence
-        && ['daily', 'weekly', 'monthly', 'yearly'].includes(event.recurrence);
-      if (hasRecurrence) {
-        EventModel.generateForwardInstances(uid(req), event, () => {
-          res.status(201).json(event);
-        });
-      } else {
-        res.status(201).json(event);
+      if (!isRecurring) return res.status(201).json(event);
+
+      // 老 schema：沿用一次性铺量（迁移期兜底，v0.4 就绪后不会走到这里）
+      if (!v04Ready) {
+        return EventModel.generateForwardInstances(userId, event, () => res.status(201).json(event));
       }
+
+      // 新 schema：建「规则」，并把刚建好的这一行挂成它的第一期。
+      // 不做的话，「每周」就只是一个字段 —— 一条永不重复的假周期任务。
+      const RuleModel = require('../models/recurringRuleModel')(require('../models/db'));
+      const R = require('../models/rrule');
+      const RRULE_OF = {
+        daily: 'FREQ=DAILY;INTERVAL=1',
+        weekly: 'FREQ=WEEKLY;INTERVAL=1',
+        monthly: 'FREQ=MONTHLY;INTERVAL=1',
+        yearly: 'FREQ=YEARLY;INTERVAL=1',
+      };
+
+      RuleModel.createRule(userId, {
+        title: event.title,
+        rrule: RRULE_OF[rec],
+        dtstart: event.date,
+        until_date: event.recurrence_end_date || null,
+        start_time: event.time || '',
+        end_time: event.end_time || null,
+        project_id: event.project_id || null,
+        priority: event.priority || null,
+        default_status: 'todo',
+        category: event.category || '其他',
+        valid_from: event.date,
+      }, (ruleErr, rule) => {
+        // 建规则失败不该把任务本身一起丢掉：退化成一条普通任务，至少不假装它能重复
+        if (ruleErr || !rule) return res.status(201).json(event);
+
+        RuleModel.attachInstance(userId, rule.id, event.id, event.date, () => {
+          const today = R.todayStr();
+          // 只补「今天 → 4 个月」：日历/甘特够看未来排期，又不会一建就铺几百行
+          RuleModel.ensureWindow(userId, today, R.addDays(today, 120), () => {
+            EventModel.getEventById(userId, event.id, (e2, fresh) => res.status(201).json(fresh || event));
+          });
+        });
+      });
     });
   });
 });
@@ -90,7 +127,9 @@ router.put('/:id', validate({
   recurrence_end_date: { rule: RULES.string, message: 'recurrence_end_date 必须是字符串', optional: true },
   subtasks: { rule: RULES.array, message: 'subtasks 必须是数组', optional: true },
   end_date: { rule: RULES.string, message: 'end_date 必须是字符串（YYYY-MM-DD）', optional: true },
-  is_milestone: { rule: (v) => v === 0 || v === 1 || v === true || v === false, message: 'is_milestone 必须是 0 或 1', optional: true }
+  is_milestone: { rule: (v) => v === 0 || v === 1 || v === true || v === false, message: 'is_milestone 必须是 0 或 1', optional: true },
+  // 补录完成日期：前端传带时区的 ISO（或 YYYY-MM-DD），后端统一收敛成 UTC
+  completed_at: { rule: RULES.string, message: 'completed_at 必须是字符串（ISO 时间或 YYYY-MM-DD）', optional: true }
 }), (req, res) => {
   const id = parseInt(req.params.id);
   const userId = uid(req);

@@ -318,6 +318,16 @@ function initDatabase() {
     v04AddColumn('occurrence_date', 'TEXT');
     v04AddColumn('archived_at', 'TEXT');
 
+    // ④b recurring_rules 补 category：物化实例时要带上分类，否则周报全落进「其他」
+    db.run(`ALTER TABLE recurring_rules ADD COLUMN category TEXT DEFAULT '其他'`, (err) => {
+      if (err) {
+        if (/duplicate column/i.test(err.message)) return; // 幂等
+        console.error('[DB][v0.4] recurring_rules.category 加列失败:', err.message);
+      } else {
+        console.log('[DB][v0.4] recurring_rules.category 已添加');
+      }
+    });
+
     // ⑤ 索引：新表空、rule_id 全 NULL 时建，必然成功
     v04Run('idx_events_rule_occurrence', `CREATE UNIQUE INDEX IF NOT EXISTS
       idx_events_rule_occurrence ON events(rule_id, occurrence_date)

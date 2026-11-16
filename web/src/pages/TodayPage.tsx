@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { TodoEvent, Recurrence } from '../lib/types';
-import { doneDate, endOf } from '../lib/spans';
+import { doneDate, doneStamp, endOf } from '../lib/spans';
 import EventDialog from '../components/EventDialog';
 import EventRow from '../components/EventRow';
 import ActiveTimer from '../components/ActiveTimer';
@@ -127,6 +127,19 @@ export default function TodayPage() {
     },
     onSettled: invalidate,
   });
+
+  /**
+   * 补记完成日期。勾选圈单击 = 现在完成（走 toggleMutation，零摩擦）；
+   * 长按 / 右键 / 点「完成于 …」= 明确指定哪天做完的，走这里。
+   * 补记到过去某天时，完成数要落在那天 —— 否则「131 天前的事今天补勾」会把今天的
+   * 完成统计撑得虚高，回头查也看不出来。
+   */
+  const completeOn = (id: number, date: string) => {
+    queryClient.setQueryData<TodoEvent[]>(['events'], (prev) =>
+      prev?.map((e) => (e.id === id ? { ...e, completed: true, status: 'done' as const } : e))
+    );
+    api.completeOn(id, doneStamp(date)).then(invalidate).catch(invalidate);
+  };
 
   // 行内勾选单条子任务：后端是「整体替换 subtasks」，所以回传全量；先做乐观更新，点下去立刻有反馈
   const toggleSubtask = (event: TodoEvent, subtaskId: number) => {
@@ -288,6 +301,7 @@ export default function TodayPage() {
                         setDialogOpen(true);
                       }}
                       onToggleSubtask={(sid) => toggleSubtask(event, sid)}
+                        onCompleteAt={(d) => completeOn(event.id, d)}
                     />
                   ))}
                 </ul>
@@ -320,6 +334,7 @@ export default function TodayPage() {
                           setDialogOpen(true);
                         }}
                         onToggleSubtask={(sid) => toggleSubtask(event, sid)}
+                        onCompleteAt={(d) => completeOn(event.id, d)}
                       />
                     ))}
                   </ul>
@@ -345,6 +360,7 @@ export default function TodayPage() {
                         setDialogOpen(true);
                       }}
                       onToggleSubtask={(sid) => toggleSubtask(event, sid)}
+                        onCompleteAt={(d) => completeOn(event.id, d)}
                     />
                   ))}
                 </ul>
@@ -373,6 +389,7 @@ export default function TodayPage() {
                           setDialogOpen(true);
                         }}
                         onToggleSubtask={(sid) => toggleSubtask(event, sid)}
+                        onCompleteAt={(d) => completeOn(event.id, d)}
                       />
                     ))}
                   </ul>

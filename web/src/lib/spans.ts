@@ -9,6 +9,25 @@ export function endOf(e: { date: string; end_date?: string | null }): string {
   return e.end_date && e.end_date > e.date ? e.end_date : '';
 }
 
+/** 本地自然日 'YYYY-MM-DD' */
+export function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * 「完成于哪一天」→ 要落库的时间戳。
+ *
+ * 今天就用此刻（时间点有意义，统计看的是当天）；补录到别的日子用当地正午 ——
+ * 不用 00:00 是为了避开时区边界，后端统一按 UTC 存，doneDate() 再转回本地自然日，
+ * 两头都稳定地落在同一天。
+ */
+export function doneStamp(date: string): string {
+  if (date === todayStr()) return new Date().toISOString();
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, 12, 0, 0).toISOString();
+}
+
 function toUTC(s: string) {
   const [y, m, d] = s.split('-').map(Number);
   return Date.UTC(y, (m || 1) - 1, d || 1);

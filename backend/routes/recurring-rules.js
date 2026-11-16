@@ -101,6 +101,16 @@ router.put('/:id', (req, res) => {
   });
 });
 
+// 停掉整条周期：明天起不再生成，并把未来没做的实例一起归档
+// （「跳过这一期」是 PATCH /api/events/:id/cancel，两件事别混）
+router.post('/:id/stop', (req, res) => {
+  RuleModel.stopRule(uid(req), Number(req.params.id), (err, result) => {
+    if (err) return fail(res, err);
+    if (!result) return res.status(404).json({ error: '规则不存在' });
+    res.json(result);
+  });
+});
+
 // 归档规则：停止生成新实例，已有实例保留
 router.delete('/:id', (req, res) => {
   RuleModel.archiveRule(uid(req), Number(req.params.id), (err, result) => {
