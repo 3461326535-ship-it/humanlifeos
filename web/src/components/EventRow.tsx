@@ -1,19 +1,7 @@
 import { useState } from 'react';
 import type { TodoEvent } from '../lib/types';
+import { PRIORITY_TEXT, priorityChipClass } from '../lib/priority';
 import TimerButton from './TimerButton';
-
-// 优先级 chip：图纸上是「浅底 + 描边」的小方牌，不是实心块
-const PRIORITY_CHIP: Record<string, string> = {
-  high: 'border-coral/40 bg-coral-soft/70 text-coral',
-  medium: 'border-clay/40 bg-clay-soft/70 text-clay',
-  low: 'border-line bg-paper-deep text-ink-soft',
-};
-
-const PRIORITY_TEXT: Record<string, string> = {
-  high: '高',
-  medium: '中',
-  low: '低',
-};
 
 function timeRange(event: TodoEvent) {
   const start = event.time || (event.start_time ? event.start_time.slice(11, 16) : '');
@@ -146,7 +134,7 @@ export default function EventRow({
           )}
         </div>
 
-        {/* 右：行内计时 + 编辑按钮（hover / 触屏常显）+ 优先级牌（完成态不再重复打勾） */}
+        {/* 右：行内计时（完成态不给计时入口）+ 编辑按钮（hover / 触屏常显）+ 优先级牌 */}
         <div className="flex flex-none items-center gap-2">
           {!event.completed && <TimerButton eventId={event.id} />}
           <button
@@ -163,8 +151,9 @@ export default function EventRow({
             </svg>
           </button>
 
-          {!event.completed && event.priority && (
-            <span className={`chip border ${PRIORITY_CHIP[event.priority]}`}>
+          {/* 优先级牌：完成态仍然保留，只是压暗（见 lib/priority.ts） */}
+          {event.priority && (
+            <span className={`chip border ${priorityChipClass(event.priority, event.completed)}`}>
               {PRIORITY_TEXT[event.priority]}
             </span>
           )}

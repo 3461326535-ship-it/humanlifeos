@@ -23,8 +23,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { api } from '../lib/api';
 import type { TodoEvent, TaskStatus } from '../lib/types';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../lib/types';
+import { PRIORITY_TEXT, priorityChipClass } from '../lib/priority';
 import EventDialog from '../components/EventDialog';
-import TimerButton from '../components/TimerButton';
 
 const COLUMNS: TaskStatus[] = ['todo', 'in_progress', 'review', 'done'];
 
@@ -41,14 +41,8 @@ const PRIORITY_DOT: Record<string, string> = {
   low: 'bg-lagoon',
 };
 
-// 卡片右上角的优先级小牌：浅底 + 描边（与今天页一致）
-const PRIORITY_CHIP: Record<string, string> = {
-  high: 'border-coral/40 bg-coral-soft/70 text-coral',
-  medium: 'border-clay/40 bg-clay-soft/70 text-clay',
-  low: 'border-line bg-paper-deep text-ink-soft',
-};
-
-const PRIORITY_TEXT: Record<string, string> = { high: '高', medium: '中', low: '低' };
+// 卡片右上角的优先级小牌：样式与今天页共用（lib/priority.ts），
+// 「已完成」列里不摘牌子，只压暗 —— 优先级是任务属性，不是待办状态
 
 // 「今天 / 11/14」这种短日期，卡片上比完整 YYYY-MM-DD 好读
 function dayLabel(date: string) {
@@ -152,7 +146,7 @@ function KanbanCard({
       {...attributes}
       {...listeners}
       onClick={() => onOpen(event)}
-      className="card group cursor-grab p-3 active:cursor-grabbing"
+      className="card cursor-grab p-3 active:cursor-grabbing"
     >
       <div className="flex items-start gap-2">
         {event.status === 'done' && (
@@ -169,10 +163,11 @@ function KanbanCard({
         >
           {event.title}
         </p>
-        {event.priority && event.status !== 'done' && (
-          <span className={`chip flex-none border ${PRIORITY_CHIP[event.priority]}`}>{PRIORITY_TEXT[event.priority]}</span>
+        {event.priority && (
+          <span className={`chip flex-none border ${priorityChipClass(event.priority, event.status === 'done')}`}>
+            {PRIORITY_TEXT[event.priority]}
+          </span>
         )}
-        {!event.completed && event.status !== 'done' && <TimerButton eventId={event.id} />}
       </div>
 
       <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
@@ -243,7 +238,9 @@ function CardPreview({ event }: { event: TodoEvent }) {
       <div className="flex items-start gap-2">
         <p className="min-w-0 flex-1 text-[13.5px] leading-[1.45] text-ink">{event.title}</p>
         {event.priority && (
-          <span className={`chip flex-none border ${PRIORITY_CHIP[event.priority]}`}>{PRIORITY_TEXT[event.priority]}</span>
+          <span className={`chip flex-none border ${priorityChipClass(event.priority, event.status === 'done')}`}>
+            {PRIORITY_TEXT[event.priority]}
+          </span>
         )}
       </div>
       <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
@@ -377,13 +374,10 @@ export default function KanbanPage() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status, position }: { id: number; status: TaskStatus; position: number }) =>
       api.updateStatus(id, status, position),
-    // 失败要显式提示：否则乐观更新会被 invalidate 悄悄拉回，看起来像「刷新就回去了」
-    onError: (err: Error) => setBanner(`状态保存失败：${err.message}`),
     onSettled: invalidate,
   });
   const reorderMutation = useMutation({
     mutationFn: (items: { id: number; position: number }[]) => api.reorder(items),
-    onError: (err: Error) => setBanner(`排序保存失败：${err.message}`),
     onSettled: invalidate,
   });
 
