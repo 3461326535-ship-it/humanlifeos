@@ -69,17 +69,31 @@ export default function EventRow({
           }
         }}
       >
-        {/* 左：空心勾选圈 */}
+        {/* 左：勾选圈 —— 完成态就在原地填实并打勾（勾必须长在你要点的地方） */}
         <button
           className={`flex h-[17px] w-[17px] flex-none items-center justify-center rounded-full border transition-colors ${
-            event.completed ? 'border-line' : 'border-[#CFC7BA] group-hover:border-moss/60'
+            event.completed
+              ? 'border-moss-deep bg-moss-deep'
+              : 'border-[#CFC7BA] group-hover:border-moss/60'
           }`}
           onClick={(e) => {
             e.stopPropagation();
             onToggle();
           }}
           aria-label={event.completed ? '标记未完成' : '标记完成'}
-        />
+        >
+          {event.completed && (
+            <svg
+              viewBox="0 0 12 12"
+              className="h-[9px] w-[9px] fill-none stroke-white"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2.4 6.2 4.7 8.6 9.6 3.4" />
+            </svg>
+          )}
+        </button>
 
         {/* 中：标题 + 一行元信息 */}
         <div className="min-w-0 flex-1">
@@ -132,7 +146,7 @@ export default function EventRow({
           )}
         </div>
 
-        {/* 右：行内计时 + 编辑按钮（hover / 触屏常显）+ 优先级牌 / 已完成绿勾 */}
+        {/* 右：行内计时 + 编辑按钮（hover / 触屏常显）+ 优先级牌（完成态不再重复打勾） */}
         <div className="flex flex-none items-center gap-2">
           {!event.completed && <TimerButton eventId={event.id} />}
           <button
@@ -149,18 +163,10 @@ export default function EventRow({
             </svg>
           </button>
 
-          {event.completed ? (
-            <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-moss-deep">
-              <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 fill-none stroke-white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2.5 6.2 4.8 8.5 9.5 3.6" />
-              </svg>
+          {!event.completed && event.priority && (
+            <span className={`chip border ${PRIORITY_CHIP[event.priority]}`}>
+              {PRIORITY_TEXT[event.priority]}
             </span>
-          ) : (
-            event.priority && (
-              <span className={`chip border ${PRIORITY_CHIP[event.priority]}`}>
-                {PRIORITY_TEXT[event.priority]}
-              </span>
-            )
           )}
         </div>
       </div>
