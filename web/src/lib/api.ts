@@ -72,6 +72,13 @@ export const api = {
       body: JSON.stringify({ status, ...(position !== undefined ? { position } : {}) }),
     });
   },
+  /** 标记「不做」/ 撤销不做（终态，不删数据） */
+  cancelEvent(id: number, canceled = true) {
+    return request<{ id: number; canceled: boolean }>(`/events/${id}/cancel`, {
+      method: 'PATCH',
+      body: JSON.stringify({ canceled }),
+    });
+  },
   reorder(items: { id: number; position: number }[]) {
     return request<{ success: boolean; updated: number }>('/events/reorder', {
       method: 'POST',

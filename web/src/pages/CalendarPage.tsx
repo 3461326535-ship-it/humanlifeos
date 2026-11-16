@@ -201,6 +201,7 @@ export default function CalendarPage() {
   const byDate = useMemo(() => {
     const map: Record<string, TodoEvent[]> = {};
     (allEvents || []).forEach((e) => {
+      if (e.canceled_at) return; // 「不做」的事不再上日历
       if (e.date) (map[e.date] ||= []).push(e);
     });
     return map;

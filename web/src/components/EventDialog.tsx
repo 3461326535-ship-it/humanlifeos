@@ -126,6 +126,13 @@ export default function EventDialog({
     onError: (e: Error) => setError(e.message),
   });
 
+  // 「不做」是终态，不是删除：数据留着，统计里算一次取消，随时能恢复
+  const cancelMutation = useMutation({
+    mutationFn: (next: boolean) => api.cancelEvent(event!.id, next),
+    onSuccess: () => onSaved?.(),
+    onError: (e: Error) => setError(e.message),
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.title.trim()) return setError('标题不能为空');
@@ -407,6 +414,23 @@ export default function EventDialog({
                   </button>
                 )}
               </div>
+            )}
+
+            {/* 介于「留着」和「删掉」之间的那个决定 —— 大部分陈旧任务其实该走这里 */}
+            {isEdit && (
+              <button
+                type="button"
+                className="btn-ghost text-xs text-ink-soft"
+                onClick={() => cancelMutation.mutate(!event!.canceled_at)}
+                disabled={cancelMutation.isPending}
+                title={
+                  event!.canceled_at
+                    ? '重新放回待办'
+                    : '决定不做了：离开待办但不删除，统计里算一次「取消」，随时可恢复'
+                }
+              >
+                {event!.canceled_at ? '恢复' : '不做'}
+              </button>
             )}
             <div className="ml-auto flex gap-2">
               <button type="button" className="btn-ghost" onClick={onClose}>

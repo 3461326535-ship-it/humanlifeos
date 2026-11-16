@@ -551,6 +551,32 @@ class EventModel {
   }
 
   // ===== 看板：更新状态（内部走同一套派生规则）=====
+  // 「不做」终态（Linear 的 Canceled）：
+  //   · 与完成分开 —— 统计里算「取消」，不算「做完」
+  //   · 也不再进逾期：决定不做了，就不该天天催
+  static cancelEvent(userId, id, canceled, callback) {
+    const at = canceled ? nowSqlite() : null;
+    const where = userId != null ? 'WHERE id = ? AND user_id = ?' : 'WHERE id = ? AND user_id IS NULL';
+    const values = [at];
+    values.push(id);
+    if (userId != null) values.push(userId);
+
+    db.run(
+      `UPDATE events SET canceled_at = ?, updated_at = CURRENT_TIMESTAMP ${where}`,
+      values,
+      function (err) {
+        if (err) return callback(err, null);
+        if (this.changes === 0) {
+          const notFound = new Error('事件不存在或无权修改');
+          notFound.statusCode = 404;
+          return callback(notFound, null);
+        }
+        EventModel._logActivityForEvent(userId, id, canceled ? 'cancel' : 'restore', {});
+        callback(null, { id, canceled: !!canceled });
+      }
+    );
+  }
+
   static updateStatus(userId, id, status, position, callback) {
     const s = normalizeStatus(status);
     const completed = (s === 'done') ? 1 : 0;

@@ -226,6 +226,16 @@ router.get('/:id/time-entries', (req, res) => {
   });
 });
 
+// 「不做」/ 撤销不做（终态标记，不删除数据）
+router.patch('/:id/cancel', (req, res) => {
+  const id = parseInt(req.params.id);
+  const canceled = req.body && req.body.canceled === false ? false : true;
+  EventModel.cancelEvent(uid(req), id, canceled, (err, result) => {
+    if (err) return res.status(err.statusCode || 500).json({ error: sanitizeError(err) });
+    res.json(result);
+  });
+});
+
 // ══════════════════════════════════════════════════════════
 // v0.4：恢复软归档的周期实例（归档只是 archived_at 标记，可回溯）
 // ══════════════════════════════════════════════════════════

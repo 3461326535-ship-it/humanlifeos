@@ -149,6 +149,7 @@ export default function TodayPage() {
   const dayEvents = useMemo(() => {
     if (!allEvents) return [];
     return allEvents
+      .filter((e) => !e.canceled_at)
       .filter((e) => !q || e.title.includes(q) || (e.category || '').includes(q))
       .filter((e) => {
         const end = endOf(e);
@@ -163,7 +164,7 @@ export default function TodayPage() {
   const carriedOver = useMemo(() => {
     if (!allEvents) return [];
     return allEvents
-      .filter((e) => !e.completed && endOf(e) && e.date < date)
+      .filter((e) => !e.completed && !e.canceled_at && endOf(e) && e.date < date)
       .filter((e) => !q || e.title.includes(q) || (e.category || '').includes(q))
       .sort((a, b) => {
         const ea = endOf(a);
@@ -191,7 +192,7 @@ export default function TodayPage() {
   const overdueAll = useMemo(() => {
     const t = todayStr();
     return (allEvents || [])
-      .filter((e) => !e.completed && !e.rule_id && !endOf(e) && e.date < t)
+      .filter((e) => !e.completed && !e.canceled_at && !e.rule_id && !endOf(e) && e.date < t)
       .sort((a, b) => b.date.localeCompare(a.date) || a.id - b.id); // 最近错过的排前面
   }, [allEvents]);
 

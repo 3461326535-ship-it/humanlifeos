@@ -36,6 +36,8 @@ export interface TodoEvent {
   rule_id?: number | null;
   /** 实例对应的原始发生日 */
   occurrence_date?: string | null;
+  /** 「不做」终态：非空 = 已决定不做（与完成分开计数，也不再进待办视图） */
+  canceled_at?: string | null;
   created_at: string;
   updated_at: string;
   subtasks: Subtask[];

@@ -20,11 +20,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import type { TodoEvent, TaskStatus } from '../lib/types';
 import { STATUS_LABELS, PRIORITY_LABELS } from '../lib/types';
 import { PRIORITY_TEXT, priorityChipClass } from '../lib/priority';
-import { coversDay, overlaps, spanInfo } from '../lib/spans';
+import { diffDays, doneDate, spanInfo } from '../lib/spans';
+import { collapseRecurring } from '../lib/recurring';
 import EventDialog from '../components/EventDialog';
 
 const COLUMNS: TaskStatus[] = ['todo', 'in_progress', 'review', 'done'];
@@ -53,7 +55,18 @@ function dayLabel(date: string) {
   return `${Number(m)}/${Number(d)}`;
 }
 
-type Scope = 'today' | 'week' | 'all';
+// 看板只做「窗口」，「全部」留给日历/统计/搜索页 ——
+// 一个不设边界的看板必然被未来的周期实例填满
+type Scope = 'today' | 'week' | 'backlog';
+
+// 每列除了可见卡片，还带两组被收起的东西：
+//   future = 未到期（还没到该看它的时候）
+//   older  = 更早完成的（Done 列只露最近几条）
+//   stale  = 陈年旧账（超期太久，该去回顾页做决定，而不是天天占着今天）
+// 阈值与 /review 页保持一致，改一处要改两处
+type Folded = { future: TodoEvent[]; older: TodoEvent[]; stale: TodoEvent[]; total: number };
+
+const STALE_DAYS = 14;
 type Columns = Record<TaskStatus, TodoEvent[]>;
 
 // 拖进「已完成」但还有未勾子任务时，先把动作挂起，等用户选
@@ -234,11 +247,14 @@ function KanbanCard({
   );
 }
 
-// 预览卡（DragOverlay 用，无交互）
-function CardPreview({ event }: { event: TodoEvent }) {
+// 预览卡（DragOverlay 用，无交互）；onOpen 传了就当静态卡用（收起区）
+function CardPreview({ event, onOpen, dragging }: { event: TodoEvent; onOpen?: (e: TodoEvent) => void; dragging?: boolean }) {
   const { done: doneSub, total: totalSub } = subProgress(event);
   return (
-    <div className="card cursor-grabbing p-3 shadow-pop">
+    <div
+      onClick={onOpen ? () => onOpen(event) : undefined}
+      className={`card p-3 ${dragging ? 'cursor-grabbing shadow-pop' : 'cursor-pointer opacity-75 hover:opacity-100'}`}
+    >
       <div className="flex items-start gap-2">
         <p className="min-w-0 flex-1 text-[13.5px] leading-[1.45] text-ink">{event.title}</p>
         {event.priority && (
@@ -265,28 +281,76 @@ function CardPreview({ event }: { event: TodoEvent }) {
   );
 }
 
+// ── 一排收起：默认只是一行字，不占屏幕；点开才渲染卡片 ──
+function CollapseRow({
+  label,
+  items,
+  onOpen,
+  hint,
+  action,
+}: {
+  label: string;
+  items: TodoEvent[];
+  onOpen: (e: TodoEvent) => void;
+  hint?: string;
+  action?: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11.5px] text-ink-soft transition-colors hover:bg-paper-deep hover:text-ink-mid"
+        >
+          <span className={`flex-none text-[9px] transition-transform ${open ? '-rotate-90' : 'rotate-90'}`}>›</span>
+          <span className="tabular-nums">{open ? '收起' : `${label} ${items.length}`}</span>
+          {hint && !open && <span className="truncate text-[10.5px] text-ink-faint">{hint}</span>}
+        </button>
+        {!open && action}
+      </div>
+      {open && (
+        <div className="mt-1 space-y-2">
+          {items.map((e) => (
+            <CardPreview key={e.id} event={e} onOpen={onOpen} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── 单列（可放置区）──
+// 只渲染「该看的」卡片；未到期 / 陈年旧账 / 更早完成的各收成一行。
+// 计数仍然报全量 —— 数字是信息，卡片是噪音，两者不冲突。
 function Column({
   status,
   events,
+  folded,
   onOpen,
   onAdd,
   onToggleSubtask,
 }: {
   status: TaskStatus;
   events: TodoEvent[];
+  folded: Folded;
   onOpen: (e: TodoEvent) => void;
   onAdd: (s: TaskStatus) => void;
   onToggleSubtask: (e: TodoEvent, subtaskId: number) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: status });
+  const isDone = status === 'done';
+
   return (
     <div className="flex min-w-[248px] flex-1 flex-col rounded-xl border border-line bg-line-soft/70">
-      {/* 列头：色点 + 名称 + 计数 */}
+      {/* 列头：色点 + 名称 + 计数（全量，含收起的） */}
       <div className="flex items-center gap-2 px-3 pb-2.5 pt-3">
         <span className={`h-[7px] w-[7px] rounded-full ${STATUS_ACCENT[status]}`} />
         <span className="text-[13px] font-semibold text-ink-mid">{STATUS_LABELS[status]}</span>
-        <span className="text-[12px] tabular-nums text-ink-soft">({events.length})</span>
+        <span className="text-[12px] tabular-nums text-ink-soft">({folded.total})</span>
       </div>
       {/* 卡片区（放置目标） */}
       <div ref={setNodeRef} className="flex-1 space-y-2 px-2">
@@ -295,6 +359,32 @@ function Column({
             <KanbanCard key={e.id} event={e} onOpen={onOpen} onToggleSubtask={onToggleSubtask} />
           ))}
         </SortableContext>
+
+        {isDone ? (
+          <CollapseRow label="更早完成" items={folded.older} onOpen={onOpen} />
+        ) : (
+          <>
+            <CollapseRow
+              label="陈年旧账"
+              items={folded.stale}
+              onOpen={onOpen}
+              hint="该做决定了"
+              action={
+                <Link
+                  to="/review"
+                  className="flex-none rounded-md px-1.5 py-0.5 text-[10.5px] text-ink-soft ring-1 ring-line transition-colors hover:text-ink-mid"
+                >
+                  去回顾
+                </Link>
+              }
+            />
+            <CollapseRow label="未到期" items={folded.future} onOpen={onOpen} />
+          </>
+        )}
+
+        {events.length === 0 && folded.total === 0 && (
+          <p className="px-1 py-3 text-center text-[11.5px] text-ink-faint">空</p>
+        )}
       </div>
       {/* 列底：添加任务 */}
       <button
@@ -354,6 +444,12 @@ export default function KanbanPage() {
   const [scope, setScope] = useState<Scope>('today');
   const [date, setDate] = useState(todayStr());
   const [columns, setColumns] = useState<Columns>({ todo: [], in_progress: [], review: [], done: [] });
+  const [folded, setFolded] = useState<Record<TaskStatus, Folded>>({
+    todo: { future: [], older: [], stale: [], total: 0 },
+    in_progress: { future: [], older: [], stale: [], total: 0 },
+    review: { future: [], older: [], stale: [], total: 0 },
+    done: { future: [], older: [], stale: [], total: 0 },
+  });
   const [activeId, setActiveId] = useState<number | null>(null);
   const [originCol, setOriginCol] = useState<TaskStatus | null>(null);
 
@@ -389,29 +485,85 @@ export default function KanbanPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // 按范围过滤 + 分列
+  const week = useMemo(() => weekBounds(), []);
+
+  // 窗口过滤：**只看到期日在这个窗口内的活**。
+  //   · 未完成 → 看计划终点（end_date 或 date）：逾期的一直算数（那是欠账），
+  //     未来的一律不进 —— 否则一个 11/09–11/20 的跨天活会同时挂在十天里
+  //   · 已完成 → 看「收尾那天」而不是计划日，否则历史完成项会堆满 Done 列
+  //   · 已取消（不做）→ 哪个窗口都不进
   const inScope = useMemo(() => {
-    let base: (e: TodoEvent) => boolean;
-    // 跨天任务只要工期覆盖这一天 / 和这一周有交集，就属于这个范围。
-    // 否则一个 11/09–11/20 的活在 11/16 看板上凭空消失，只能回起始日找。
-    if (scope === 'all') base = () => true;
-    else if (scope === 'today') base = (e: TodoEvent) => coversDay(e, date);
-    else {
-      const { start, end } = weekBounds();
-      base = (e: TodoEvent) => overlaps(e, start, end);
-    }
+    const today = todayStr();
+    const base = (e: TodoEvent) => {
+      if (e.canceled_at) return false;
+      if (e.completed || e.status === 'done') {
+        if (scope === 'backlog') return true;
+        const d = doneDate(e) || e.date;
+        return scope === 'today' ? d === date : d >= week.start && d <= week.end;
+      }
+      // 未完成看「开工日」而不是截止日：
+      // 一个 11/10–11/20 的跨天活，今天正干到第 7 天，不该因为截止日还在前头就被收起来。
+      // 反过来说，开工日在未来的活还没轮到，任何一个窗口都不该占屏。
+      if (scope === 'today') return e.date <= date;
+      if (scope === 'week') return e.date <= week.end;
+      return true;
+    };
     if (!onlyUnfinishedSub) return base;
     return (e: TodoEvent) => base(e) && (e.subtasks || []).some((s) => !s.completed);
-  }, [scope, date, onlyUnfinishedSub]);
+  }, [scope, date, week, onlyUnfinishedSub]);
 
   useEffect(() => {
     if (!allEvents) return;
+    const today = todayStr();
+
+    // 先按窗口筛，再把周期任务折成「每条规则只露下一次」
+    const scoped = allEvents.filter(inScope);
+    const { visible } = collapseRecurring(scoped, today);
+
     const grouped: Columns = { todo: [], in_progress: [], review: [], done: [] };
-    allEvents.forEach((e) => {
-      if (inScope(e)) grouped[e.status].push(e);
+    visible.forEach((e) => grouped[e.status].push(e));
+
+    const nextColumns: Columns = { todo: [], in_progress: [], review: [], done: [] };
+    const nextFolded = { ...folded };
+
+    COLUMNS.forEach((c) => {
+      const sorted = sortCol(grouped[c]);
+      const total = sorted.length;
+
+      if (c === 'done') {
+        // Done 列按「最近收尾」排，只渲染最近 5 条，其余收成一行
+        const byRecent = [...sorted].sort(
+          (a, b) => (doneDate(b) || b.date).localeCompare(doneDate(a) || a.date) || b.id - a.id
+        );
+        nextColumns[c] = byRecent.slice(0, 5);
+        nextFolded[c] = { future: [], older: byRecent.slice(5), stale: [], total };
+        return;
+      }
+
+      // 其它列分三档：
+      //   未到期   → 还没轮到开工，收起来
+      //   陈年旧账 → 超期太久，罗列在这儿也只是让人心慌，收起来并指向回顾页
+      //   该看的   → 剩下的
+      const startsInFuture = (e: TodoEvent) => e.date > today;
+      const isStale = (e: TodoEvent) =>
+        diffDays(e.end_date && e.end_date > e.date ? e.end_date : e.date, today) > STALE_DAYS;
+
+      nextColumns[c] = sorted.filter((e) => !startsInFuture(e) && !isStale(e));
+      nextFolded[c] = {
+        future: sorted
+          .filter(startsInFuture)
+          .sort((a, b) => (a.end_date || a.date).localeCompare(b.end_date || b.date)),
+        stale: sorted
+          .filter((e) => !startsInFuture(e) && isStale(e))
+          .sort((a, b) => a.date.localeCompare(b.date)),
+        older: [],
+        total,
+      };
     });
-    COLUMNS.forEach((c) => (grouped[c] = sortCol(grouped[c])));
-    setColumns(grouped);
+
+    setColumns(nextColumns);
+    setFolded(nextFolded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allEvents, inScope]);
 
   // 卡内勾选单条子任务：回传全量 subtasks（后端做整体替换）
@@ -544,7 +696,7 @@ export default function KanbanPage() {
   const dialogDefaultDate = scope === 'today' ? date : todayStr();
 
   const activeEvent = activeId != null ? allEvents?.find((e) => e.id === activeId) ?? null : null;
-  const totalCount = COLUMNS.reduce((n, c) => n + columns[c].length, 0);
+  const totalCount = COLUMNS.reduce((n, c) => n + folded[c].total, 0);
 
   return (
     <div className="min-w-0">
@@ -552,13 +704,20 @@ export default function KanbanPage() {
       <div className="mb-4 flex flex-wrap items-center gap-3">
         {/* 范围切换 */}
         <div className="seg">
-          {(['today', 'week', 'all'] as Scope[]).map((s) => (
+          {(['today', 'week', 'backlog'] as Scope[]).map((s) => (
             <button
               key={s}
               onClick={() => setScope(s)}
               className={`seg-item ${scope === s ? 'seg-item-on' : ''}`}
+              title={
+                s === 'backlog'
+                  ? '所有还没处理完的（未到期的收在列底，点开才渲染）'
+                  : s === 'week'
+                  ? '到期日在本周内'
+                  : '到期日在今天及以前（逾期的也算）'
+              }
             >
-              {s === 'today' ? '今天' : s === 'week' ? '本周' : '全部'}
+              {s === 'today' ? '今天' : s === 'week' ? '本周' : '积压'}
             </button>
           ))}
         </div>
@@ -625,13 +784,14 @@ export default function KanbanPage() {
                 key={status}
                 status={status}
                 events={columns[status]}
+                folded={folded[status]}
                 onOpen={openEdit}
                 onAdd={openAdd}
                 onToggleSubtask={toggleSubtask}
               />
             ))}
           </div>
-          <DragOverlay>{activeEvent ? <CardPreview event={activeEvent} /> : null}</DragOverlay>
+          <DragOverlay>{activeEvent ? <CardPreview event={activeEvent} dragging /> : null}</DragOverlay>
         </DndContext>
       )}
 

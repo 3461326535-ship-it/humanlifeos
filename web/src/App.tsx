@@ -8,6 +8,7 @@ import KanbanPage from './pages/KanbanPage';
 import GanttPage from './pages/GanttPage';
 import CalendarPage from './pages/CalendarPage';
 import StatsPage from './pages/StatsPage';
+import ReviewPage from './pages/ReviewPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import AiChat from './components/AiChat';
 import TimerFloat from './components/TimerFloat';
@@ -25,6 +26,7 @@ const TABS = [
   { to: '/gantt', label: '甘特', end: false },
   { to: '/calendar', label: '日历', end: false },
   { to: '/stats', label: '统计', end: false },
+  { to: '/review', label: '回顾', end: false },
 ];
 
 export default function App() {
@@ -225,12 +227,14 @@ export default function App() {
           <Route path="/gantt" element={<GanttPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/review" element={<ReviewPage />} />
           <Route path="*" element={<PlaceholderPage title="页面" milestone="—" />} />
         </Routes>
       </main>
 
       {/* 全局计时浮标：任何页面都能看到 / 结束当前计时 */}
       {!isLogin && <TimerFloat />}
+
       {/* AI 助手：浮标 + 聊天窗 + 确认弹窗，走后端现有的 /api/ai/* */}
       {!isLogin && <AiChat />}
     </div>
