@@ -11,10 +11,12 @@ import { api } from './api';
 export async function saveNote(queryClient: QueryClient, content: string, date?: string) {
   const row = await api.addNote(content, date);
   await queryClient.invalidateQueries({ queryKey: ['report'] });
+  await queryClient.invalidateQueries({ queryKey: ['notes'] });
   return row;
 }
 
 export async function removeNote(queryClient: QueryClient, id: number) {
   await api.deleteNote(id);
   await queryClient.invalidateQueries({ queryKey: ['report'] });
+  await queryClient.invalidateQueries({ queryKey: ['notes'] });
 }

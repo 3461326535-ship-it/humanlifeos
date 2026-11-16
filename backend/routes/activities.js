@@ -33,6 +33,24 @@ router.get('/', (req, res) => {
   );
 });
 
+// 最近的随手记：页头的「记一句」浮层里要能立刻看到刚记的和前几天记的。
+// 不带这个接口，人为了确认「我写过什么」还得专门跑一趟统计页 —— 那就不是随手记了。
+router.get('/notes', (req, res) => {
+  const userId = uid(req);
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+
+  db.all(
+    `SELECT id, content, created_at FROM activities
+     WHERE ${scope(userId)} AND type = 'note'
+     ORDER BY created_at DESC, id DESC LIMIT ?`,
+    scopeParams(userId, [limit]),
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: sanitizeError(err) });
+      res.json(rows);
+    }
+  );
+});
+
 // 随手记：发布一条 note
 //
 // 为什么显式写 created_at 而不用 DEFAULT CURRENT_TIMESTAMP：

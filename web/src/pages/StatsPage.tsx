@@ -348,7 +348,7 @@ export default function StatsPage() {
                     {report.notes.length > 0 && (
                       <span className="text-[11px] tabular-nums text-ink-faint">{report.notes.length} 条</span>
                     )}
-                    <span className="ml-auto text-[11px] text-ink-faint">页头的「记一句」或按 n 随时记，不用回这一页</span>
+                    <span className="ml-auto text-[11px] text-ink-faint">页头的「记一句」（按 n）能记，也能翻最近记的</span>
                   </div>
 
                   {report.notes.length > 0 && (

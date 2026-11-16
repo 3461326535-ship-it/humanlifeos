@@ -295,6 +295,9 @@ export const api = {
   deleteNote(id: number) {
     return request<{ ok: boolean }>(`/activities/${id}`, { method: 'DELETE' });
   },
+  recentNotes(limit = 12) {
+    return request<{ id: number; content: string; created_at: string }[]>(`/activities/notes?limit=${limit}`);
+  },
   toggleEvent(id: number) {
     return request<TodoEvent>(`/events/${id}/toggle`, { method: 'PATCH' });
   },

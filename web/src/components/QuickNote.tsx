@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { saveNote } from '../lib/noteActions';
+import { api } from '../lib/api';
+import { saveNote, removeNote } from '../lib/noteActions';
 
 const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -15,6 +16,15 @@ function md(day: string) {
 }
 function weekdayOf(day: string) {
   return WEEK_CN[new Date(`${day}T00:00:00`).getDay()];
+}
+/** 「今天 / 昨天 / 3/14」：翻起来要先判断是哪天，日期本身比星期有用 */
+function dayLabel(ts: string) {
+  const day = ts.slice(0, 10);
+  const now = new Date();
+  if (day === dayKey(now)) return '今天';
+  const y = new Date(now.getTime() - 86400000);
+  if (day === dayKey(y)) return '昨天';
+  return md(day);
 }
 
 /**
@@ -40,6 +50,13 @@ export default function QuickNote() {
 
   const rootRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLTextAreaElement>(null);
+
+  // 最近记的：就长在浮层里 —— 记完立刻能在同一块地方看见，不用再跑一趟统计页
+  const { data: notes } = useQuery({
+    queryKey: ['notes', 12],
+    queryFn: () => api.recentNotes(12),
+    enabled: open,
+  });
 
   // 打开就聚焦，别让人再点一下输入框
   useEffect(() => {
@@ -104,6 +121,15 @@ export default function QuickNote() {
     }
   }
 
+  async function drop(id: number) {
+    setErr('');
+    try {
+      await removeNote(queryClient, id);
+    } catch (e) {
+      setErr((e as Error).message || '没删掉，再试一次');
+    }
+  }
+
   const backdating = date !== today;
 
   return (
@@ -130,7 +156,7 @@ export default function QuickNote() {
         <div
           role="dialog"
           aria-label="随手记一句"
-          className="absolute right-0 top-full z-30 mt-2 w-[356px] rounded-xl border border-line bg-white p-3 shadow-pop"
+          className="absolute right-0 top-full z-30 mt-2 w-[372px] rounded-xl border border-line bg-white p-3 shadow-pop"
         >
           <textarea
             ref={boxRef}
@@ -199,6 +225,52 @@ export default function QuickNote() {
           {!err && backdating && !showDate && (
             <p className="mt-1.5 text-[11px] text-ink-faint">会记在 {md(date)} 这一天，不是今天</p>
           )}
+
+          {/* 最近记的：写和看在同一块地方，省掉「记完再跑一趟统计页」这一步 */}
+          <div className="mt-2.5 border-t border-line/70 pt-2">
+            <div className="mb-1 flex items-baseline gap-2 px-0.5">
+              <p className="text-[11px] text-ink-soft">最近记的</p>
+              {notes && notes.length > 0 && (
+                <span className="text-[10.5px] tabular-nums text-ink-faint">{notes.length} 条</span>
+              )}
+              <button
+                type="button"
+                className="ml-auto text-[10.5px] text-ink-faint transition-colors hover:text-moss"
+                onClick={() => {
+                  setOpen(false);
+                  navigate(`/stats?d=${today}&at=${Date.now()}`);
+                }}
+              >
+                按天看 · 战报 →
+              </button>
+            </div>
+
+            <ul className="max-h-[236px] space-y-0.5 overflow-y-auto pr-0.5">
+              {notes?.map((n) => (
+                <li key={n.id} className="group flex items-start gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:bg-paper-deep">
+                  <div className="min-w-0 flex-1">
+                    <p className="whitespace-pre-wrap break-words text-[12.5px] leading-snug text-ink-mid">{n.content}</p>
+                    <p className="mt-0.5 text-[10px] tabular-nums text-ink-faint">
+                      {dayLabel(n.created_at)} {n.created_at.slice(11, 16)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="删掉这条随手记"
+                    title="删掉这条"
+                    onClick={() => drop(n.id)}
+                    className="mt-[1px] flex-none rounded px-1 text-[11px] leading-4 text-ink-faint opacity-0 transition-opacity hover:bg-coral-soft hover:text-coral group-hover:opacity-100"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+              {notes && notes.length === 0 && (
+                <li className="px-1.5 py-2 text-[11.5px] text-ink-faint">还没记过什么。</li>
+              )}
+              {!notes && <li className="px-1.5 py-2 text-[11.5px] text-ink-faint">读取中…</li>}
+            </ul>
+          </div>
         </div>
       )}
 
